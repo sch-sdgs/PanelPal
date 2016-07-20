@@ -1,1 +1,2 @@
 git+https://github.com/sndrtj/pyrefflat.git@master
+sqlite3
