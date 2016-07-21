@@ -72,7 +72,6 @@ def query_db(c, query, args=(), one=False):
 class regions():
 
     def get_regions_by_gene(self,gene):
-        #TODO will only get if exon is in region need to do introns too
         db = 'resources/refflat.db'
         conn = sqlite3.connect(db)
         c = conn.cursor()
@@ -129,6 +128,7 @@ class regions():
         return formatted_result
 
     def genes_in_region(self,chrom,start,end):
+        # TODO will only get if exon is in region need to do introns too
         db = 'resources/refflat.db'
         conn = sqlite3.connect(db)
         c = conn.cursor()
