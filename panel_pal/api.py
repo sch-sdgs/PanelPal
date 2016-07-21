@@ -9,19 +9,19 @@ app = Flask(__name__)
 api = Api(app)
 
 parser = reqparse.RequestParser()
-parser.add_argument('gene')
 
-class HelloWorld(Resource):
-    def get(self):
-        return {'hello': 'world'}
+class RegionsGene(Resource):
 
-
-class Regions(Resource):
-
-    def get(self):
-        args = parser.parse_args()
+    def get(self,gene):
         r = regions()
-        result = r.get_regions_by_gene(args.gene)
+        result = r.get_regions_by_gene(gene)
+        return result
+
+class RegionsTx(Resource):
+
+    def get(self, tx):
+        r = regions()
+        result = r.get_regions_by_tx(tx)
         return result
 
 class Projects(Resource):
@@ -32,8 +32,12 @@ class Panels(Resource):
     def get(self):
         pass
 
-api.add_resource(HelloWorld, '/hello')
-api.add_resource(Regions, '/regions')
+class Helpers():
+    def conver_to_bed(self,json):
+        pass
+
+api.add_resource(RegionsGene, '/regions/gene/<string:gene>')
+api.add_resource(RegionsTx, '/regions/tx/<string:tx>')
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -67,12 +67,12 @@ def query_db(c, query, args=(), one=False):
     c.execute(query, args)
     r = [dict((c.description[i][0], value) \
                for i, value in enumerate(row)) for row in c.fetchall()]
-    c.connection.close()
     return (r[0] if r else None) if one else r
 
 class regions():
 
     def get_regions_by_gene(self,gene):
+        #TODO will only get if exon is in region need to do introns too
         db = 'resources/refflat.db'
         conn = sqlite3.connect(db)
         c = conn.cursor()
@@ -82,6 +82,7 @@ class regions():
         for region in result:
             tx = region["accession"]
             exon_id = region["id"]
+            number = region["number"]
             chrom = region["chrom"]
             strand = region["strand"]
             start = region["start"]
@@ -92,18 +93,63 @@ class regions():
             formatted_result[gene][tx]["strand"] = strand
             if "exons" not in formatted_result[gene][tx]:
                 formatted_result[gene][tx]["exons"]=[]
-            exon_details={"id":exon_id,"start":start,"end":end}
+                exon_details = {"id": exon_id, "start": start, "end": end, "number": number}
             formatted_result[gene][tx]["exons"].append(exon_details)
 
         return formatted_result
 
-    def genes_in_region(self,chr,start,end):
-        pass
+    def get_regions_by_tx(self, tx):
+        db = 'resources/refflat.db'
+        conn = sqlite3.connect(db)
+        c = conn.cursor()
+        result = query_db(c,
+                          "SELECT * FROM tx join genes on tx.gene_id=genes.id join exons on tx.id = exons.tx_id WHERE accession=?",
+                          (tx,))
+        formatted_result = {}
+        formatted_result[tx] = {}
+        for region in result:
+            name = region["name"]
+            tx = region["accession"]
+            exon_id = region["id"]
+            chrom = region["chrom"]
+            strand = region["strand"]
+            start = region["start"]
+            end = region["end"]
+            number = region["number"]
+            formatted_result[tx]["chrom"] = chrom
+            formatted_result[tx]["gene"] = name
+            formatted_result[tx]["strand"] = strand
+            if "exons" not in formatted_result[tx]:
+                formatted_result[tx]["exons"] = []
+            exon_details = {"id": exon_id, "start": start, "end": end, "number":number}
+            formatted_result[tx]["exons"].append(exon_details)
 
 
 
-# r=regions()
-# print json.dumps(r.get('TP53'),indent=4)
+        return formatted_result
+
+    def genes_in_region(self,chrom,start,end):
+        db = 'resources/refflat.db'
+        conn = sqlite3.connect(db)
+        c = conn.cursor()
+        fully_within = query_db(c,
+                          "SELECT * FROM tx join genes on tx.gene_id=genes.id join exons on tx.id = exons.tx_id WHERE chrom=? AND (start >= ? AND end <= ?)",
+                          (chrom,start,end,))
+        x = query_db(c,
+                                "SELECT * FROM tx join genes on tx.gene_id=genes.id join exons on tx.id = exons.tx_id WHERE chrom=? AND (start <= ? AND end >= ?)",
+                                (chrom, start,start,))
+        y = query_db(c,
+                                "SELECT * FROM tx join genes on tx.gene_id=genes.id join exons on tx.id = exons.tx_id WHERE chrom=? AND (start <= ? AND end >=  ?)",
+                                (chrom, end,end,))
+
+        c.connection.close()
+
+        return fully_within + x + y
+
+
+
+r=regions()
+print json.dumps(r.genes_in_region('chr17',7589542,7589388),indent=4)
 
 
 def main():
