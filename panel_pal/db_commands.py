@@ -149,8 +149,8 @@ class regions():
 
 
 r=regions()
-print json.dumps(r.genes_in_region('chr17',7589542,7589388),indent=4)
-
+# print json.dumps(r.genes_in_region('chr17',7589542,7589388),indent=4)
+print json.dumps(r.get_regions_by_gene('TP53'),indent=4)
 
 def main():
     parser = argparse.ArgumentParser(description='creates db tables required for PanelPal program')
