@@ -1,5 +1,6 @@
 import sqlite3
 import argparse
+from db_commands import add_project, add_user
 
 def create_db(conn):
     pp = conn.cursor()
@@ -30,28 +31,6 @@ def create_db(conn):
         print e.args[0]
         return False
 
-def add_project(project, conn):
-    pp = conn.cursor()
-    try:
-        pp.execute("INSERT OR IGNORE INTO projects(name) VALUES (?)", (project,))
-        conn.commit()
-        return True
-    except conn.Error as e:
-        conn.rollback()
-        print e.args[0]
-        return False
-
-def add_user(user, conn):
-    pp = conn.cursor()
-    try:
-        pp.execute("INSERT OR IGNORE INTO users(username) VALUES (?)", (user,))
-        conn.commit()
-        return True
-    except conn.Error as e:
-        conn.rollback()
-        print e.args[0]
-        return False
-
 def main():
     parser = argparse.ArgumentParser(description='creates db tables required for PanelPal program')
     parser.add_argument('--db', default="resources/")
@@ -68,18 +47,18 @@ def main():
     if not complete:
         print "Database creation failed. Exiting."
         exit()
-
-    projects = args.projects.split(',')
-    for project in projects:
-        complete = add_project(project, conn_main)
-        if not complete:
-            print project + " not added to database"
-
-    users = args.users.split(',')
-    for user in users:
-        complete = add_user(user, conn_main)
-        if not complete:
-            print user + " not added to database"
+    if args.projects is not None:
+        projects = args.projects.split(',')
+        for project in projects:
+            complete = add_project(project, conn_main)
+            if not complete:
+                print project + " not added to database"
+    if args.users is not None:
+        users = args.users.split(',')
+        for user in users:
+            complete = add_user(user, conn_main)
+            if not complete:
+                print user + " not added to database"
 
 
 if __name__ == '__main__':

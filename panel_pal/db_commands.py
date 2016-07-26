@@ -3,56 +3,85 @@ import argparse
 import json
 from pybedtools import BedTool
 
-def create_db(conn):
-    pp = conn.cursor()
-    pp.executescript('drop table if exists projects;')
-    pp.executescript('drop table if exists panels;')
-    pp.executescript('drop table if exists versions;')
-    pp.executescript('drop table if exists users;')
-    pp.executescript('drop table if exists ref_logtable;')
-
-    try:
-        pp.executescript("begin")
-        pp.executescript("""
-        CREATE TABLE projects
-            (id INTEGER PRIMARY KEY, name VARCHAR(50), UNIQUE(name));
-        CREATE TABLE panels
-            (id INTEGER PRIMARY KEY, name VARCHAR(50), team_id INTEGER, current_version INTEGER, FOREIGN KEY(team_id) REFERENCES projects(id), UNIQUE(name));
-        CREATE TABLE versions
-            (id INTEGER PRIMARY KEY, intro INTEGER, last INTEGER, panel_id INTEGER, region_id INTEGER, comment VARCHAR(100), extension_3 INTEGER, extension_5 INTEGER, FOREIGN KEY(panel_id) REFERENCES panels(id));
-        CREATE TABLE users
-            (id INTEGER PRIMARY KEY, username varchar(20), UNIQUE(username));
-        CREATE TABLE ref_logtable
-            (id INTEGER PRIMARY KEY, project_id INTEGER, version_id INTEGER, region_id INTEGER, user_id INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id), FOREIGN KEY(version_id) REFERENCES versions(id), FOREIGN KEY(user_id) REFERENCES users(id));
-        """)
-        pp.executescript("commit")
-        return True
-    except conn.Error as e:
-        pp.executescript("rollback")
-        print e.args[0]
-        return False
 
 def add_project(project, conn):
     pp = conn.cursor()
     try:
         pp.execute("INSERT OR IGNORE INTO projects(name) VALUES (?)", (project,))
         conn.commit()
-        return True
+        return pp.lastrowid
     except conn.Error as e:
         conn.rollback()
         print e.args[0]
-        return False
+        return -1
+
+def get_project(project, conn):
+    pp = conn.cursor()
+    projects = query_db(pp, "SELECT id FROM projects WHERE name=?", (project,))
+    if len(projects) == 0:
+        project_id = add_project(project, conn)
+    else:
+        project_id = projects[0].get('id')
+
+    return project_id
+
+
+def add_panel(panel, project_id, conn):
+    pp = conn.cursor()
+    try:
+        pp.execute("INSERT OR IGNORE INTO panels(name, team_id, current_version) VALUES (?, ?, 1)", (panel,project_id))
+        conn.commit()
+        return pp.lastrowid
+    except conn.Error as e:
+        conn.rollback()
+        print e.args[0]
+        return -1
+
+
+def get_panel(panel, team_id, conn):
+    pp = conn.cursor()
+    panels = query_db(pp, "SELECT id FROM panels WHERE name=?", (panel,))
+    if len(panels) == 0:
+        panel_id = add_panel(panel, team_id, conn)
+    else:
+        panel_id = panels[0].get('id')
+    pp.close()
+    return panel_id
+
+def add_to_version(panel_id, region_id, version, extension_3, extension_5, conn):
+    pp=conn.cursor()
+    command = 'INSERT INTO versions(intro, panel_id, region_id'
+    values = 'VALUES(?,?,?'
+    versions = (version, panel_id, region_id)
+    if extension_3 is not None:
+        command += ', extension_3'
+        values += ', ?'
+        versions.extend(extension_3)
+    if extension_5 is not None:
+        command += ', extension_5'
+        values += ', ?'
+        versions.extend(extension_5)
+    command = command + ') ' + values + ')'
+    try:
+        pp.execute(command, versions)
+        conn.commit()
+        return 0
+    except conn.Error as e:
+        conn.rollback()
+        print e.args[0]
+        return -1
+
 
 def add_user(user, conn):
     pp = conn.cursor()
     try:
         pp.execute("INSERT OR IGNORE INTO users(username) VALUES (?)", (user,))
         conn.commit()
-        return True
+        return pp.lastrowid
     except conn.Error as e:
         conn.rollback()
         print e.args[0]
-        return False
+        return -1
 
 def query_db(c, query, args=(), one=False):
     """
@@ -153,17 +182,56 @@ class regions():
 # print json.dumps(r.genes_in_region('chr17',7589542,7589388),indent=4)
 # print json.dumps(r.get_regions_by_gene('TP53'),indent=4)
 
+def insert_versions(genes, conn_pp, rf, panel_id, version):
+    pp = conn_pp.cursor()
+    current_regions = []
+    results = query_db(pp, "SELECT region_id FROM versions WHERE panel_id=?;", (panel_id,))
+    pp.close()
+    if len(results) > 0:
+        for result in results:
+            current_regions.append(result.get('region_id'))
+    print current_regions
+    current_regions = set(current_regions)
+
+    for gene in genes:
+        regions = query_db(rf, "select distinct regions.id from genes join tx on genes.id=tx.gene_id join exons on tx.id=exons.tx_id join regions on exons.region_id=regions.id where name=? order by start", (gene,))
+        for region in regions:
+            if region.get('id') not in current_regions:
+                add_to_version(panel_id, region.get('id'), version, None, None, conn_pp)
+
+
+
 def import_bed(project, panel, gene_file, panel_pal, refflat):
     conn_panelpal = sqlite3.connect(panel_pal)
-    pp = conn_panelpal.cursor()
     conn_refflat = sqlite3.connect(refflat)
     rf = conn_refflat.cursor()
 
-    file = open(gene_file, 'r')
-    genes = [line.strip('\n') for line in file.readlines()]
-    results = query_db(pp, "SELECT * FROM panels WHERE name=?;", (panel,))
-    print results
+    f= open(gene_file, 'r')
+    genes = [line.strip('\n') for line in f.readlines()]
 
+    project_id = get_project(project, conn_panelpal)
+    print project + " id = " + str(project_id)
+    if project_id == -1:
+        print 'Could not insert project ' + project + "; exiting."
+        exit()
+    panel_id = get_panel(panel, project_id, conn_panelpal)
+    print panel + " id = " + str(panel_id)
+    if panel_id == -1:
+        print 'Could not insert panel ' + panel + "; exiting."
+        exit()
+
+    pp = conn_panelpal.cursor()
+    version = query_db(pp, 'SELECT current_version FROM panels WHERE id = ?', (panel_id,))
+    pp.close()
+    insert_versions(genes, conn_panelpal, rf, panel_id, version[0].get('current_version'))
+
+
+
+
+    conn_panelpal.close()
+    conn_refflat.close()
+
+import_bed('NGD', 'HSPRecessive', '/home/bioinfo/Natalie/wc/genes/NGD_HSPrecessive_v1.txt', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
 
 def get_panel_by_project(project):
     pass
@@ -180,38 +248,4 @@ def check_bed(bed_file):
         print ("ERROR: " + str(exception))
 
 
-check_bed("/results/Analysis/MiSeq/MasterBED/upcoming_BED_files/test.bed")
-
-
-def main():
-    parser = argparse.ArgumentParser(description='creates db tables required for PanelPal program')
-    parser.add_argument('--db', default="resources/")
-    parser.add_argument('--projects', default="CTD,IEM,Haems,HeredCancer,DevDel,NGD")
-    parser.add_argument('--users')
-    args = parser.parse_args()
-
-    db = args.db + 'panel_pal.db'
-
-    conn_main = sqlite3.connect(db)
-
-    complete = create_db(conn_main)
-
-    if not complete:
-        print "Database creation failed. Exiting."
-        exit()
-
-    projects = args.projects.split(',')
-    for project in projects:
-        complete = add_project(project, conn_main)
-        if not complete:
-            print project + " not added to database"
-
-    users = args.users.split(',')
-    for user in users:
-        complete = add_user(user, conn_main)
-        if not complete:
-            print user + " not added to database"
-
-
-if __name__ == '__main__':
-    main()
+#check_bed("/results/Analysis/MiSeq/MasterBED/upcoming_BED_files/test.bed")
