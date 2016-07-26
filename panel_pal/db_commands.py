@@ -152,6 +152,19 @@ r=regions()
 # print json.dumps(r.genes_in_region('chr17',7589542,7589388),indent=4)
 print json.dumps(r.get_regions_by_gene('TP53'),indent=4)
 
+def import_bed(project, panel, gene_file, panel_pal, refflat):
+    conn_panelpal = sqlite3.connect(panel_pal)
+    pp = conn_panelpal.cursor()
+    conn_refflat = sqlite3.connect(refflat)
+    rf = conn_refflat.cursor()
+
+    file = open(gene_file, 'r')
+    genes = [line.strip('\n') for line in file.readlines()]
+    results = query_db(pp, "SELECT * FROM panels WHERE name=?;", (panel,))
+    print results
+
+
+
 def main():
     parser = argparse.ArgumentParser(description='creates db tables required for PanelPal program')
     parser.add_argument('--db', default="resources/")
