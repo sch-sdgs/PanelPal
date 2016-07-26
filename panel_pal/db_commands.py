@@ -190,7 +190,6 @@ def insert_versions(genes, conn_pp, rf, panel_id, version):
     if len(results) > 0:
         for result in results:
             current_regions.append(result.get('region_id'))
-    print current_regions
     current_regions = set(current_regions)
 
     for gene in genes:
@@ -224,14 +223,26 @@ def import_bed(project, panel, gene_file, panel_pal, refflat):
     version = query_db(pp, 'SELECT current_version FROM panels WHERE id = ?', (panel_id,))
     pp.close()
     insert_versions(genes, conn_panelpal, rf, panel_id, version[0].get('current_version'))
-
-
-
-
     conn_panelpal.close()
     conn_refflat.close()
 
-import_bed('NGD', 'HSPRecessive', '/home/bioinfo/Natalie/wc/genes/NGD_HSPrecessive_v1.txt', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
+#import_bed('NGD', 'HSPRecessive', '/home/bioinfo/Natalie/wc/genes/NGD_HSPrecessive_v1.txt', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
+
+def export_bed(panel, panel_pal, refflat):
+    conn_panelpal = sqlite3.connect(panel_pal)
+    pp = conn_panelpal.cursor()
+    conn_refflat = sqlite3.connect(refflat)
+    rf = conn_refflat.cursor()
+
+    panel_info = query_db(pp, 'SELECT id, current_version FROM panels WHERE name = ?', (panel,))[0]
+    panel_id = panel_info.get('id')
+    panel_v = panel_info.get('current_version')
+
+    pp.execute('ATTACH database ? as rf;', (refflat,))
+    region_ids = query_db(pp, 'SELECT rf.regions.chrom, rf.regions.start, rf.regions.end, versions.extension_3, versions.extension_5 FROM versions join regions on rf.regions.id=versions.region_id WHERE panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)', (panel_id, panel_v, panel_v))
+    print region_ids
+
+export_bed('HSPRecessive', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
 
 def get_panel_by_project(project):
     pass

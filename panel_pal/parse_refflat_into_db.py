@@ -39,7 +39,7 @@ def parse_reflat(c,refflat):
             end = exon._end
             chrom = exon._chr
             number = exon._number
-            c.execute("INSERT OR IGNORE INTO regions(chrom,start,end) VALUES (?,?,?)",
+            c.exrfecute("INSERT OR IGNORE INTO regions(chrom,start,end) VALUES (?,?,?)",
                       (chrom, start, end))
             c.execute("SELECT id FROM regions WHERE chrom=? AND start=? AND end=?", (chrom,start,end,))
             region_id = c.fetchone()[0]
