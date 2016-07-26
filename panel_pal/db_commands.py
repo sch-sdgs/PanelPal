@@ -1,6 +1,7 @@
 import sqlite3
 import argparse
 import json
+from pybedtools import BedTool
 
 def create_db(conn):
     pp = conn.cursor()
@@ -148,8 +149,9 @@ class regions():
 
 
 
-r=regions()
-print json.dumps(r.genes_in_region('chr17',7589542,7589388),indent=4)
+# r=regions()
+# print json.dumps(r.genes_in_region('chr17',7589542,7589388),indent=4)
+# print json.dumps(r.get_regions_by_gene('TP53'),indent=4)
 
 def import_bed(project, panel, gene_file, panel_pal, refflat):
     conn_panelpal = sqlite3.connect(panel_pal)
@@ -162,6 +164,23 @@ def import_bed(project, panel, gene_file, panel_pal, refflat):
     results = query_db(pp, "SELECT * FROM panels WHERE name=?;", (panel,))
     print results
 
+
+def get_panel_by_project(project):
+    pass
+
+def check_bed(bed_file):
+    bed = BedTool(bed_file)
+    try:
+        sorted_bed = bed.sort()
+        merged_bed = sorted_bed.merge(c="4",o="distinct")
+
+        return merged_bed
+
+    except Exception as exception:
+        print ("ERROR: " + str(exception))
+
+
+check_bed("/results/Analysis/MiSeq/MasterBED/upcoming_BED_files/test.bed")
 
 
 def main():
@@ -192,9 +211,6 @@ def main():
         complete = add_user(user, conn_main)
         if not complete:
             print user + " not added to database"
-
-
-
 
 
 if __name__ == '__main__':
