@@ -145,10 +145,12 @@ class regions():
         db = 'resources/refflat.db'
         conn = sqlite3.connect(db)
         c = conn.cursor()
-        result = query_db(c,"SELECT * FROM genes join tx on genes.id=tx.gene_id join exons on tx.id = exons.tx_id WHERE name=?", (gene,))
+        result = query_db(c,"SELECT * FROM genes join tx on genes.id=tx.gene_id join exons on tx.id = exons.tx_id join regions on exons.region_id = regions.id WHERE name=?", (gene,))
         formatted_result = {}
         formatted_result[gene] = {}
+
         for region in result:
+            print json.dumps(region,indent=4)
             tx = region["accession"]
             exon_id = region["id"]
             number = region["number"]
@@ -162,7 +164,8 @@ class regions():
             formatted_result[gene][tx]["strand"] = strand
             if "exons" not in formatted_result[gene][tx]:
                 formatted_result[gene][tx]["exons"]=[]
-                exon_details = {"id": exon_id, "start": start, "end": end, "number": number}
+
+            exon_details = {"id": exon_id, "start": start, "end": end, "number": number}
             formatted_result[gene][tx]["exons"].append(exon_details)
 
         return formatted_result
