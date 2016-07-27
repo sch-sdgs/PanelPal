@@ -245,6 +245,8 @@ def export_bed(panel, panel_pal, refflat):
 
     pp.execute('ATTACH database ? as rf;', (refflat,))
     region_ids = query_db(pp, 'SELECT rf.regions.chrom, rf.regions.start, rf.regions.end, versions.extension_3, versions.extension_5 FROM versions join regions on rf.regions.id=versions.region_id WHERE panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)', (panel_id, panel_v, panel_v))
+
+    
     print region_ids
 
 #export_bed('HSPRecessive', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
