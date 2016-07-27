@@ -19,6 +19,8 @@ def create_db(conn):
             (id INTEGER PRIMARY KEY, name VARCHAR(50), team_id INTEGER, current_version INTEGER, FOREIGN KEY(team_id) REFERENCES projects(id), UNIQUE(name));
         CREATE TABLE versions
             (id INTEGER PRIMARY KEY, intro INTEGER, last INTEGER, panel_id INTEGER, region_id INTEGER, comment VARCHAR(100), extension_3 INTEGER, extension_5 INTEGER, FOREIGN KEY(panel_id) REFERENCES panels(id));
+        CREATE TABLE pref_tx
+            (id INTEGER PRIMARY KEY, project_id INTEGER, tx_id INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id));
         CREATE TABLE users
             (id INTEGER PRIMARY KEY, username varchar(20), UNIQUE(username));
         CREATE TABLE ref_logtable
