@@ -4,27 +4,38 @@
     <title>Panel Pal</title>
   </head>
 
-  <link rel="stylesheet" href="static/css/bootstrap.min.css">
-  <link rel="stylesheet" href="static/css/starter-template.css">
+  <link rel="stylesheet" href="../static/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../static/css/bootstrap-theme.min.css">
+  <link rel="stylesheet" href="../static/css/panel_pal.css">
 
   <body>
 
-    <header>
-      <div class="container">
-        <h1 class="logo">Panel Pal</h1>
-          <strong><nav>
-            <ul class="menu">
-                <li><a href="{{ url_for('view_panels') }}">Panels</a></li>
-                <li><a href="{{ url_for('view_users') }}">Users</a></li>
-            </ul>
-            </nav></strong>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="{{ url_for('index') }}">Panel Pal</a>
       </div>
-    </header>
+      <div id="navbar" class="collapse navbar-collapse">
+        <ul class="nav navbar-nav">
+          <li class="active"><a href="{{ url_for('index') }}">Home</a></li>
+          <li><a href="{{ url_for('view_panels') }}">Panels <span class="badge">{{ panels }}</span></a></li>
+          <li><a href="{{ url_for('view_users') }}">Users</a></li>
+        </ul>
+      </div><!--/.nav-collapse -->
+    </div>
+  </nav>
 
+<div class="container theme-showcase" role="main">
     <div class="container">
       {% block content %}
       {% endblock %}
     </div>
-
+  </div>
   </body>
 </html>

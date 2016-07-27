@@ -1,18 +1,18 @@
 {% extends "layout.html" %}
  
 {% block content %}
-  <h2>Contact</h2>
+  <h2>Add User</h2>
 
     {% for message in form.name.errors %}
   <div class="flash">{{ message }}</div>
 {% endfor %}
 
-  <form action="{{ url_for('add_users') }}" method=post>
+  <form action="{{ url_for('add_users') }}" method="POST" class="form">
     {{ form.hidden_tag() }}
- 
+    <div class="form-group">
     {{ form.name.label }}
-    {{ form.name }}
- 
-    {{ form.submit }}
+    {{ form.name(class_="form-control") }}
+    </div>
+    {{ form.submit(class_="btn btn-primary") }}
   </form>
 {% endblock %}

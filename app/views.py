@@ -4,12 +4,13 @@ from panel_pal.db_commands import *
 import sqlite3
 from flask import Flask, render_template, request, flash
 from forms import UserForm
+from flask_bootstrap import Bootstrap
 
 app.secret_key = 'development key'
 
 @app.route('/')
 def index():
-    return "Hello, World!"
+    return render_template('home.html',panels=3)
 
 @app.route('/panels')
 def view_panels():
