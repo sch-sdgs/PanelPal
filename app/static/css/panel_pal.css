@@ -7,4 +7,10 @@ body {
 }
 .jumbotron{
   margin-top: 100px;
+  background-color: #69B5EC;
+  color: #ffffff;
+}
+
+.btn{
+  margin-top: 5px;
 }

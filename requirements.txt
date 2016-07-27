@@ -4,3 +4,4 @@ flask_restful
 requests
 flask_bootstrap
 flask-wtf
+flask-table

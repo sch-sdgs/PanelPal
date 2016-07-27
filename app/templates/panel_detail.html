@@ -1,0 +1,8 @@
+{% extends "layout.html" %}
+ 
+{% block content %}
+  <h2>Viewing Panel</h2>
+<h3>{{ genes|safe }} <a href="#" class="btn btn-success btn-md"><span class="glyphicon glyphicon-plus"></span> Add Gene</a></h3>
+{{ panel_detail }}
+
+{% endblock %}
