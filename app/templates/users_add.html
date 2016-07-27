@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+ 
+{% block content %}
+  <h2>Contact</h2>
+
+    {% for message in form.name.errors %}
+  <div class="flash">{{ message }}</div>
+{% endfor %}
+
+  <form action="{{ url_for('add_users') }}" method=post>
+    {{ form.hidden_tag() }}
+ 
+    {{ form.name.label }}
+    {{ form.name }}
+ 
+    {{ form.submit }}
+  </form>
+{% endblock %}

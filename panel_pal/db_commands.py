@@ -48,6 +48,11 @@ def get_panel(panel, team_id, conn):
     pp.close()
     return panel_id
 
+def get_users(conn):
+    pp = conn.cursor()
+    users = query_db(pp, "SELECT * FROM users")
+    return users
+
 def add_to_version(panel_id, region_id, version, extension_3, extension_5, conn):
     pp=conn.cursor()
     command = 'INSERT INTO versions(intro, panel_id, region_id'
@@ -242,7 +247,7 @@ def export_bed(panel, panel_pal, refflat):
     region_ids = query_db(pp, 'SELECT rf.regions.chrom, rf.regions.start, rf.regions.end, versions.extension_3, versions.extension_5 FROM versions join regions on rf.regions.id=versions.region_id WHERE panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)', (panel_id, panel_v, panel_v))
     print region_ids
 
-export_bed('HSPRecessive', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
+#export_bed('HSPRecessive', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
 
 def get_panel_by_project(project):
     pass
