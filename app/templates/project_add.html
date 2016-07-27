@@ -1,13 +1,13 @@
 {% extends "layout.html" %}
  
 {% block content %}
-  <h2>Add User</h2>
+  <h2>Add Project</h2>
 
     {% for message in form.name.errors %}
   <div class="alert alert-danger">Oh Snap! {{ message }}</div>
 {% endfor %}
 
-  <form action="{{ url_for('add_users') }}" method="POST" class="form">
+  <form action="{{ url_for('add_projects') }}" method="POST" class="form">
     {{ form.hidden_tag() }}
     <div class="form-group">
     {{ form.name.label }}

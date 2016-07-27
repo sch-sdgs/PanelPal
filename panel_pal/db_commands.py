@@ -25,6 +25,21 @@ def get_project(project, conn):
 
     return project_id
 
+def get_projects(conn):
+    pp = conn.cursor()
+    projects = query_db(pp, "SELECT * FROM projects")
+
+    return projects
+
+def delete(conn,table,id):
+    pp = conn.cursor()
+    print table
+    print id
+    query = "DELETE FROM "+table+" WHERE id = ?"
+    print query
+    projects = pp.execute(query,(id,))
+    conn.commit()
+    print projects
 
 def add_panel(panel, project_id, conn):
     pp = conn.cursor()
@@ -38,7 +53,7 @@ def add_panel(panel, project_id, conn):
         return -1
 
 
-def get_panel(panel, team_id, conn):
+def get_panel_id(panel, team_id, conn):
     pp = conn.cursor()
     panels = query_db(pp, "SELECT id FROM panels WHERE name=?", (panel,))
     if len(panels) == 0:
@@ -47,6 +62,26 @@ def get_panel(panel, team_id, conn):
         panel_id = panels[0].get('id')
     pp.close()
     return panel_id
+
+def get_panels(conn):
+    pp = conn.cursor()
+    panels = query_db(pp, "SELECT panels.name as panelname,projects.name as projectname, current_version, panels.id as panelid FROM panels join projects on panels.team_id = projects.id ")
+    return panels
+
+
+def get_panel(conn1,conn2,id):
+    pp = conn1.cursor()
+    rf = conn2.cursor()
+
+    panel_info = query_db(pp, 'SELECT id, current_version FROM panels WHERE id = ?', (id,))
+    panel_id = panel_info[0].get('id')
+    panel_v = panel_info[0].get('current_version')
+
+    pp.execute('ATTACH database ? as rf;', ('../panel_pal/resources/refflat.db',))
+    panel = query_db(pp,
+                          'SELECT rf.genes.name as genename, rf.regions.chrom, rf.regions.start, rf.regions.end, versions.extension_3, versions.extension_5, rf.tx.accession FROM versions join regions on rf.regions.id=versions.region_id join rf.exons on rf.regions.id=rf.exons.region_id join rf.tx on rf.exons.tx_id = rf.tx.id join rf.genes on rf.tx.gene_id = rf.genes.id  WHERE panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)',
+                          (panel_id, panel_v, panel_v))
+    return panel
 
 def get_users(conn):
     pp = conn.cursor()

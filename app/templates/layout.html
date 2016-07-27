@@ -4,13 +4,13 @@
     <title>Panel Pal</title>
   </head>
 
-  <link rel="stylesheet" href="../static/css/bootstrap.min.css">
-  <link rel="stylesheet" href="../static/css/bootstrap-theme.min.css">
-  <link rel="stylesheet" href="../static/css/panel_pal.css">
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/css/bootstrap-theme.min.css">
+  <link rel="stylesheet" href="/static/css/panel_pal.css">
 
   <body>
 
-    <nav class="navbar navbar-inverse navbar-fixed-top">
+    <nav class="navbar navbar-default navbar-fixed-top">
     <div class="container">
       <div class="navbar-header">
         <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
@@ -19,13 +19,45 @@
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
         </button>
-        <a class="navbar-brand" href="{{ url_for('index') }}">Panel Pal</a>
+        <a class="navbar-brand" href="{{ url_for('index') }}"><span class="glyphicon glyphicon-list-alt"></span> Panel Pal</a>
       </div>
       <div id="navbar" class="collapse navbar-collapse">
         <ul class="nav navbar-nav">
-          <li class="active"><a href="{{ url_for('index') }}">Home</a></li>
-          <li><a href="{{ url_for('view_panels') }}">Panels <span class="badge">{{ panels }}</span></a></li>
-          <li><a href="{{ url_for('view_users') }}">Users</a></li>
+          <li><a href="{{ url_for('index') }}">Home</a></li>
+
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Projects <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="{{ url_for('view_projects') }}">View Projects</a>
+                <li role="separator" class="divider"></li>
+                <li><a href="{{ url_for('add_projects') }}">Add Projects</a></li>
+              </ul>
+          </li>
+
+            <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Panels <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="{{ url_for('view_panels') }}">View Panels</a>
+                <li role="separator" class="divider"></li>
+                <li><a href="#">Create Panel</a></li>
+                <li><a href="#">Create Panel From Panel App</a></li>
+                <li><a href="#">Edit Panel</a></li>
+                <li><a href="#">Make Panel Live</a></li>
+                <li role="separator" class="divider"></li>
+                <li><a href="#">Export Panel</a></li>
+              </ul>
+          </li>
+
+
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Users <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="{{ url_for('view_users') }}">View Users</a>
+                <li role="separator" class="divider"></li>
+                <li><a href="{{ url_for('add_users') }}">Add Users</a></li>
+              </ul>
+          </li>
+          <li><a href="#">API</a></li>
         </ul>
       </div><!--/.nav-collapse -->
     </div>
@@ -37,5 +69,12 @@
       {% endblock %}
     </div>
   </div>
+
+
+
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+  <script src="/static/js/bootstrap.min.js"></script>
   </body>
 </html>
