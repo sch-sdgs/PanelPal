@@ -9,6 +9,11 @@ from flask_table import Table, Col, LinkCol, ButtonCol
 
 app.secret_key = 'development key'
 
+d = Database()
+p = Panels()
+u = Users()
+pro = Projects()
+
 class ItemTable(Table):
     username = Col('Username')
     id = Col('Id')
@@ -53,7 +58,7 @@ def delete_record():
     conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
     table = request.args.get('table')
     id = request.args.get('id')
-    delete(conn_panelpal,table,id)
+    d.delete(conn_panelpal,table,id)
     if table == 'projects':
         return view_projects()
     elif table == 'users':
@@ -61,9 +66,7 @@ def delete_record():
 
 @app.route('/panels')
 def view_panels():
-    conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
-    panels = get_panels(conn_panelpal)
-    print panels
+    panels = p.get_panels()
     table = ItemTablePanels(panels, classes=['table', 'table-striped'])
     return render_template('panels.html',panels=table)
 
@@ -72,7 +75,7 @@ def panel_detail():
     conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
     conn_ref = sqlite3.connect('../panel_pal/resources/refflat.db')
     id = request.args.get('id')
-    panel = get_panel(conn_panelpal,conn_ref,id)
+    panel = p.get_panel(conn_panelpal,conn_ref,id)
     genes = []
     for i in panel:
         genes.append(Markup("<a href=\"#\" class=\"btn btn-info btn-md\"><span class=\"glyphicon glyphicon-remove\"></span> "+i["genename"]+"</a>"))
@@ -83,7 +86,7 @@ def panel_detail():
 @app.route('/users')
 def view_users():
     conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
-    users = get_users(conn_panelpal)
+    users = u.get_users(conn_panelpal)
     for i in users:
         id = i["id"]
         i["table"] = "users"
@@ -100,7 +103,7 @@ def add_users():
             return render_template('users_add.html', form=form)
         else:
             conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
-            id = add_user(form.data["name"], conn_panelpal)
+            id = u.add_user(form.data["name"], conn_panelpal)
             return view_users()
 
     elif request.method == 'GET':
@@ -110,7 +113,7 @@ def add_users():
 @app.route('/projects')
 def view_projects():
     conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
-    projects = get_projects(conn_panelpal)
+    projects = pro.get_projects(conn_panelpal)
     for i in projects:
         id = i["id"]
         i["table"] = "projects"
@@ -128,7 +131,7 @@ def add_projects():
             return render_template('project_add.html', form=form)
         else:
             conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
-            id = add_project(form.data["name"], conn_panelpal)
+            id = pro.add_project(form.data["name"], conn_panelpal)
             return view_projects()
 
     elif request.method == 'GET':
