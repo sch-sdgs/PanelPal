@@ -55,10 +55,9 @@ def index():
 
 @app.route('/delete',methods=['GET', 'POST'])
 def delete_record():
-    conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
     table = request.args.get('table')
     id = request.args.get('id')
-    d.delete(conn_panelpal,table,id)
+    d.delete(table,id)
     if table == 'projects':
         return view_projects()
     elif table == 'users':
@@ -72,10 +71,8 @@ def view_panels():
 
 @app.route('/panels/view')
 def panel_detail():
-    conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
-    conn_ref = sqlite3.connect('../panel_pal/resources/refflat.db')
     id = request.args.get('id')
-    panel = p.get_panel(conn_panelpal,conn_ref,id)
+    panel = p.get_panel(id)
     genes = []
     for i in panel:
         genes.append(Markup("<a href=\"#\" class=\"btn btn-info btn-md\"><span class=\"glyphicon glyphicon-remove\"></span> "+i["genename"]+"</a>"))
@@ -85,12 +82,10 @@ def panel_detail():
 
 @app.route('/users')
 def view_users():
-    conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
-    users = u.get_users(conn_panelpal)
+    users = u.get_users()
     for i in users:
         id = i["id"]
         i["table"] = "users"
-    print users
     table = ItemTable(users,classes=['table', 'table-striped'])
     return render_template('users.html',users=table,)
 
@@ -102,8 +97,7 @@ def add_users():
             flash('All fields are required.')
             return render_template('users_add.html', form=form)
         else:
-            conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
-            id = u.add_user(form.data["name"], conn_panelpal)
+            id = u.add_user(form.data["name"])
             return view_users()
 
     elif request.method == 'GET':
@@ -112,8 +106,7 @@ def add_users():
 
 @app.route('/projects')
 def view_projects():
-    conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
-    projects = pro.get_projects(conn_panelpal)
+    projects = pro.get_projects()
     for i in projects:
         id = i["id"]
         i["table"] = "projects"
@@ -130,8 +123,7 @@ def add_projects():
             flash('All fields are required.')
             return render_template('project_add.html', form=form)
         else:
-            conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
-            id = pro.add_project(form.data["name"], conn_panelpal)
+            id = pro.add_project(form.data["name"])
             return view_projects()
 
     elif request.method == 'GET':

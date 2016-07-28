@@ -5,13 +5,19 @@ import os
 from pybedtools import BedTool
 
 
+
+
 class Database():
+
     def __init__(self):
         path = os.path.dirname(__file__)
         self.refflat = path + '/resources/refflat.db'
-        self.refflat_conn = sqlite3.connect(self.refflat)
+        self.refflat_conn = sqlite3.connect(self.refflat,check_same_thread=False)
         self.panelpal = path + '/resources/panel_pal.db'
-        self.panelpal_conn = sqlite3.connect(self.panelpal)
+        self.panelpal_conn = sqlite3.connect(self.panelpal,check_same_thread=False)
+        pp = self.panelpal_conn.cursor()
+        pp.execute('ATTACH database ? as rf;', (self.refflat,))
+        pp.close()
 
     def delete(self,conn, table, id):
         pp = conn.cursor()
@@ -39,10 +45,14 @@ class Database():
                   for i, value in enumerate(row)) for row in c.fetchall()]
         return (r[0] if r else None) if one else r
 
-class Projects(Database):
+    def __del__(self):
+        self.panelpal_conn.close()
+        self.refflat_conn.close()
 
-    def query_db(self,c, query, args=(), one=False):
-        pass
+
+class Projects(Database):
+    def query_db(self, c, query, args=(), one=False):
+        return Database.query_db(self, c, query, args=(), one=False)
 
     def add_project(self ,project):
         pp = self.panelpal_conn.cursor()
@@ -73,10 +83,10 @@ class Projects(Database):
 
 class Panels(Database):
 
-    def query_db(self, c, query, args=(), one=False):
-        pass
+    def query_db(self,c, query, args=(), one=False):
+        return Database.query_db(self, c, query, args, one=False)
 
-    def add_panel(panel, project_id, conn):
+    def add_panel(self,panel, project_id, conn):
         pp = conn.cursor()
         try:
             pp.execute("INSERT OR IGNORE INTO panels(name, team_id, current_version) VALUES (?, ?, 1)", (panel,project_id))
@@ -106,13 +116,11 @@ class Panels(Database):
 
     def get_panel(self,id):
         pp = self.panelpal_conn.cursor()
-        rf = self.refflat_conn.cursor()
 
         panel_info = self.query_db(pp, 'SELECT id, current_version FROM panels WHERE id = ?', (id,))
         panel_id = panel_info[0].get('id')
         panel_v = panel_info[0].get('current_version')
 
-        pp.execute('ATTACH database ? as rf;', ('../panel_pal/resources/refflat.db',))
         panel = self.query_db(pp,
                               'SELECT rf.genes.name as genename, rf.regions.chrom, rf.regions.start, rf.regions.end, versions.extension_3, versions.extension_5, rf.tx.accession FROM versions join regions on rf.regions.id=versions.region_id join rf.exons on rf.regions.id=rf.exons.region_id join rf.tx on rf.exons.tx_id = rf.tx.id join rf.genes on rf.tx.gene_id = rf.genes.id  WHERE panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)',
                               (panel_id, panel_v, panel_v))
@@ -134,10 +142,10 @@ class Panels(Database):
         command = command + ') ' + values + ')'
         try:
             pp.execute(command, versions)
-            conn.commit()
+            self.panelpal_conn.commit()
             return 0
-        except conn.Error as e:
-            conn.rollback()
+        except self.panelpal_conn.Error as e:
+            self.panelpal_conn.rollback()
             print e.args[0]
             return -1
 
@@ -185,7 +193,7 @@ class Panels(Database):
 
     # import_bed('NGD', 'HSPRecessive', '/home/bioinfo/Natalie/wc/genes/NGD_HSPrecessive_v1.txt', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
 
-    def export_bed(self,panel, panel_pal, refflat):
+    def export_bed(self,panel):
         pp = self.panelpal_conn.cursor()
         rf = self.refflat_conn.cursor()
 
@@ -193,7 +201,6 @@ class Panels(Database):
         panel_id = panel_info.get('id')
         panel_v = panel_info.get('current_version')
 
-        pp.execute('ATTACH database ? as rf;', (refflat,))
         region_ids = self.query_db(pp,
                               'SELECT rf.regions.chrom, rf.regions.start, rf.regions.end, versions.extension_3, versions.extension_5 FROM versions join regions on rf.regions.id=versions.region_id WHERE panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)',
                               (panel_id, panel_v, panel_v))
@@ -216,9 +223,8 @@ class Panels(Database):
             print ("ERROR: " + str(exception))
 
 class Users(Database):
-
     def query_db(self, c, query, args=(), one=False):
-        pass
+        return Database.query_db(self, c, query, args=(), one=False)
 
     def get_users(self):
         pp = self.panelpal_conn.cursor()
@@ -236,10 +242,9 @@ class Users(Database):
             print e.args[0]
             return -1
 
-class regions(Database):
-
+class Regions(Database):
     def query_db(self, c, query, args=(), one=False):
-        pass
+        return Database.query_db(self, c, query, args=(), one=False)
 
     def get_regions_by_gene(self,gene):
 
