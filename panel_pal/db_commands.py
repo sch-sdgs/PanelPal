@@ -284,12 +284,15 @@ def import_pref_transcripts(project, transcripts, panel_pal, refflat):
     for tx in tx_list:
         if tx != tx_list[0]:
             acc = tx.split('\t')[1].split('.')[0] #splits gene name from transcript and removes version from accession
-            print acc
+            try:
+                tx_id = query_db(rf, 'SELECT id FROM tx WHERE accession = ?', (acc,))[0].get('id')
+                pp.execute('INSERT INTO pref_tx (project_id, tx_id) VALUES (?,?)', (project_id, tx_id))
+            except IndexError:
+                print acc + ' not in refflat database'
 
-            tx_id = query_db(rf, 'SELECT id FROM tx WHERE accession = ?', (acc,))[0].get('id')
-            pp.execute('INSERT INTO pref_tx (project_id, tx_id) VALUES (?,?)', (project_id, tx_id))
+import_pref_transcripts('NGD', '/results/Analysis/MiSeq/MasterTranscripts/NGD_preferred_transcripts.txt', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
 
-#import_pref_transcripts('NGD', '/results/Analysis/MiSeq/MasterTranscripts/NGD_preferred_transcripts.txt', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
+import_pref_transcripts('CTD', '/results/Analysis/MiSeq/MasterTranscripts/CTD_preferred_transcripts.txt', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
 
 def export_bed(panel, panel_pal, refflat):
     conn_panelpal = sqlite3.connect(panel_pal)
