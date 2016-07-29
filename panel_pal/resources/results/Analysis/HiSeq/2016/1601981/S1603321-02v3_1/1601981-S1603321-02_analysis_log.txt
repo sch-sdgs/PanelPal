@@ -1,0 +1,20 @@
+Analysis run by NJG on Fri Jul 29 09:22:14 BST 2016 using script HiSeq_NGS_gene_panel_analysis_v3.1.sh with additional scripts determining_read_and_insert_size.pl, extracting_regions_with_below_minimum_depth.pl, combine_VCFs.pl, annotating_variants_with_annovar.sh, simplifying_vcf_for_annovar.pl and adding_annovar_output_to_vcf_v2.pl
+Parameters used were
+FASTQ file for lane 1 read 1 /mnt/remotefs/160314_D00461_0085_BHJM5WBCXX/Data/Intensities/BaseCalls/fastqs/Project_1601981/Sample_1601981-S1603321-02/1601981-S1603321-02_AAACATCG_L001_R1_001.fastq.gz
+FASTQ file for lane 1 read 2 /mnt/remotefs/160314_D00461_0085_BHJM5WBCXX/Data/Intensities/BaseCalls/fastqs/Project_1601981/Sample_1601981-S1603321-02/1601981-S1603321-02_AAACATCG_L001_R2_001.fastq.gz
+FASTQ file for lane 2 read 1 /mnt/remotefs/160314_D00461_0085_BHJM5WBCXX/Data/Intensities/BaseCalls/fastqs/Project_1601981/Sample_1601981-S1603321-02/1601981-S1603321-02_AAACATCG_L002_R1_001.fastq.gz
+FASTQ file for lane 2 read 2 /mnt/remotefs/160314_D00461_0085_BHJM5WBCXX/Data/Intensities/BaseCalls/fastqs/Project_1601981/Sample_1601981-S1603321-02/1601981-S1603321-02_AAACATCG_L002_R2_001.fastq.gz
+Worklist number and patient ID (hyphen separated) 1601981-S1603321-02
+Disease group CTD
+Library type SureSelect
+Broad-panel BED file CTDFinaldesignwith25bp_v2.bed
+small-panel BED file CTD_COL3A1_25_v3.bed
+Abbreviation for small panel COL3A1
+preferred transcript file CTD_preferred_transcripts.txt
+Required depth for exons 30
+Required depth for introns 18
+Splicing threshold (distance checked into introns) 25
+Polymorphisms file CTD_NGS_polymorphism_list_v8.txt
+Run year 2016
+Run number 85
+exonic small-panel BED file CTD_COL3A1_25_v3_exonic.bed

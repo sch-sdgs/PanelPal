@@ -5,10 +5,7 @@ import os
 from pybedtools import BedTool
 
 
-
-
 class Database():
-
     def __init__(self):
         path = os.path.dirname(__file__)
         self.refflat = path + '/resources/refflat.db'
@@ -46,13 +43,15 @@ class Database():
         return (r[0] if r else None) if one else r
 
     def __del__(self):
+        self.panelpal_conn.commit()
         self.panelpal_conn.close()
+        self.refflat_conn.commit()
         self.refflat_conn.close()
 
 
 class Projects(Database):
     def query_db(self, c, query, args=(), one=False):
-        return Database.query_db(self, c, query, args=(), one=False)
+        return Database.query_db(self, c, query, args, one=False)
 
     def add_project(self ,project):
         pp = self.panelpal_conn.cursor()
@@ -102,7 +101,7 @@ class Panels(Database):
         pp = self.panelpal_conn.cursor()
         panels = self.query_db(pp, "SELECT id FROM panels WHERE name=?", (panel,))
         if len(panels) == 0:
-            panel_id = self.add_panel(panel, team_id)
+            panel_id = self.add_panel(panel, team_id, self.panelpal_conn)
         else:
             panel_id = panels[0].get('id')
         pp.close()
@@ -166,7 +165,7 @@ class Panels(Database):
                                (gene,))
             for region in regions:
                 if region.get('id') not in current_regions:
-                    self.add_to_version(panel_id, region.get('id'), version, None, None, conn_pp)
+                    self.add_to_version(panel_id, region.get('id'), version, None, None)
 
     def import_bed(self,project, panel, gene_file):
 
@@ -175,12 +174,13 @@ class Panels(Database):
         f = open(gene_file, 'r')
         genes = [line.strip('\n') for line in f.readlines()]
 
-        project_id = self.get_project(project)
+        p = Projects()
+        project_id = p.get_project(project)
         print project + " id = " + str(project_id)
         if project_id == -1:
             print 'Could not insert project ' + project + "; exiting."
             exit()
-        panel_id = self.get_panel(panel, project_id)
+        panel_id = self.get_panel_id(panel, project_id)
         print panel + " id = " + str(panel_id)
         if panel_id == -1:
             print 'Could not insert panel ' + panel + "; exiting."
@@ -189,11 +189,10 @@ class Panels(Database):
         pp = self.panelpal_conn.cursor()
         version = self.query_db(pp, 'SELECT current_version FROM panels WHERE id = ?', (panel_id,))
         pp.close()
-        self.insert_versions(genes, rf, panel_id, version[0].get('current_version'))
+        self.insert_versions(genes, panel_id, version[0].get('current_version'))
 
-    # import_bed('NGD', 'HSPRecessive', '/home/bioinfo/Natalie/wc/genes/NGD_HSPrecessive_v1.txt', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
 
-    def import_pref_transcripts(self, project, transcripts, panel_pal, refflat):
+    def import_pref_transcripts(self, project, transcripts):
         f = open(transcripts, 'r')
         tx_list = [line.strip('\n') for line in f.readlines()]
 
@@ -211,25 +210,47 @@ class Panels(Database):
                 except IndexError:
                     print acc + ' not in refflat database'
 
-    def export_bed(self,panel, panel_pal, refflat):
+    def export_bed(self, panel, bed_type):
         pp = self.panelpal_conn.cursor()
-        rf = self.refflat_conn.cursor()
 
         panel_info = self.query_db(pp, 'SELECT id, current_version FROM panels WHERE name = ?', (panel,))[0]
         panel_id = panel_info.get('id')
         panel_v = panel_info.get('current_version')
 
-        region_ids = self.query_db(pp,
-                              'SELECT rf.regions.chrom, rf.regions.start, rf.regions.end, versions.extension_3, versions.extension_5 FROM versions join regions on rf.regions.id=versions.region_id WHERE panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)',
+        regions = self.query_db(pp,
+                              '''SELECT rf.regions.chrom, rf.regions.start, rf.regions.end, rf.exons.number, versions.extension_3, versions.extension_5, rf.genes.name, rf.tx.accession
+                                    FROM versions
+                                    join regions on rf.regions.id=versions.region_id
+                                    join exons on rf.exons.region_id = rf.regions.id
+                                    join panels on versions.panel_id=panels.id
+                                    join projects on panels.team_id = projects.id
+                                    join pref_tx on panels.id=pref_tx.project_id
+                                    join rf.tx on rf.tx.id=pref_tx.tx_id
+                                    join rf.genes on rf.tx.gene_id = rf.genes.id
+                                    WHERE panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)''',
                               (panel_id, panel_v, panel_v))
-        print region_ids
 
-    # export_bed('HSPRecessive', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db', '/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
+        lines = []
+        for region in regions:
+            if region.get('extension_3') is None:
+                start = region.get('start')
+            else:
+                start = region.get('start') - region.get('extension_3')
+
+            if region.get('extension_5') is None:
+                end = region.get('end')
+            else:
+                end = region.get('end') + region.get('extension_5')
+
+            line = [region.get('chrom'), start, end, "ex"+str(region.get('number'))+"_"+region.get('name')+"_"+region.get('accession')]
+            lines.append("\t".join(str(x) for x in line))
+        return "\n".join(lines)
+
 
     def get_panel_by_project(project):
         pass
 
-    def check_bed(bed_file):
+    def check_bed(self, bed_file):
         bed = BedTool(bed_file)
         try:
             sorted_bed = bed.sort()
@@ -242,7 +263,7 @@ class Panels(Database):
 
 class Users(Database):
     def query_db(self, c, query, args=(), one=False):
-        return Database.query_db(self, c, query, args=(), one=False)
+        return Database.query_db(self, c, query, args, one=False)
 
     def get_users(self):
         pp = self.panelpal_conn.cursor()
@@ -262,7 +283,7 @@ class Users(Database):
 
 class Regions(Database):
     def query_db(self, c, query, args=(), one=False):
-        return Database.query_db(self, c, query, args=(), one=False)
+        return Database.query_db(self, c, query, args, one=False)
 
     def get_regions_by_gene(self,gene):
 
@@ -339,9 +360,11 @@ class Regions(Database):
 
 #p = Panels()
 
-#p.import_pref_transcripts('NGD', '/results/Analysis/MiSeq/MasterTranscripts/NGD_preferred_transcripts.txt','/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db','/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
-#p.import_pref_transcripts('CTD', '/results/Analysis/MiSeq/MasterTranscripts/CTD_preferred_transcripts.txt','/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db','/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
-#p.import_pref_transcripts('IEM', '/results/Analysis/MiSeq/MasterTranscripts/IEM_preferred_transcripts.txt','/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db','/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
-#p.import_pref_transcripts('Haems', '/results/Analysis/MiSeq/MasterTranscripts/Haems_preferred_transcripts.txt','/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db','/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
-#p.import_pref_transcripts('HeredCancer', '/results/Analysis/MiSeq/MasterTranscripts/HeredCancer_preferred_transcripts.txt','/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/panel_pal.db','/home/bioinfo/Natalie/wc/panel_pal/panel_pal/resources/refflat.db')
-
+#p.import_pref_transcripts('NGD', '/results/Analysis/MiSeq/MasterTranscripts/NGD_preferred_transcripts.txt')
+#p.import_pref_transcripts('CTD', '/results/Analysis/MiSeq/MasterTranscripts/CTD_preferred_transcripts.txt')
+#p.import_pref_transcripts('IEM', '/results/Analysis/MiSeq/MasterTranscripts/IEM_preferred_transcripts.txt')
+#p.import_pref_transcripts('Haems', '/results/Analysis/MiSeq/MasterTranscripts/Haems_preferred_transcripts.txt')
+#p.import_pref_transcripts('HeredCancer', '/results/Analysis/MiSeq/MasterTranscripts/HeredCancer_preferred_transcripts.txt')
+#p.import_bed('NGD', 'HSPRecessive', '/home/bioinfo/Natalie/wc/genes/NGD_HSPrecessive_v1.txt')
+#bed = p.export_bed('HSPRecessive')
+#print bed
