@@ -1,7 +1,37 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html>
   <head>
     <title>Panel Pal</title>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+  <script src="/static/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+$(document).ready(function() {
+
+  $('a[data-toggle=modal], button[data-toggle=modal]').click(function () {
+
+    var data_id = '';
+    var data_name = '';
+
+
+    if (typeof $(this).data('id') !== 'undefined') {
+
+      data_id = $(this).data('id');
+    }
+
+    if (typeof $(this).data('name') !== 'undefined') {
+
+      data_name = $(this).data('name');
+    }
+
+    $('#geneName').val(data_name);
+    $('#panelId').val(data_id);
+
+  })
+});
+
+    </script>
   </head>
 
   <link rel="stylesheet" href="/static/css/bootstrap.min.css">
@@ -63,6 +93,9 @@
     </div>
   </nav>
 
+    {% block popup %}
+    {% endblock %}
+
 <div class="container theme-showcase" role="main">
     <div class="container">
       {% block content %}
@@ -73,8 +106,5 @@
 
 
 
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-  <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
-  <script src="/static/js/bootstrap.min.js"></script>
   </body>
 </html>

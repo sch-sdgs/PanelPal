@@ -1,8 +1,52 @@
 {% extends "layout.html" %}
- 
+
+{% block popup %}
+<div id="addGene" class="modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                <h4>Add a Gene to the Panel</h4>
+                <p></p>
+                <form action="{{ url_for('add_gene') }}" method="POST" class="form">
+                    <div class="form-group">
+                    {{ add_form.geneNameAdd.label }}
+                    {{ add_form.geneNameAdd(class_="form-control") }}
+                        {{ add_form.panelId.label }}
+                    {{ add_form.panelId(class_="form-control",readonly="readonly") }}
+                    </div>
+                    {{ add_form.submit(class_="btn btn-primary") }}
+                  </form>
+                  <button class="btn btn-danger btn-md" data-toggle="modal" data-target="#myModal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="removeGene" class="modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                <h4>Remove Gene</h4>
+                <p>You are removing: Are you sure you want to proceed?</p>
+
+                <form action="{{ url_for('remove_gene') }}" method="POST" class="form">
+                    <div class="form-group">
+                    {{ form.geneName.label }}
+                    {{ form.geneName(class_="form-control",readonly="readonly") }}
+                        {{ form.panelId.label }}
+                    {{ form.panelId(class_="form-control",readonly="readonly") }}
+                    </div>
+                    {{ form.submit(class_="btn btn-primary") }}
+                  </form>
+                <button class="btn btn-danger btn-md" data-toggle="modal" data-target="#removeGene">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
 {% block content %}
-  <h2>Viewing Panel</h2>
-<h3>{{ genes|safe }} <a href="#" class="btn btn-success btn-md"><span class="glyphicon glyphicon-plus"></span> Add Gene</a></h3>
+  <h2>Panel | <strong>{{ panel_name }} (v{{ version }})</strong></h2>
+<h3>{{ genes|safe }} <button class="btn btn-success btn-md" data-toggle="modal" data-id="{{ panel_id }}" data-target="#addGene"><span class="glyphicon glyphicon-plus"></span> Add Gene</button></h3>
 {{ panel_detail }}
 
 {% endblock %}

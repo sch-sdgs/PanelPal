@@ -3,7 +3,7 @@ from models import *
 from panel_pal.db_commands import *
 import sqlite3
 from flask import Flask, render_template, request, flash, url_for, Markup
-from forms import UserForm, ProjectForm
+from forms import UserForm, ProjectForm, RemoveGene, AddGene
 from flask_bootstrap import Bootstrap
 from flask_table import Table, Col, LinkCol, ButtonCol
 
@@ -30,8 +30,6 @@ class ItemTablePanels(Table):
     panelname = Col('Panel')
     current_version = Col('Version')
     view = LinkCol('View','panel_detail',url_kwargs=dict(id='panelid'))
-    # delete = LinkCol('Delete','delete_record',url_kwargs=dict(id='id',table='table'))
-    #
 
 class ItemTablePanel(Table):
     allow_sort = False
@@ -40,8 +38,6 @@ class ItemTablePanel(Table):
     end = Col('End')
     accession = Col('Accession')
     genename = Col('Gene')
-    # delete = LinkCol('Delete','delete_record',url_kwargs=dict(id='id',table='table'))
-    #
     def sort_url(self, col_key, reverse=False):
         if reverse:
             direction = 'desc'
@@ -70,15 +66,40 @@ def view_panels():
     return render_template('panels.html',panels=table)
 
 @app.route('/panels/view')
-def panel_detail():
+def panel_detail(panel_id=None):
     id = request.args.get('id')
+    if id is None:
+        id = panel_id
     panel = p.get_panel(id)
+    form = RemoveGene()
+    add_form = AddGene()
     genes = []
     for i in panel:
-        genes.append(Markup("<a href=\"#\" class=\"btn btn-info btn-md\"><span class=\"glyphicon glyphicon-remove\"></span> "+i["genename"]+"</a>"))
+        genes.append(Markup("<button class=\"btn btn-info btn-md\" data-id=\""+str(i["panelid"])+"\" data-name=\""+i["genename"]+"\" data-toggle=\"modal\" data-target=\"#removeGene\"><span class=\"glyphicon glyphicon-remove\"></span> "+i["genename"]+"</button>"))
     table = ItemTablePanel(panel, classes=['table', 'table-striped'])
-    return render_template('panel_detail.html', panel_detail=table, genes=" ".join(sorted(set(genes))))
+    return render_template('panel_detail.html', panel_name=panel[0]["panelname"],version=panel[0]["current_version"],panel_detail=table, genes=" ".join(sorted(set(genes))),form=form,add_form=add_form,panel_id=id)
 
+@app.route('/panels/delete/gene', methods=['POST'])
+def remove_gene():
+    form = RemoveGene()
+    if request.method == 'POST':
+        id = form.data['panelId']
+        gene = form.data['geneName']
+        print id
+        print gene
+        p.remove_gene(id,gene)
+    return panel_detail(id)
+
+@app.route('/panels/delete/add', methods=['POST'])
+def add_gene():
+    form = AddGene()
+    if request.method == 'POST':
+        id = form.data['panelId']
+        gene = form.data['geneName']
+        # print id
+        # print gene
+        # p.remove_gene(id,gene)
+    return panel_detail(id)
 
 @app.route('/users')
 def view_users():
