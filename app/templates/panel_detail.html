@@ -46,7 +46,10 @@
 
 {% block content %}
   <h2>Panel | <strong>{{ panel_name }} (v{{ version }})</strong></h2>
+
 <h3>{{ genes|safe }} <button class="btn btn-success btn-md" data-toggle="modal" data-id="{{ panel_id }}" data-target="#addGene"><span class="glyphicon glyphicon-plus"></span> Add Gene</button></h3>
 {{ panel_detail }}
+
+
 
 {% endblock %}

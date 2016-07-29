@@ -5,7 +5,7 @@ import sqlite3
 from flask import Flask, render_template, request, flash, url_for, Markup
 from forms import UserForm, ProjectForm, RemoveGene, AddGene
 from flask_bootstrap import Bootstrap
-from flask_table import Table, Col, LinkCol, ButtonCol
+from flask_table import Table, Col, LinkCol, ButtonCol, NumberCol
 
 app.secret_key = 'development key'
 
@@ -34,8 +34,8 @@ class ItemTablePanels(Table):
 class ItemTablePanel(Table):
     allow_sort = False
     chrom = Col('Chromosome')
-    start = Col('Start')
-    end = Col('End')
+    start = NumberCol('Start',valmin=False)
+    end = NumberCol('End',valmin=True)
     accession = Col('Accession')
     genename = Col('Gene')
     def sort_url(self, col_key, reverse=False):
