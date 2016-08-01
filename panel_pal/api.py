@@ -1,7 +1,7 @@
 from flask import Flask, Response, jsonify
 from flask_restful import Resource, Api,reqparse,fields, marshal
 from requests import put, get, request
-from db_commands import *
+from panel_pal.db_commands import Regions, Panels as db_panels
 import json
 import argparse
 import sqlite3
@@ -61,7 +61,7 @@ class RegionsGene(Resource):
     )
 
     def get(self,gene):
-        r = regions()
+        r = Regions()
         result = r.get_regions_by_gene(gene)
         resp = output_bed(result)
         resp.status_code = 200
@@ -70,7 +70,7 @@ class RegionsGene(Resource):
 class RegionsTx(Resource):
 
     def get(self, tx):
-        r = regions()
+        r = Regions()
         result = r.get_regions_by_tx(tx)
         return result
 
@@ -107,10 +107,17 @@ class Panels(Resource):
 
 
     def get(self,id):
-        conn_panelpal = sqlite3.connect('../panel_pal/resources/panel_pal.db')
-        conn_ref = sqlite3.connect('../panel_pal/resources/refflat.db')
-        result = get_panel(conn_panelpal,conn_ref,id)
+        db = db_panels()
+        result = db.get_panel(id)
         return result
+
+class BEDs(Resource):
+    def get(self, bed_type, panel):
+        db = db_panels()
+        result = db.export_bed(panel, bed_type)
+        resp = app.make_response(result)
+        return resp
+
 
 class Helpers():
     def convert_to_bed(self,json_data):
@@ -134,6 +141,7 @@ class Helpers():
 api.add_resource(RegionsGene, '/api/regions/gene/<string:gene>')
 api.add_resource(RegionsTx, '/api/regions/tx/<string:tx>')
 api.add_resource(Panels, '/api/regions/panel/<string:id>')
+api.add_resource(BEDs, '/api/bed/<string:bed_type>/<string:panel>')
 
 
 if __name__ == '__main__':

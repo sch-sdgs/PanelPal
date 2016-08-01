@@ -1,6 +1,6 @@
 import sqlite3
 import argparse
-from db_commands import add_project, add_user
+from db_commands import Projects, Users
 
 def create_db(conn):
     pp = conn.cursor()
@@ -19,6 +19,8 @@ def create_db(conn):
             (id INTEGER PRIMARY KEY, name VARCHAR(50), team_id INTEGER, current_version INTEGER, FOREIGN KEY(team_id) REFERENCES projects(id), UNIQUE(name));
         CREATE TABLE versions
             (id INTEGER PRIMARY KEY, intro INTEGER, last INTEGER, panel_id INTEGER, region_id INTEGER, comment VARCHAR(100), extension_3 INTEGER, extension_5 INTEGER, FOREIGN KEY(panel_id) REFERENCES panels(id));
+        CREATE TABLE pref_tx
+            (id INTEGER PRIMARY KEY, project_id INTEGER, tx_id INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id));
         CREATE TABLE users
             (id INTEGER PRIMARY KEY, username varchar(20), UNIQUE(username));
         CREATE TABLE ref_logtable
@@ -32,6 +34,9 @@ def create_db(conn):
         return False
 
 def main():
+    p=Projects()
+    u=Users()
+
     parser = argparse.ArgumentParser(description='creates db tables required for PanelPal program')
     parser.add_argument('--db', default="resources/")
     parser.add_argument('--projects', default="CTD,IEM,Haems,HeredCancer,DevDel,NGD")
@@ -50,13 +55,13 @@ def main():
     if args.projects is not None:
         projects = args.projects.split(',')
         for project in projects:
-            complete = add_project(project, conn_main)
+            complete = p.add_project(project)
             if not complete:
                 print project + " not added to database"
     if args.users is not None:
         users = args.users.split(',')
         for user in users:
-            complete = add_user(user, conn_main)
+            complete = u.add_user(user)
             if not complete:
                 print user + " not added to database"
 
