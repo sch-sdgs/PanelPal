@@ -1,8 +1,10 @@
-import sqlite3
-import argparse
 import json
+import sqlite3
+
 import os
 from pybedtools import BedTool
+
+from app import models
 
 
 class Database():
@@ -286,18 +288,19 @@ class Users(Database):
         return Database.query_db(self, c, query, args, one=False)
 
     def get_users(self):
-        pp = self.panelpal_conn.cursor()
-        users = self.query_db(pp, "SELECT * FROM users")
-        return users
+        # pp = self.panelpal_conn.cursor()
+        # users = self.query_db(pp,"SELECT * FROM users")
+        # return users
+        print models.Users.query.all()
 
-    def add_user(self,user, conn):
+    def add_user(self,user):
         pp = self.panelpal_conn.cursor()
         try:
             pp.execute("INSERT OR IGNORE INTO users(username) VALUES (?)", (user,))
-            conn.commit()
+            self.panelpal_conn.commit()
             return pp.lastrowid
-        except conn.Error as e:
-            conn.rollback()
+        except self.panelpal_conn.Error as e:
+            self.panelpal_conn.rollback()
             print e.args[0]
             return -1
 
@@ -378,3 +381,11 @@ class Regions(Database):
 
         return fully_within + x + y
 
+
+
+users= models.Users.query.all()
+print users
+for u in users:
+    print(u.id,u.username)
+    print u.id
+    print u.username
