@@ -152,17 +152,15 @@ class Panels(Database):
 
     def insert_versions(self,genes, panel_id, version):
         pp = self.panelpal_conn.cursor()
-        rf = self.refflat_conn.cursor()
         current_regions = []
         results = self.query_db(pp, "SELECT region_id FROM versions WHERE panel_id=?;", (panel_id,))
-        pp.close()
         if len(results) > 0:
             for result in results:
                 current_regions.append(result.get('region_id'))
         current_regions = set(current_regions)
 
         for gene in genes:
-            regions = self.query_db(rf,
+            regions = self.query_db(pp,
                                "select distinct regions.id from genes join tx on genes.id=tx.gene_id join exons on tx.id=exons.tx_id join regions on exons.region_id=regions.id where name=? order by start",
                                (gene,))
             for region in regions:
@@ -170,8 +168,6 @@ class Panels(Database):
                     self.add_to_version(panel_id, region.get('id'), version, None, None)
 
     def import_bed(self,project, panel, gene_file):
-
-        rf = self.refflat_conn.cursor()
 
         f = open(gene_file, 'r')
         genes = [line.strip('\n') for line in f.readlines()]
@@ -199,7 +195,6 @@ class Panels(Database):
         tx_list = [line.strip('\n') for line in f.readlines()]
 
         pp = self.panelpal_conn.cursor()
-        rf = self.refflat_conn.cursor()
         project_id = self.query_db(pp, 'SELECT id fROM projects WHERE name = ?', (project,))[0].get('id')
 
         for tx in tx_list:
@@ -207,7 +202,7 @@ class Panels(Database):
                 acc = tx.split('\t')[1].split('.')[
                     0]  # splits gene name from transcript and removes version from accession
                 try:
-                    tx_id = self.query_db(rf, 'SELECT id FROM tx WHERE accession = ?', (acc,))[0].get('id')
+                    tx_id = self.query_db(pp, 'SELECT id FROM tx WHERE accession = ?', (acc,))[0].get('id')
                     pp.execute('INSERT INTO pref_tx (project_id, tx_id) VALUES (?,?)', (project_id, tx_id))
                 except IndexError:
                     print acc + ' not in refflat database'
@@ -215,41 +210,72 @@ class Panels(Database):
     def export_bed(self, panel, bed_type):
         pp = self.panelpal_conn.cursor()
 
-        panel_info = self.query_db(pp, 'SELECT id, current_version FROM panels WHERE name = ?', (panel,))[0]
+        panel_info = self.query_db(pp, 'SELECT id, team_id, current_version FROM panels WHERE name = ?', (panel,))[0]
         panel_id = panel_info.get('id')
         panel_v = panel_info.get('current_version')
+        project_id = panel_info.get('team_id')
 
         regions = self.query_db(pp,
-                              '''SELECT rf.regions.chrom, rf.regions.start, rf.regions.end,
-                                        rf.exons.number, versions.extension_3, versions.extension_5,
-                                        rf.genes.name, rf.tx.accession
+                              '''SELECT versions.region_id, regions.chrom,
+                                    CASE WHEN versions.extension_5 ISNULL THEN regions.start ELSE regions.start - versions.extension_5 END as start,
+                                    CASE WHEN versions.extension_3 ISNULL THEN regions.end ELSE regions.end + versions.extension_3 END as end, tx.accession,
+                                    "ex" || exons.number || "_" || genes.name || "_" || tx.accession  as identifier
                                     FROM versions
                                     JOIN panels ON panels.id = versions.panel_id
-                                    JOIN projects ON projects.id = panels.team_id
-                                    JOIN pref_tx ON pref_tx.project_id = projects.id
-                                    JOIN rf.regions ON rf.regions.id = versions.region_id
-                                    JOIN rf.exons ON rf.exons.region_id = rf.regions.id
-                                    JOIN rf.tx ON rf.tx.id = rf.exons.tx_id
-                                    JOIN rf.genes ON rf.genes.id = rf.tx.gene_id
-                                    WHERE versions.panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL) AND rf.tx.id = pref_tx.tx_id''',
-                              (panel_id, panel_v, panel_v))
+                                    JOIN regions ON regions.id = versions.region_id
+                                    JOIN exons ON exons.region_id = regions.id
+                                    JOIN tx ON exons.tx_id = tx.id
+                                    JOIN genes ON tx.gene_id = genes.id
+                                    WHERE versions.panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)''',
+                               (panel_id, panel_v, panel_v))
+
+        formatted_result = {}
+
+        for region in regions:
+            region_start = region.get('start')
+            region_end = region.get('end')
+            out = [region.get('chrom'), region_start, region_end, region.get('identifier')]
+            line = "\t".join(str(x) for x in out)
+
+            if region_start not in formatted_result:
+                formatted_result[region_start] = {}
+            if region_end not in formatted_result[region_start]:
+                formatted_result[region_start][region_end] = {}
+            if "accession" not in formatted_result[region_start][region_end]:
+                formatted_result[region_start][region_end]["accession"] = []
+
+            accession = {'name':region.get('accession'), 'line':line}
+            formatted_result[region_start][region_end]["accession"].append(accession)
+
+
+        main_tx_result = self.query_db(pp, '''SELECT tx.accession
+                                            FROM pref_tx
+                                            JOIN tx ON tx.id = pref_tx.tx_id
+                                            WHERE pref_tx.project_id = ?''', (project_id,))
+
+        master_accessions = []
+        for tx in main_tx_result:
+            master_accessions.append(tx.get('accession'))
 
         lines = []
-        for region in regions:
-            print region
-            if region.get('extension_3') is None:
-                start = region.get('start')
-            else:
-                start = region.get('start') - region.get('extension_3')
 
-            if region.get('extension_5') is None:
-                end = region.get('end')
-            else:
-                end = region.get('end') + region.get('extension_5')
+        for start in formatted_result:
+            for end in formatted_result[start]:
+                accessions = formatted_result[start][end]['accession']
+                if len(accessions) > 1:
+                    for acc in accessions:
+                        name = acc["name"]
+                        line = acc["line"]
+                        if name in master_accessions:
+                            lines.append(line)
+                elif len(accessions) == 1:
+                    acc = accessions[0]
+                    lines.append(acc["line"])
+        sorted_lines = sorted(lines)
 
-            line = [region.get('chrom'), start, end, "ex"+str(region.get('number'))+"_"+region.get('name')+"_"+region.get('accession')]
-            lines.append("\t".join(str(x) for x in line))
-        return "\n".join(lines)
+        bed_checked = self.check_bed("\n".join(sorted_lines))
+
+        return "\n".join(sorted_lines)
 
 
     def get_panel_by_project(self,project):
@@ -383,9 +409,14 @@ class Regions(Database):
 
 
 
-users= models.Users.query.all()
-print users
-for u in users:
-    print(u.id,u.username)
-    print u.id
-    print u.username
+#users= models.Users.query.all()
+#print users
+#for u in users:
+#    print(u.id,u.username)
+#    print u.id
+#    print u.username
+
+#p = Panels()
+
+#bed = p.check_bed('/home/bioinfo/Natalie/wc/genes/test.bed')
+#print bed

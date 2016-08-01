@@ -54,7 +54,7 @@ def main():
     parser.add_argument('--refflat',default="/results/Pipeline/reference/UCSCRefSeqTable_refflat_format.txt")
     args = parser.parse_args()
 
-    conn = sqlite3.connect('resources/refflat.db')
+    conn = sqlite3.connect('resources/panel_pal.db')
     c = conn.cursor()
 
     create_tables(c)

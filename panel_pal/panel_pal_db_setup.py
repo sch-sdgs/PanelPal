@@ -1,6 +1,7 @@
 import sqlite3
 import argparse
 from db_commands import Projects, Users
+import parse_refflat_into_db
 
 def create_db(conn):
     pp = conn.cursor()
@@ -18,9 +19,9 @@ def create_db(conn):
         CREATE TABLE panels
             (id INTEGER PRIMARY KEY, name VARCHAR(50), team_id INTEGER, current_version INTEGER, FOREIGN KEY(team_id) REFERENCES projects(id), UNIQUE(name));
         CREATE TABLE versions
-            (id INTEGER PRIMARY KEY, intro INTEGER, last INTEGER, panel_id INTEGER, region_id INTEGER, comment VARCHAR(100), extension_3 INTEGER, extension_5 INTEGER, FOREIGN KEY(panel_id) REFERENCES panels(id));
+            (id INTEGER PRIMARY KEY, intro INTEGER, last INTEGER, panel_id INTEGER, region_id INTEGER, comment VARCHAR(100), extension_3 INTEGER, extension_5 INTEGER, FOREIGN KEY(panel_id) REFERENCES panels(id), FOREIGN KEY(region_id) REFERENCES regions(id));
         CREATE TABLE pref_tx
-            (id INTEGER PRIMARY KEY, project_id INTEGER, tx_id INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id));
+            (id INTEGER PRIMARY KEY, project_id INTEGER, tx_id INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id), FOREIGN KEY(tx_id) REFERENCES tx(id));
         CREATE TABLE users
             (id INTEGER PRIMARY KEY, username varchar(20), UNIQUE(username));
         CREATE TABLE ref_logtable
@@ -47,6 +48,7 @@ def main():
 
     conn_main = sqlite3.connect(db)
 
+    parse_refflat_into_db.main()
     complete = create_db(conn_main)
 
     if not complete:
