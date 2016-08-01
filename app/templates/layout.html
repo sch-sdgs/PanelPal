@@ -1,7 +1,218 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html>
   <head>
     <title>Panel Pal</title>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+  <script src="/static/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+$(document).ready(function() {
+
+  $('a[data-toggle=modal], button[data-toggle=modal]').click(function () {
+
+    var data_id = '';
+    var data_name = '';
+
+
+    if (typeof $(this).data('id') !== 'undefined') {
+
+      data_id = $(this).data('id');
+    }
+
+    if (typeof $(this).data('name') !== 'undefined') {
+
+      data_name = $(this).data('name');
+    }
+
+    $('#geneName').val(data_name);
+    $('#panelId').val(data_id);
+
+  })
+});
+
+    </script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+//original http://bootsnipp.com/snippets/featured/buttons-minus-and-plus-in-input
+(function( $ ){
+  $.fn.bootnumberspiner = function(options) {
+  	var spinners = $(this);
+
+    $(spinners).each(function (key,spinner) {
+        var $spinner = $(spinner);
+        spinner.settings = $.extend({
+	    	width:"200px",
+      		value:0,
+            id:key,
+      		min_value:$spinner.attr('data-valuemin'),
+      		max_value:$spinner.attr('data-valuemax'),
+      		name:"quint",
+      		minus_icon:"glyphicon glyphicon-minus",
+      		plus_icon:"glyphicon glyphicon-plus",
+          	onChange:function(){},
+          	onCreate:function(){}
+	    }, options);
+
+
+
+        spinner.settings.value = $spinner.attr('data-value') || spinner.settings.value;
+        spinner.settings.id = $spinner.attr('data-id') || spinner.settings.id;
+      	spinner.settings.name = $spinner.attr('data-name') || spinner.settings.name;
+
+      	$spinner.css("width",spinner.settings.width);
+    	$spinner.html(get_content(spinner));
+
+        bind_click($spinner,spinner);
+        focusin($spinner,spinner);
+        change($spinner,spinner);
+        spinner.settings.onCreate(spinner);
+
+    });
+
+
+
+
+    function change($spinner,spinner){
+        var input_number = $spinner.find('.input-number');
+
+        $(input_number).change(function() {
+
+          minValue =  parseInt($(this).attr('min'));
+          maxValue =  parseInt($(this).attr('max'));
+          valueCurrent = parseInt($(this).val());
+
+          name = $(this).attr('name');
+          if(valueCurrent >= minValue) {
+              $spinner.find(".btn-number[data-type='minus'][data-field='"+name+"']").removeAttr('disabled')
+          } else {
+              alert('Sorry, the minimum value was reached');
+              $(this).val($(this).data('oldValue') || minValue);
+          }
+          if(valueCurrent <= maxValue) {
+              $spinner.find(".btn-number[data-type='plus'][data-field='"+name+"']").removeAttr('disabled')
+          } else {
+              alert('Sorry, the maximum value was reached');
+            $(this).val($(this).data('oldValue') || maxValue);
+          }
+
+          spinner.settings.onChange(valueCurrent,spinner);
+    	});
+    }
+
+    function focusin($spinner,spinner){
+        var input_number = $spinner.find('.input-number');
+
+    	$(input_number).focusin(function(){
+         	$(this).data('oldValue', $(this).val());
+      	});
+    }
+
+    function mausePress(){
+
+    }
+
+
+
+    function bind_click($spinner,spinner){
+      var btn_number = $spinner.find('.btn-number');
+
+         $(btn_number).click(function(e){
+          e.preventDefault();
+
+          fieldName = $(this).attr('data-field');
+          type      = $(this).attr('data-type');
+          var input = $spinner.find("input[name='"+fieldName+"']");
+          var currentVal = parseInt(input.val());
+
+          if (!isNaN(currentVal)) {
+              if(type == 'minus') {
+
+                  if(currentVal > input.attr('min')) {
+                      input.val(currentVal - 1).change();
+                  }
+                  if(parseInt(input.val()) == input.attr('min')) {
+                      $(this).attr('disabled', true);
+                  }
+
+              } else if(type == 'plus') {
+
+                  if(currentVal < input.attr('max')) {
+                      input.val(currentVal + 1).change();
+                  }
+                  if(parseInt(input.val()) == input.attr('max')) {
+                      $(this).attr('disabled', true);
+                  }
+
+              }
+          } else {
+              input.val(0);
+          }
+      });
+    }
+
+
+
+    function get_content(spinner){
+	    var content = "",
+            value = spinner.settings.value, //disabled="disabled";
+            minDisabled,
+            maxDisabled,
+            disabled = 'disabled="disabled"';
+
+        if(spinner.settings.min_value > spinner.settings.value  )
+        {
+          value = spinner.settings.min_value;
+        }else if(spinner.settings.max_value < spinner.settings.value){
+      	  value = spinner.settings.max_value;
+        }
+
+        minDisabled = value <= spinner.settings.min_value  ? disabled  : '';
+        maxDisabled = value >= spinner.settings.max_value  ? disabled  : '';
+
+
+
+		content += '<div class="input-group">';
+		content += '<span class="input-group-btn">';
+		content += '<button type="button" class="btn btn-default btn-number" data-type="minus" data-field="'+spinner.settings.name+'['+spinner.settings.id+']" '+minDisabled+'>';
+		content += '<span class="'+spinner.settings.minus_icon+'"></span>';
+		content += '</button>';
+		content += '</span>';
+		content += '<input type="text" name="'+spinner.settings.name+'['+spinner.settings.id+']" class="form-control input-number" value="'+value+'" min="'+spinner.settings.min_value+'" max="'+spinner.settings.max_value+'">';
+		content += '<span class="input-group-btn">';
+		content += '<button type="button" class="btn btn-default btn-number" data-type="plus" data-field="'+spinner.settings.name+'['+spinner.settings.id+']" '+maxDisabled+'>';
+		content += '<span class="'+spinner.settings.plus_icon+'"></span>';
+		content += '</button>';
+		content += '</span>';
+		content += '</div>';
+
+	    return 	content;
+    }
+  }
+
+})( jQuery );
+
+
+$('.min').bootnumberspiner({
+                            onChange:function(valueCurrent,spinner){
+                              //console.log(valueCurrent);
+                              //console.log(spinner);
+                            },
+  							onCreate:function(spinner){
+                              //console.log(spinner.settings.value);
+                            }
+						  });
+        $('.max').bootnumberspiner({
+                            onChange:function(valueCurrent,spinner){
+                              //console.log(valueCurrent);
+                              //console.log(spinner);
+                            },
+  							onCreate:function(spinner){
+                              //console.log(spinner.settings.value);
+                            }
+						  });});
+
+    </script>
   </head>
 
   <link rel="stylesheet" href="/static/css/bootstrap.min.css">
@@ -63,6 +274,9 @@
     </div>
   </nav>
 
+    {% block popup %}
+    {% endblock %}
+
 <div class="container theme-showcase" role="main">
     <div class="container">
       {% block content %}
@@ -73,8 +287,5 @@
 
 
 
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-  <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
-  <script src="/static/js/bootstrap.min.js"></script>
   </body>
 </html>

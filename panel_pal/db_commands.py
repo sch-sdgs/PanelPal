@@ -121,7 +121,7 @@ class Panels(Database):
         panel_v = panel_info[0].get('current_version')
 
         panel = self.query_db(pp,
-                              'SELECT rf.genes.name as genename, rf.regions.chrom, rf.regions.start, rf.regions.end, versions.extension_3, versions.extension_5, rf.tx.accession FROM versions join regions on rf.regions.id=versions.region_id join rf.exons on rf.regions.id=rf.exons.region_id join rf.tx on rf.exons.tx_id = rf.tx.id join rf.genes on rf.tx.gene_id = rf.genes.id  WHERE panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)',
+                              'SELECT panels.id as panelid, panels.current_version, panels.name as panelname, versions.intro,versions.last,versions.region_id, versions.id, rf.genes.name as genename, rf.regions.chrom, rf.regions.start, rf.regions.end, versions.extension_3, versions.extension_5, rf.tx.accession FROM versions join regions on rf.regions.id=versions.region_id join rf.exons on rf.regions.id=rf.exons.region_id join rf.tx on rf.exons.tx_id = rf.tx.id join rf.genes on rf.tx.gene_id = rf.genes.id join panels on versions.panel_id = panels.id  WHERE panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)',
                               (panel_id, panel_v, panel_v))
         return panel
 
@@ -250,7 +250,7 @@ class Panels(Database):
         return "\n".join(lines)
 
 
-    def get_panel_by_project(project):
+    def get_panel_by_project(self,project):
         pass
 
     def check_bed(self, bed_file):
@@ -263,6 +263,23 @@ class Panels(Database):
 
         except Exception as exception:
             print ("ERROR: " + str(exception))
+
+    def remove_gene(self,panel_id,gene):
+        pp = self.panelpal_conn.cursor()
+        panel = self.get_panel(int(panel_id))
+        ids=[]
+        current_version=0
+        for i in panel:
+            if i["genename"] == gene:
+                id = i["id"]
+                intro = i["intro"]
+                current_version = i["current_version"]
+                pp.execute('UPDATE versions SET last = ? WHERE id = ?',(current_version,id,))
+                ids.append(id)
+        new_version = current_version+1
+        pp.execute('UPDATE panels SET current_version = ? WHERE id = ?',(new_version,panel_id,))
+        self.panelpal_conn.commit()
+
 
 class Users(Database):
     def query_db(self, c, query, args=(), one=False):
