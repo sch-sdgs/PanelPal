@@ -218,20 +218,23 @@ class Panels(Database):
         panel_v = panel_info.get('current_version')
 
         regions = self.query_db(pp,
-                              '''SELECT rf.regions.chrom, rf.regions.start, rf.regions.end, rf.exons.number, versions.extension_3, versions.extension_5, rf.genes.name, rf.tx.accession
+                              '''SELECT rf.regions.chrom, rf.regions.start, rf.regions.end,
+                                        rf.exons.number, versions.extension_3, versions.extension_5,
+                                        rf.genes.name, rf.tx.accession
                                     FROM versions
-                                    join regions on rf.regions.id=versions.region_id
-                                    join exons on rf.exons.region_id = rf.regions.id
-                                    join panels on versions.panel_id=panels.id
-                                    join projects on panels.team_id = projects.id
-                                    join pref_tx on panels.id=pref_tx.project_id
-                                    join rf.tx on rf.tx.id=pref_tx.tx_id
-                                    join rf.genes on rf.tx.gene_id = rf.genes.id
-                                    WHERE panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)''',
+                                    JOIN panels ON panels.id = versions.panel_id
+                                    JOIN projects ON projects.id = panels.team_id
+                                    JOIN pref_tx ON pref_tx.project_id = projects.id
+                                    JOIN rf.regions ON rf.regions.id = versions.region_id
+                                    JOIN rf.exons ON rf.exons.region_id = rf.regions.id
+                                    JOIN rf.tx ON rf.tx.id = rf.exons.tx_id
+                                    JOIN rf.genes ON rf.genes.id = rf.tx.gene_id
+                                    WHERE versions.panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL) AND rf.tx.id = pref_tx.tx_id''',
                               (panel_id, panel_v, panel_v))
 
         lines = []
         for region in regions:
+            print region
             if region.get('extension_3') is None:
                 start = region.get('start')
             else:
@@ -358,13 +361,3 @@ class Regions(Database):
 
         return fully_within + x + y
 
-#p = Panels()
-
-#p.import_pref_transcripts('NGD', '/results/Analysis/MiSeq/MasterTranscripts/NGD_preferred_transcripts.txt')
-#p.import_pref_transcripts('CTD', '/results/Analysis/MiSeq/MasterTranscripts/CTD_preferred_transcripts.txt')
-#p.import_pref_transcripts('IEM', '/results/Analysis/MiSeq/MasterTranscripts/IEM_preferred_transcripts.txt')
-#p.import_pref_transcripts('Haems', '/results/Analysis/MiSeq/MasterTranscripts/Haems_preferred_transcripts.txt')
-#p.import_pref_transcripts('HeredCancer', '/results/Analysis/MiSeq/MasterTranscripts/HeredCancer_preferred_transcripts.txt')
-#p.import_bed('NGD', 'HSPRecessive', '/home/bioinfo/Natalie/wc/genes/NGD_HSPrecessive_v1.txt')
-#bed = p.export_bed('HSPRecessive')
-#print bed
