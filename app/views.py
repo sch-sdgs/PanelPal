@@ -1,11 +1,9 @@
-from app import app
-from models import *
-from panel_pal.db_commands import *
-import sqlite3
-from flask import Flask, render_template, request, flash, url_for, Markup
+from flask import render_template, request, flash, url_for, Markup
+from flask_table import Table, Col, LinkCol
+
+from app import app, db, models
 from forms import UserForm, ProjectForm, RemoveGene, AddGene
-from flask_bootstrap import Bootstrap
-from flask_table import Table, Col, LinkCol, ButtonCol, NumberCol
+from panel_pal.db_commands import *
 
 app.secret_key = 'development key'
 
@@ -13,6 +11,35 @@ d = Database()
 p = Panels()
 u = Users()
 pro = Projects()
+
+class NumberCol(Col):
+
+    def __init__(self, name, valmin=False, attr=None, attr_list=None, **kwargs):
+
+        self.valmin=valmin
+        super(NumberCol, self).__init__(
+            name,
+            attr=attr,
+            attr_list=attr_list,
+            **kwargs)
+
+
+    def td(self, item, attr):
+        return '<td>{}</td>'.format(
+            self.td_contents(item, self.get_attr_list(attr)))
+
+    def td_contents(self, item, attr_list):
+        if self.valmin:
+            valmin = self.from_attr_list(item, attr_list)
+            valmax = int(self.from_attr_list(item, attr_list)) + 10000000
+            name = "min"
+        else:
+            valmin = 0
+            valmax = self.from_attr_list(item, attr_list)
+            name = "max"
+        return '<div class="{name}" data-name="quantity" data-value="{number}" data-valuemin="{valmin}" data-valuemax="{valmax}" data-id="80"></div>'.format(
+            name=name,number=self.from_attr_list(item, attr_list),valmax=valmax,valmin=valmin)
+
 
 class ItemTable(Table):
     username = Col('Username')
@@ -44,6 +71,13 @@ class ItemTablePanel(Table):
         else:
             direction = 'asc'
         return url_for('panel_detail', sort=col_key, direction=direction)
+
+def row2dict(row):
+    d = {}
+    for column in row.__table__.columns:
+        d[column.name] = str(getattr(row, column.name))
+
+    return d
 
 @app.route('/')
 def index():
@@ -103,11 +137,13 @@ def add_gene():
 
 @app.route('/users')
 def view_users():
-    users = u.get_users()
+    users = models.Users.query.all()
+    result = []
     for i in users:
-        id = i["id"]
-        i["table"] = "users"
-    table = ItemTable(users,classes=['table', 'table-striped'])
+        row = row2dict(i)
+        row["table"] = "users"
+        result.append(row)
+    table = ItemTable(result,classes=['table', 'table-striped'])
     return render_template('users.html',users=table,)
 
 @app.route('/users/add', methods=['GET', 'POST'])
@@ -118,7 +154,9 @@ def add_users():
             flash('All fields are required.')
             return render_template('users_add.html', form=form)
         else:
-            id = u.add_user(form.data["name"])
+            u = models.Users(username=form.data["name"])
+            db.session.add(u)
+            db.session.commit()
             return view_users()
 
     elif request.method == 'GET':
