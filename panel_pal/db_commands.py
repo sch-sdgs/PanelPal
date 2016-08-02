@@ -273,6 +273,7 @@ class Panels(Database):
                 id = i["id"]
                 intro = i["intro"]
                 current_version = i["current_version"]
+                print id
                 pp.execute('UPDATE versions SET last = ? WHERE id = ?',(current_version,id,))
                 ids.append(id)
         new_version = current_version+1
@@ -379,10 +380,3 @@ class Regions(Database):
         return fully_within + x + y
 
 
-
-users= models.Users.query.all()
-print users
-for u in users:
-    print(u.id,u.username)
-    print u.id
-    print u.username

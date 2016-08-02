@@ -11,8 +11,8 @@
                     <div class="form-group">
                     {{ add_form.geneNameAdd.label }}
                     {{ add_form.geneNameAdd(class_="form-control") }}
-                        {{ add_form.panelId.label }}
-                    {{ add_form.panelId(class_="form-control",readonly="readonly") }}
+                        {{ add_form.panelIdAdd.label }}
+                    {{ add_form.panelIdAdd(class_="form-control",readonly="readonly") }}
                     </div>
                     {{ add_form.submit(class_="btn btn-primary") }}
                   </form>
@@ -45,11 +45,25 @@
 {% endblock %}
 
 {% block content %}
-  <h2>Panel | <strong>{{ panel_name }} (v{{ version }})</strong></h2>
+<div>
+<div align="right">
+    <br>
+<form action="{{ url_for('edit_panel') }}" method="POST">
+<button type="submit" class="btn btn-warning"><span class="glyphicon glyphicon-floppy-disk"></span> Save</button>
+    <button type="button" class="btn btn-default"> <span class="glyphicon glyphicon-download-alt"></span> Download Current .BED</button>
+<button type="button" class="btn btn-default"><span class="glyphicon glyphicon-trash"></span> Exit</button>
+    </div>
+    <hr>
+<h2>Panel | <strong>{{ panel_name }} (v{{ version }})</strong></h2>
+    <hr>
+    <h4>Genes in Panel</h4>
+    <p>Click a gene to remove or click "Add Gene" to add a new gene, click "Save" to preserve changes</p>
+<h3>{{ genes|safe }} <button type="button" class="btn btn-success btn-md" data-toggle="modal" data-id="" data-target="#addGene"><span class="glyphicon glyphicon-plus"></span> Add Gene</button></h3>
+<hr>
+    <h4>Regions in Panel</h4>
+    <p>Adjust regions in the panel, click save to preserve changes</p>
+  {{ panel_detail }}
 
-<h3>{{ genes|safe }} <button class="btn btn-success btn-md" data-toggle="modal" data-id="{{ panel_id }}" data-target="#addGene"><span class="glyphicon glyphicon-plus"></span> Add Gene</button></h3>
-{{ panel_detail }}
-
-
-
+</form>
+</div>
 {% endblock %}

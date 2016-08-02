@@ -18,5 +18,5 @@ class RemoveGene(Form):
 
 class AddGene(Form):
     geneNameAdd = TextField("Gene Name")
-    panelId = TextField("Panel ID")
+    panelIdAdd = TextField("Panel ID")
     submit = SubmitField("Add Gene")
