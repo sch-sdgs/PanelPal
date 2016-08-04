@@ -6,3 +6,4 @@ flask_bootstrap
 flask-wtf
 flask-table
 flask-restful-swagger
+flask.ext.sqlalchemy

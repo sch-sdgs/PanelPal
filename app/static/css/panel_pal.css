@@ -11,6 +11,35 @@ body {
   color: #ffffff;
 }
 
-.btn{
+.btngene{
   margin-bottom: 5px;
 }
+
+.hide
+{
+    display:none;
+}
+
+
+h3
+{
+  display: inline;
+}
+
+.test{
+  display: inline-block;
+}
+
+
+.label
+{
+  margin-right:5px;
+}
+
+.panel{
+  margin-top: 10px;
+}
+.addhere{
+  white-space:normal;
+}
+

@@ -1,291 +1,165 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
-  <head>
+<head>
     <title>Panel Pal</title>
 
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-  <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
-  <script src="/static/js/bootstrap.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+    <script src="/static/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.0/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.0/jquery-ui.js"></script>
     <script type="text/javascript">
-$(document).ready(function() {
+        $(document).ready(function () {
+            var unsaved = false;
+            $(":input").change(function () { //trigers change in all input fields including text type
+                unsaved = true;
+            });
+            $('#mySubmitButton').click(function () {
+                unsaved = false;
+            });
+            $('#myDeleteButton').click(function () {
+                unsaved = false;
+            });
 
-  $('a[data-toggle=modal], button[data-toggle=modal]').click(function () {
+            function unloadPage() {
+                if (unsaved) {
+                    return "You have unsaved changes on this page. Do you want to leave this page and discard your changes or stay on this page?";
+                }
+            }
 
-    var data_id = '';
-    var data_name = '';
-
-
-    if (typeof $(this).data('id') !== 'undefined') {
-
-      data_id = $(this).data('id');
-    }
-
-    if (typeof $(this).data('name') !== 'undefined') {
-
-      data_name = $(this).data('name');
-    }
-
-    $('#geneName').val(data_name);
-    $('#panelId').val(data_id);
-
-  })
-});
-
+            window.onbeforeunload = unloadPage;
+        });
     </script>
-    <script type="text/javascript">
-      $(document).ready(function() {
-//original http://bootsnipp.com/snippets/featured/buttons-minus-and-plus-in-input
-(function( $ ){
-  $.fn.bootnumberspiner = function(options) {
-  	var spinners = $(this);
+    <script>
 
-    $(spinners).each(function (key,spinner) {
-        var $spinner = $(spinner);
-        spinner.settings = $.extend({
-	    	width:"200px",
-      		value:0,
-            id:key,
-      		min_value:$spinner.attr('data-valuemin'),
-      		max_value:$spinner.attr('data-valuemax'),
-      		name:"quint",
-      		minus_icon:"glyphicon glyphicon-minus",
-      		plus_icon:"glyphicon glyphicon-plus",
-          	onChange:function(){},
-          	onCreate:function(){}
-	    }, options);
+        $(document).ready(function () {
 
 
 
-        spinner.settings.value = $spinner.attr('data-value') || spinner.settings.value;
-        spinner.settings.id = $spinner.attr('data-id') || spinner.settings.id;
-      	spinner.settings.name = $spinner.attr('data-name') || spinner.settings.name;
+            $("#genelabels").hide();
+            // If JS enabled, disable main input
+            $("#listgenes").prop('disabled', true);
+            // $("#responsibilities").addClass("hidden");
 
-      	$spinner.css("width",spinner.settings.width);
-    	$spinner.html(get_content(spinner));
+            // If JS enabled then add fields
+            //$("#resp").append('<input type="button" class="btn btn-primary" value="Add" id="add"> ');
 
-        bind_click($spinner,spinner);
-        focusin($spinner,spinner);
-        change($spinner,spinner);
-        spinner.settings.onCreate(spinner);
+            // Add items to input field
+            var eachline = '';
+            $("#add").click(function () {
 
-    });
+                          $("#genelabels").show();
+                var lines = $('#genes').val().split('\n');
+                var lines2 = $('#listgenes').val().split('\n');
 
+                for (var i = 0; i < lines.length; i++) {
+                    if (lines[i] != '' && i + lines2.length < 11) {
+                        eachline += lines[i] + '\n';
+                    }
+                }
 
+                $('#listgenes').text($("<div>" + eachline + "</div>").text())
 
-
-    function change($spinner,spinner){
-        var input_number = $spinner.find('.input-number');
-
-        $(input_number).change(function() {
-
-          minValue =  parseInt($(this).attr('min'));
-          maxValue =  parseInt($(this).attr('max'));
-          valueCurrent = parseInt($(this).val());
-
-          name = $(this).attr('name');
-          if(valueCurrent >= minValue) {
-              $spinner.find(".btn-number[data-type='minus'][data-field='"+name+"']").removeAttr('disabled')
-          } else {
-              alert('Sorry, the minimum value was reached');
-              $(this).val($(this).data('oldValue') || minValue);
-          }
-          if(valueCurrent <= maxValue) {
-              $spinner.find(".btn-number[data-type='plus'][data-field='"+name+"']").removeAttr('disabled')
-          } else {
-              alert('Sorry, the maximum value was reached');
-            $(this).val($(this).data('oldValue') || maxValue);
-          }
-
-          spinner.settings.onChange(valueCurrent,spinner);
-    	});
-    }
-
-    function focusin($spinner,spinner){
-        var input_number = $spinner.find('.input-number');
-
-    	$(input_number).focusin(function(){
-         	$(this).data('oldValue', $(this).val());
-      	});
-    }
-
-    function mausePress(){
-
-    }
+                $("<h3><span class='label label-warning test'>"+lines+"</span></h3>").appendTo('#addhere');
+                //$("<strong>"+lines+" </strong>").appendTo('#addhere');
 
 
-
-    function bind_click($spinner,spinner){
-      var btn_number = $spinner.find('.btn-number');
-
-         $(btn_number).click(function(e){
-          e.preventDefault();
-
-          fieldName = $(this).attr('data-field');
-          type      = $(this).attr('data-type');
-          var input = $spinner.find("input[name='"+fieldName+"']");
-          var currentVal = parseInt(input.val());
-
-          if (!isNaN(currentVal)) {
-              if(type == 'minus') {
-
-                  if(currentVal > input.attr('min')) {
-                      input.val(currentVal - 1).change();
-                  }
-                  if(parseInt(input.val()) == input.attr('min')) {
-                      $(this).attr('disabled', true);
-                  }
-
-              } else if(type == 'plus') {
-
-                  if(currentVal < input.attr('max')) {
-                      input.val(currentVal + 1).change();
-                  }
-                  if(parseInt(input.val()) == input.attr('max')) {
-                      $(this).attr('disabled', true);
-                  }
-
-              }
-          } else {
-              input.val(0);
-          }
-      });
-    }
-
-
-
-    function get_content(spinner){
-	    var content = "",
-            value = spinner.settings.value, //disabled="disabled";
-            minDisabled,
-            maxDisabled,
-            disabled = 'disabled="disabled"';
-
-        if(spinner.settings.min_value > spinner.settings.value  )
-        {
-          value = spinner.settings.min_value;
-        }else if(spinner.settings.max_value < spinner.settings.value){
-      	  value = spinner.settings.max_value;
-        }
-
-        minDisabled = value <= spinner.settings.min_value  ? disabled  : '';
-        maxDisabled = value >= spinner.settings.max_value  ? disabled  : '';
-
-
-
-		content += '<div class="input-group">';
-		content += '<span class="input-group-btn">';
-		content += '<button type="button" class="btn btn-default btn-number" data-type="minus" data-field="'+spinner.settings.name+'['+spinner.settings.id+']" '+minDisabled+'>';
-		content += '<span class="'+spinner.settings.minus_icon+'"></span>';
-		content += '</button>';
-		content += '</span>';
-		content += '<input type="text" name="'+spinner.settings.name+'['+spinner.settings.id+']" class="form-control input-number" value="'+value+'" min="'+spinner.settings.min_value+'" max="'+spinner.settings.max_value+'">';
-		content += '<span class="input-group-btn">';
-		content += '<button type="button" class="btn btn-default btn-number" data-type="plus" data-field="'+spinner.settings.name+'['+spinner.settings.id+']" '+maxDisabled+'>';
-		content += '<span class="'+spinner.settings.plus_icon+'"></span>';
-		content += '</button>';
-		content += '</span>';
-		content += '</div>';
-
-	    return 	content;
-    }
-  }
-
-})( jQuery );
-
-
-$('.min').bootnumberspiner({
-                            onChange:function(valueCurrent,spinner){
-                              //console.log(valueCurrent);
-                              //console.log(spinner);
-                            },
-  							onCreate:function(spinner){
-                              //console.log(spinner.settings.value);
-                            }
-						  });
-        $('.max').bootnumberspiner({
-                            onChange:function(valueCurrent,spinner){
-                              //console.log(valueCurrent);
-                              //console.log(spinner);
-                            },
-  							onCreate:function(spinner){
-                              //console.log(spinner.settings.value);
-                            }
-						  });});
-
+                $('#genes').val('');
+            });
+        });
     </script>
-  </head>
+    <script>
+        $(function () {
+            $("#genes").autocomplete({
+                source: function (request, response) {
+                    $.getJSON("{{url_for('autocomplete')}}", {
+                        q: request.term, // in flask, "q" will be the argument to look for using request.args
+                    }, function (data) {
+                        response(data.matching_results); // matching_results from jsonify
+                    });
+                },
+                minLength: 2,
+                select: function (event, ui) {
+                    console.log(ui.item.value); // not in your question, but might help later
+                }
+            });
+        })
+    </script>
+</head>
 
-  <link rel="stylesheet" href="/static/css/bootstrap.min.css">
-  <link rel="stylesheet" href="/static/css/bootstrap-theme.min.css">
-  <link rel="stylesheet" href="/static/css/panel_pal.css">
+<link rel="stylesheet" href="/static/css/bootstrap.min.css">
+<link rel="stylesheet" href="/static/css/bootstrap-theme.min.css">
+<link rel="stylesheet" href="/static/css/panel_pal.css">
 
-  <body>
+<body>
 
-    <nav class="navbar navbar-default navbar-fixed-top">
+<nav class="navbar navbar-default navbar-fixed-top">
     <div class="container">
-      <div class="navbar-header">
-        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-          <span class="sr-only">Toggle navigation</span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-        </button>
-        <a class="navbar-brand" href="{{ url_for('index') }}"><span class="glyphicon glyphicon-list-alt"></span> Panel Pal</a>
-      </div>
-      <div id="navbar" class="collapse navbar-collapse">
-        <ul class="nav navbar-nav">
-          <li><a href="{{ url_for('index') }}">Home</a></li>
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="{{ url_for('index') }}"><span class="glyphicon glyphicon-list-alt"></span>
+                Panel Pal</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+            <ul class="nav navbar-nav">
+                <li><a href="{{ url_for('index') }}">Home</a></li>
 
-          <li class="dropdown">
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Projects <span class="caret"></span></a>
-              <ul class="dropdown-menu">
-                <li><a href="{{ url_for('view_projects') }}">View Projects</a>
-                <li role="separator" class="divider"></li>
-                <li><a href="{{ url_for('add_projects') }}">Add Projects</a></li>
-              </ul>
-          </li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">Projects <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('view_projects') }}">View Projects</a>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="{{ url_for('add_projects') }}">Add Projects</a></li>
+                    </ul>
+                </li>
 
-            <li class="dropdown">
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Panels <span class="caret"></span></a>
-              <ul class="dropdown-menu">
-                <li><a href="{{ url_for('view_panels') }}">View Panels</a>
-                <li role="separator" class="divider"></li>
-                <li><a href="#">Create Panel</a></li>
-                <li><a href="#">Create Panel From Panel App</a></li>
-                <li><a href="#">Edit Panel</a></li>
-                <li><a href="#">Make Panel Live</a></li>
-                <li role="separator" class="divider"></li>
-                <li><a href="#">Export Panel</a></li>
-              </ul>
-          </li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">Panels <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('view_panels') }}">View Panels</a>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="/panels/create">Create Panel</a></li>
+                        <li><a href="#">Create Panel From Panel App</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="#">Export Panel</a></li>
+                    </ul>
+                </li>
 
 
-          <li class="dropdown">
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Users <span class="caret"></span></a>
-              <ul class="dropdown-menu">
-                <li><a href="{{ url_for('view_users') }}">View Users</a>
-                <li role="separator" class="divider"></li>
-                <li><a href="{{ url_for('add_users') }}">Add Users</a></li>
-              </ul>
-          </li>
-          <li><a href="http://10.182.131.21:5001/api/spec.html">API</a></li>
-        </ul>
-      </div><!--/.nav-collapse -->
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">Users <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('view_users') }}">View Users</a>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="{{ url_for('add_users') }}">Add Users</a></li>
+                    </ul>
+                </li>
+                <li><a href="http://10.182.131.21:5001/api/spec.html">API</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
     </div>
-  </nav>
+</nav>
 
-    {% block popup %}
-    {% endblock %}
+{% block popup %}
+{% endblock %}
 
 <div class="container theme-showcase" role="main">
     <div class="container">
-      {% block content %}
-      {% endblock %}
+        {% block content %}
+        {% endblock %}
     </div>
-  </div>
+</div>
 
 
-
-
-  </body>
+</body>
 </html>

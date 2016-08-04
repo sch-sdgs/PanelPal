@@ -31,6 +31,9 @@ def parse_reflat(c,refflat):
         gene_id = c.fetchone()[0]
         tx = record.transcript
         strand = record.strand
+        cdsstart = record.cdsStart
+        cdsend = record.cdsEnd
+        record.tx
         c.execute("INSERT OR IGNORE INTO tx(gene_id,strand,accession) VALUES (?,?,?)", (gene_id, strand, tx))
         c.execute("SELECT id FROM tx WHERE accession=?", (tx,))
         tx_id = c.fetchone()[0]
