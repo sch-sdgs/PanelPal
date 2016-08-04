@@ -1,6 +1,6 @@
 import json
 import sqlite3
-
+from enum import Enum
 import os
 from pybedtools import BedTool
 
@@ -131,15 +131,15 @@ class Panels(Database):
         pp=self.panelpal_conn.cursor()
         command = 'INSERT INTO versions(intro, panel_id, region_id'
         values = 'VALUES(?,?,?'
-        versions = (version, panel_id, region_id)
+        versions = [version, panel_id, region_id]
         if extension_3 is not None:
             command += ', extension_3'
             values += ', ?'
-            versions.extend(extension_3)
+            versions.append(extension_3)
         if extension_5 is not None:
             command += ', extension_5'
             values += ', ?'
-            versions.extend(extension_5)
+            versions.append(extension_5)
         command = command + ') ' + values + ')'
         try:
             pp.execute(command, versions)
@@ -147,27 +147,69 @@ class Panels(Database):
             return 0
         except self.panelpal_conn.Error as e:
             self.panelpal_conn.rollback()
-            print e.args[0]
+            print 'Error'
+            print e.args
             return -1
 
-    def insert_versions(self,genes, panel_id, version):
+    def insert_versions(self,genes, panel_id, version, use_cds):
         pp = self.panelpal_conn.cursor()
         current_regions = []
-        results = self.query_db(pp, "SELECT region_id FROM versions WHERE panel_id=?;", (panel_id,))
-        if len(results) > 0:
-            for result in results:
-                current_regions.append(result.get('region_id'))
+        current = self.query_db(pp, "SELECT region_id FROM versions WHERE panel_id=?;", (panel_id,))
+        if len(current) > 0:
+            for c in current:
+                current_regions.append(c.get('region_id'))
         current_regions = set(current_regions)
 
         for gene in genes:
-            regions = self.query_db(pp,
-                               "select distinct regions.id from genes join tx on genes.id=tx.gene_id join exons on tx.id=exons.tx_id join regions on exons.region_id=regions.id where name=? order by start",
+            results = self.query_db(pp,
+                               '''SELECT regions.id, regions.start, regions.end, tx.strand, tx.cds_start, tx.cds_end
+                                    FROM genes
+                                    JOIN tx ON genes.id=tx.gene_id
+                                    JOIN exons ON tx.id=exons.tx_id
+                                    JOIN regions ON exons.region_id=regions.id
+                                    WHERE name = ?
+                                    ORDER BY start''',
                                (gene,))
+            regions = {}
+            for r in results:
+                r_id = r.get('id')
+                r_start = r.get('start')
+                r_end = r.get('end')
+                cds_start = r.get('cds_start')
+                cds_end = r.get('cds_end')
+                tx = {'cds_start':cds_start, 'cds_end':cds_end}
+                if r_id not in regions:
+                    regions[r_id] = {'start':r_start, 'end':r_end, 'tx':[tx]}
+                elif tx not in regions[r_id]['tx']:
+                    regions[r_id]['tx'].append(tx)
             for region in regions:
-                if region.get('id') not in current_regions:
-                    self.add_to_version(panel_id, region.get('id'), version, None, None)
+                if region not in current_regions and use_cds:
+                    region_start = regions[region].get('start')
+                    region_end = regions[region].get('end')
+                    #get longest cds coordinates for gene
+                    gene_cds_start = 400000000
+                    gene_cds_end = 0
+                    for tx in regions[region].get('tx'):
+                        if tx.get('cds_start') < gene_cds_start:
+                            gene_cds_start = tx.get('cds_start')
+                        if tx.get('cds_end') > gene_cds_end:
+                            gene_cds_end = tx.get('cds_end')
+                    #add extensions to region to exclude UTRs when exporting BED
+                    if gene_cds_start > region_end or gene_cds_end < region_start:
+                        pass
+                    elif region_start < gene_cds_start < region_end:
+                        extension_5 = region_start - gene_cds_start #negative number required
+                        self.add_to_version(panel_id, region, version, None, extension_5)
+                    elif region_start < gene_cds_end < region_end:
+                        extension_3 = gene_cds_end - region_end #negative number required
+                        self.add_to_version(panel_id, region, version, extension_3, None)
+                    else:
+                        self.add_to_version(panel_id, region, version, None, None)
+                #if UTRs are required, just add region to versions table
+                elif region not in current_regions:
+                    self.add_to_version(panel_id, region, version, None, None)
 
-    def import_bed(self,project, panel, gene_file):
+    def import_bed(self,project, panel, gene_file, bed_file, use_cds=True):
 
         f = open(gene_file, 'r')
         genes = [line.strip('\n') for line in f.readlines()]
@@ -187,7 +229,14 @@ class Panels(Database):
         pp = self.panelpal_conn.cursor()
         version = self.query_db(pp, 'SELECT current_version FROM panels WHERE id = ?', (panel_id,))
         pp.close()
-        self.insert_versions(genes, panel_id, version[0].get('current_version'))
+        self.insert_versions(genes, panel_id, version[0].get('current_version'), use_cds)
+
+        pp_bed = self.export_bed(panel, 'ROI_25').split("\n")
+
+        self.compare_bed(bed_file, False, pp_bed, True)
+
+
+
 
 
     def import_pref_transcripts(self, project, transcripts):
@@ -215,10 +264,39 @@ class Panels(Database):
         panel_v = panel_info.get('current_version')
         project_id = panel_info.get('team_id')
 
-        regions = self.query_db(pp,
+
+        whole_project = False
+        if bed_type == "ROI_5":
+            extension = 5
+        elif bed_type == "ROI_25":
+            extension = 25
+        elif bed_type == "Project":
+            extension = 25
+            whole_project = True
+        else:
+            return "BED type not valid. Please use ROI_5, ROI_25 or Project."
+
+        print extension
+
+        if whole_project:
+            regions = self.query_db(pp,
+                                    '''SELECT versions.region_id, regions.chrom,
+                                          CASE WHEN versions.extension_5 ISNULL THEN regions.start - ? ELSE regions.start - versions.extension_5 - ? END as start,
+                                          CASE WHEN versions.extension_3 ISNULL THEN regions.end + ? ELSE regions.end + versions.extension_3 + ? END as end, tx.accession,
+                                          "ex" || exons.number || "_" || genes.name || "_" || tx.accession  as identifier
+                                          FROM versions
+                                          JOIN panels ON panels.id = versions.panel_id
+                                          JOIN regions ON regions.id = versions.region_id
+                                          JOIN exons ON exons.region_id = regions.id
+                                          JOIN tx ON exons.tx_id = tx.id
+                                          JOIN genes ON tx.gene_id = genes.id
+                                          WHERE panels.team_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)''',
+                                    (extension, extension, extension, extension, project_id, panel_v, panel_v))
+        else:
+            regions = self.query_db(pp,
                               '''SELECT versions.region_id, regions.chrom,
-                                    CASE WHEN versions.extension_5 ISNULL THEN regions.start ELSE regions.start - versions.extension_5 END as start,
-                                    CASE WHEN versions.extension_3 ISNULL THEN regions.end ELSE regions.end + versions.extension_3 END as end, tx.accession,
+                                    CASE WHEN versions.extension_5 ISNULL THEN regions.start - ? ELSE regions.start - versions.extension_5 - ? END as start,
+                                    CASE WHEN versions.extension_3 ISNULL THEN regions.end + ? ELSE regions.end + versions.extension_3 + ? END as end, tx.accession,
                                     "ex" || exons.number || "_" || genes.name || "_" || tx.accession  as identifier
                                     FROM versions
                                     JOIN panels ON panels.id = versions.panel_id
@@ -227,25 +305,26 @@ class Panels(Database):
                                     JOIN tx ON exons.tx_id = tx.id
                                     JOIN genes ON tx.gene_id = genes.id
                                     WHERE versions.panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)''',
-                               (panel_id, panel_v, panel_v))
+                               (extension, extension, extension, extension, panel_id, panel_v, panel_v))
 
         formatted_result = {}
 
         for region in regions:
             region_start = region.get('start')
             region_end = region.get('end')
-            out = [region.get('chrom'), region_start, region_end, region.get('identifier')]
-            line = "\t".join(str(x) for x in out)
+            c = region.get('chrom')
 
-            if region_start not in formatted_result:
-                formatted_result[region_start] = {}
-            if region_end not in formatted_result[region_start]:
-                formatted_result[region_start][region_end] = {}
-            if "accession" not in formatted_result[region_start][region_end]:
-                formatted_result[region_start][region_end]["accession"] = []
+            if c not in formatted_result:
+                formatted_result[c] = {}
+            if region_start not in formatted_result[c]:
+                formatted_result[c][region_start] = {}
+            if region_end not in formatted_result[c][region_start]:
+                formatted_result[c][region_start][region_end] = {}
+            if "accession" not in formatted_result[c][region_start][region_end]:
+                formatted_result[c][region_start][region_end]["accession"] = []
 
-            accession = {'name':region.get('accession'), 'line':line}
-            formatted_result[region_start][region_end]["accession"].append(accession)
+            accession = {'name':region.get('accession'), 'identifier':region.get('identifier')}
+            formatted_result[c][region_start][region_end]["accession"].append(accession)
 
 
         main_tx_result = self.query_db(pp, '''SELECT tx.accession
@@ -258,31 +337,40 @@ class Panels(Database):
             master_accessions.append(tx.get('accession'))
 
         lines = []
+        for chrom in formatted_result:
+            for start in formatted_result[chrom]:
+                for end in formatted_result[chrom][start]:
+                    accessions = formatted_result[chrom][start][end]['accession']
+                    if len(accessions) > 1:
+                        for acc in accessions:
+                            name = acc["name"]
 
-        for start in formatted_result:
-            for end in formatted_result[start]:
-                accessions = formatted_result[start][end]['accession']
-                if len(accessions) > 1:
-                    for acc in accessions:
-                        name = acc["name"]
-                        line = acc["line"]
-                        if name in master_accessions:
+                            if name in master_accessions:
+                                ident = "*" + acc["identifier"] + "*"
+                            else:
+                                ident = acc["identifier"]
+                            out = [chrom, start, end, ident]
+                            line = "\t".join(str(x) for x in out)
                             lines.append(line)
-                elif len(accessions) == 1:
-                    acc = accessions[0]
-                    lines.append(acc["line"])
+                    elif len(accessions) == 1:
+                        acc = accessions[0]
+                        ident = acc["identifier"]
+                        out = [chrom, start, end, ident]
+                        line = "\t".join(str(x) for x in out)
+                        lines.append(line)
         sorted_lines = sorted(lines)
 
-        bed_checked = self.check_bed("\n".join(sorted_lines))
+        bed = "\n".join(sorted_lines)
+        merged_bed = self.check_bed(bed, True)
 
-        return "\n".join(sorted_lines)
+        return merged_bed
 
 
     def get_panel_by_project(self,project):
         pass
 
-    def check_bed(self, bed_file):
-        bed = BedTool(bed_file)
+    def check_bed(self, bed_file, stream):
+        bed = BedTool(bed_file, from_string=stream)
         try:
             sorted_bed = bed.sort()
             merged_bed = sorted_bed.merge(c="4", o="distinct")
@@ -291,6 +379,20 @@ class Panels(Database):
 
         except Exception as exception:
             print ("ERROR: " + str(exception))
+
+    def compare_bed(self, bed_file, orig_from_string, pp_bed):
+        original_bed = BedTool(bed_file, from_string=orig_from_string)
+
+        missing_from_pp = original_bed.intersect(pp_bed, v=True)
+        print 'Missing from exported BED'
+        print missing_from_pp
+        missing_from_orig = pp_bed.intersect(original_bed, v=True)
+        print 'Missing from original BED'
+        print missing_from_orig
+
+
+
+
 
     def remove_gene(self,panel_id,gene):
         pp = self.panelpal_conn.cursor()
@@ -307,7 +409,6 @@ class Panels(Database):
         new_version = current_version+1
         pp.execute('UPDATE panels SET current_version = ? WHERE id = ?',(new_version,panel_id,))
         self.panelpal_conn.commit()
-
 
 class Users(Database):
     def query_db(self, c, query, args=(), one=False):
@@ -416,7 +517,6 @@ class Regions(Database):
 #    print u.id
 #    print u.username
 
-#p = Panels()
-
+#Panels().import_bed('NGD', 'HSPRecessive', '/home/bioinfo/Natalie/wc/genes/NGD_HSPrecessive_v1.txt', '/results/Analysis/MiSeq/MasterBED/NGD_HSPrecessive_v1.bed', True)
 #bed = p.check_bed('/home/bioinfo/Natalie/wc/genes/test.bed')
 #print bed
