@@ -13,7 +13,7 @@ def create_tables(c):
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, name CHAR(50), UNIQUE(name))''')
 
     c.execute('''CREATE TABLE tx
-        (id INTEGER PRIMARY KEY AUTOINCREMENT, gene_id INTEGER, strand CHAR(1), accession CHAR(30),FOREIGN KEY(gene_id) REFERENCES genes(id), UNIQUE(accession))''')
+        (id INTEGER PRIMARY KEY AUTOINCREMENT, gene_id INTEGER, strand CHAR(1), accession CHAR(30), tx_start INTEGER, tx_end INTEGER, cds_start INTEGER, cds_end INTEGER,FOREIGN KEY(gene_id) REFERENCES genes(id), UNIQUE(accession))''')
 
     c.execute('''CREATE TABLE exons
         (id INTEGER PRIMARY KEY AUTOINCREMENT, tx_id, region_id INTEGER, number INTEGER, FOREIGN KEY(tx_id) REFERENCES tx(id), FOREIGN KEY(region_id) REFERENCES regions(id) )''')
@@ -31,10 +31,11 @@ def parse_reflat(c,refflat):
         gene_id = c.fetchone()[0]
         tx = record.transcript
         strand = record.strand
-        cdsstart = record.cdsStart
-        cdsend = record.cdsEnd
-        record.tx
-        c.execute("INSERT OR IGNORE INTO tx(gene_id,strand,accession) VALUES (?,?,?)", (gene_id, strand, tx))
+        txStart = record.txStart
+        txEnd = record.txEnd
+        cdsStart = record.cdsStart
+        cdsEnd = record.cdsEnd
+        c.execute("INSERT OR IGNORE INTO tx(gene_id, strand, accession, tx_start, tx_end, cds_start, cds_end) VALUES (?,?,?,?,?,?,?)", (gene_id, strand, tx, txStart, txEnd, cdsStart, cdsEnd))
         c.execute("SELECT id FROM tx WHERE accession=?", (tx,))
         tx_id = c.fetchone()[0]
         for exon in record.exons:
@@ -57,7 +58,7 @@ def main():
     parser.add_argument('--refflat',default="/results/Pipeline/reference/UCSCRefSeqTable_refflat_format.txt")
     args = parser.parse_args()
 
-    conn = sqlite3.connect('resources/refflat.db')
+    conn = sqlite3.connect('resources/panel_pal.db')
     c = conn.cursor()
 
     create_tables(c)
