@@ -70,7 +70,7 @@ class Projects(Database):
         pp = self.panelpal_conn.cursor()
         projects = self.query_db(pp, "SELECT id FROM projects WHERE name=?", (project,))
         if len(projects) == 0:
-            project_id = self.add_project(project, self.panelpal_conn)
+            project_id = self.add_project(project)
         else:
             project_id = projects[0].get('id')
 
@@ -82,6 +82,30 @@ class Projects(Database):
 
         return projects
 
+class Studies(Database):
+    def query_db(self, c, query, args=(), one=False):
+        return Database.query_db(self, c, query, args, one=False)
+
+    def add_study(self, study, project_id):
+        pp = self.panelpal_conn.cursor()
+        try:
+            pp.execute("INSERT OR IGNORE INTO studies(name, project_id, current_version) VALUES (?,?,1)", (study,project_id))
+            self.panelpal_conn.commit()
+            return pp.lastrowid
+        except self.panelpal_conn.Error as e:
+            self.panelpal_conn.rollback()
+            print e.args[0]
+            return -1
+
+    def get_study(self, study):
+        pp = self.panelpal_conn.cursor()
+        try:
+            study_id = self.query_db(pp, "SELECT id FROM studies WHERE name = ?", (study,))[0].get('id')
+            return study_id
+        except IndexError:
+            return -1
+
+
 class Panels(Database):
 
     def query_db(self,c, query, args=(), one=False):
@@ -90,7 +114,7 @@ class Panels(Database):
     def add_panel(self,panel, project_id, conn):
         pp = conn.cursor()
         try:
-            pp.execute("INSERT OR IGNORE INTO panels(name, team_id, current_version) VALUES (?, ?, 1)", (panel,project_id))
+            pp.execute("INSERT OR IGNORE INTO panels(name, study_id) VALUES (?, ?)", (panel,project_id))
             conn.commit()
             return pp.lastrowid
         except conn.Error as e:
@@ -111,7 +135,7 @@ class Panels(Database):
 
     def get_panels(self):
         pp = self.panelpal_conn.cursor()
-        panels = self.query_db(pp, "SELECT panels.name as panelname,projects.name as projectname, current_version, panels.id as panelid FROM panels join projects on panels.team_id = projects.id ")
+        panels = self.query_db(pp, "SELECT panels.name as panelname,studies.name as projectname, studies.current_version, panels.id as panelid FROM panels join studies on panels.study_id = studies.id ")
         return panels
 
 
@@ -123,7 +147,7 @@ class Panels(Database):
         panel_v = panel_info[0].get('current_version')
 
         panel = self.query_db(pp,
-                              'SELECT panels.id as panelid, panels.current_version, panels.name as panelname, versions.intro,versions.last,versions.region_id, versions.id, rf.genes.name as genename, rf.regions.chrom, rf.regions.start, rf.regions.end, versions.extension_3, versions.extension_5, rf.tx.accession FROM versions join regions on rf.regions.id=versions.region_id join rf.exons on rf.regions.id=rf.exons.region_id join rf.tx on rf.exons.tx_id = rf.tx.id join rf.genes on rf.tx.gene_id = rf.genes.id join panels on versions.panel_id = panels.id  WHERE panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)',
+                              'SELECT panels.id as panelid, panels.current_version, panels.name as panelname, versions.intro,versions.last,versions.region_id, versions.id, genes.name as genename, regions.chrom, regions.start, regions.end, versions.extension_3, versions.extension_5, tx.accession FROM versions join regions on regions.id=versions.region_id join exons on regions.id=exons.region_id join tx on exons.tx_id = tx.id join genes on tx.gene_id = genes.id join panels on versions.panel_id = panels.id  WHERE panel_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)',
                               (panel_id, panel_v, panel_v))
         return panel
 
@@ -209,16 +233,16 @@ class Panels(Database):
                 elif region not in current_regions:
                     self.add_to_version(panel_id, region, version, None, None)
 
-    def import_bed(self,project, panel, gene_file, bed_file, use_cds=True):
+    def import_bed(self, study, panel, gene_file, bed_file, use_cds=True):
 
         f = open(gene_file, 'r')
         genes = [line.strip('\n') for line in f.readlines()]
 
-        p = Projects()
-        project_id = p.get_project(project)
-        print project + " id = " + str(project_id)
+        s = Studies()
+        project_id = s.get_study(study)
+        print study + " id = " + str(project_id)
         if project_id == -1:
-            print 'Could not insert project ' + project + "; exiting."
+            print 'Could not insert project ' + study + "; exiting."
             exit()
         panel_id = self.get_panel_id(panel, project_id)
         print panel + " id = " + str(panel_id)
@@ -227,14 +251,12 @@ class Panels(Database):
             exit()
 
         pp = self.panelpal_conn.cursor()
-        version = self.query_db(pp, 'SELECT current_version FROM panels WHERE id = ?', (panel_id,))
+        version = self.query_db(pp, 'SELECT current_version FROM studies WHERE id = ?', (project_id,))
         pp.close()
         self.insert_versions(genes, panel_id, version[0].get('current_version'), use_cds)
 
-        pp_bed = self.export_bed(panel, 'ROI_25').split("\n")
-
-        self.compare_bed(bed_file, False, pp_bed, True)
-
+        pp_bed = self.export_bed(panel, 'ROI_25')
+        self.compare_bed(bed_file, False, pp_bed)
 
 
 
@@ -259,10 +281,11 @@ class Panels(Database):
     def export_bed(self, panel, bed_type):
         pp = self.panelpal_conn.cursor()
 
-        panel_info = self.query_db(pp, 'SELECT id, team_id, current_version FROM panels WHERE name = ?', (panel,))[0]
+        panel_info = self.query_db(pp, 'SELECT panels.id, study_id, studies.project_id, studies.current_version FROM panels JOIN studies ON panels.study_id = studies.id WHERE panels.name = ?', (panel,))[0]
         panel_id = panel_info.get('id')
         panel_v = panel_info.get('current_version')
-        project_id = panel_info.get('team_id')
+        study_id = panel_info.get('study_id')
+        project_id = panel_info.get('project_id')
 
 
         whole_project = False
@@ -290,8 +313,8 @@ class Panels(Database):
                                           JOIN exons ON exons.region_id = regions.id
                                           JOIN tx ON exons.tx_id = tx.id
                                           JOIN genes ON tx.gene_id = genes.id
-                                          WHERE panels.team_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)''',
-                                    (extension, extension, extension, extension, project_id, panel_v, panel_v))
+                                          WHERE panels.study_id = ? AND intro <= ? AND (last >= ? OR last ISNULL)''',
+                                    (extension, extension, extension, extension, study_id, panel_v, panel_v))
         else:
             regions = self.query_db(pp,
                               '''SELECT versions.region_id, regions.chrom,
@@ -362,7 +385,6 @@ class Panels(Database):
 
         bed = "\n".join(sorted_lines)
         merged_bed = self.check_bed(bed, True)
-
         return merged_bed
 
 
@@ -391,9 +413,7 @@ class Panels(Database):
         print missing_from_orig
 
 
-
-
-
+    # TODO merge with develop_matt to change version update
     def remove_gene(self,panel_id,gene):
         pp = self.panelpal_conn.cursor()
         panel = self.get_panel(int(panel_id))

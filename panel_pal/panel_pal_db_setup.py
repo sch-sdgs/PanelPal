@@ -1,6 +1,6 @@
 import sqlite3
 import argparse
-from db_commands import Projects, Users
+from db_commands import Projects, Users, Studies
 import parse_refflat_into_db
 
 def create_db(conn):
@@ -16,8 +16,10 @@ def create_db(conn):
         pp.executescript("""
         CREATE TABLE projects
             (id INTEGER PRIMARY KEY, name VARCHAR(50), UNIQUE(name));
+        CREATE TABLE studies
+            (id INTEGER PRIMARY KEY, project_id INTEGER, name VARCHAR(50), current_version INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id), UNIQUE(name));
         CREATE TABLE panels
-            (id INTEGER PRIMARY KEY, name VARCHAR(50), team_id INTEGER, current_version INTEGER, FOREIGN KEY(team_id) REFERENCES projects(id), UNIQUE(name));
+            (id INTEGER PRIMARY KEY, name VARCHAR(50), study_id INTEGER, FOREIGN KEY(study_id) REFERENCES studies(id), UNIQUE(name));
         CREATE TABLE versions
             (id INTEGER PRIMARY KEY, intro INTEGER, last INTEGER, panel_id INTEGER, region_id INTEGER, comment VARCHAR(100), extension_3 INTEGER, extension_5 INTEGER, FOREIGN KEY(panel_id) REFERENCES panels(id), FOREIGN KEY(region_id) REFERENCES regions(id));
         CREATE TABLE pref_tx
@@ -37,10 +39,12 @@ def create_db(conn):
 def main():
     p=Projects()
     u=Users()
+    s=Studies()
 
     parser = argparse.ArgumentParser(description='creates db tables required for PanelPal program')
     parser.add_argument('--db', default="resources/")
-    parser.add_argument('--projects', default="CTD,IEM,Haems,HeredCancer,DevDel,NGD")
+    parser.add_argument('--projects', default="CTD,IEM,Haems,HeredCancer,DevDel,NGD,Research")
+    parser.add_argument('--studies', default="CTD,IEM,Haems_Bleeding,Haems_BMF,Haems_TruSight,HeredCancer_TruSight,HeredCancer_SureSelect,DevDel,NGD,NGD_Motor,NGD_Movement")
     parser.add_argument('--users')
     args = parser.parse_args()
 
@@ -58,13 +62,27 @@ def main():
         projects = args.projects.split(',')
         for project in projects:
             complete = p.add_project(project)
-            if not complete:
+            if complete == -1:
                 print project + " not added to database"
+    if args.studies is not None:
+        studies = args.studies.split(',')
+        for study in studies:
+            if '_' in study:
+                project = study.split('_')[0]
+            else:
+                project = study
+            project_id = p.get_project(project)
+            if project_id == -1:
+                print project + " is not a project; cannot add " + study
+            else:
+                complete = s.add_study(study,project_id)
+                if complete == -1:
+                    print study + " not added to database"
     if args.users is not None:
         users = args.users.split(',')
         for user in users:
             complete = u.add_user(user)
-            if not complete:
+            if complete == -1:
                 print user + " not added to database"
 
 
