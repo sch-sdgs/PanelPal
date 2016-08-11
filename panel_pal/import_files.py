@@ -49,18 +49,17 @@ p = Panels()
 #print 'Motor SMA'
 #p.import_bed('NGD_Motor','Motor_SMA','/home/bioinfo/Natalie/wc/genes/Motor_SMA_v1_25bp.txt','/results/Analysis/MiSeq/MasterBED/Motor_SMA_v1_25bp.bed', True)
 
+#p.import_bed('Haems_Bleeding','ADAMTS13','/home/bioinfo/Natalie/wc/genes/Bleeding_ADAMTS13_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_ADAMTS13_25_v1.bed', True)
 
-p.import_bed('Haems_Bleeding','ADAMTS13','/home/bioinfo/Natalie/wc/genes/Bleeding_ADAMTS13_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_ADAMTS13_25_v1.bed', True)
-
-p.import_bed('Haems_Bleeding','FactorV','/home/bioinfo/Natalie/wc/genes/Bleeding_FactorV_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_FactorV_25_v1.bed', True)
-p.import_bed('Haems_Bleeding','FactorVIII','/home/bioinfo/Natalie/wc/genes/Bleeding_FactorVIII_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_FactorVIII_25_v1.bed', True)
-p.import_bed('Haems_Bleeding','FactorVIII_IX','/home/bioinfo/Natalie/wc/genes/Bleeding_FactorVIII_IX_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_FactorVIII_IX_25_v1.bed', True)
-p.import_bed('Haems_Bleeding','FactorXIII','/home/bioinfo/Natalie/wc/genes/Bleeding_FactorXIII_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_FactorXIII_25_v1.bed', True)
-p.import_bed('Haems_Bleeding','Fibrinogen','/home/bioinfo/Natalie/wc/genes/Bleeding_Fibrinogen_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_Fibrinogen_25_v1.bed', True)
-p.import_bed('Haems_Bleeding','Glanzman','/home/bioinfo/Natalie/wc/genes/Bleeding_Glanzman_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_Glanzman_25_v1.bed', True)
-p.import_bed('Haems_Bleeding','MYH9','/home/bioinfo/Natalie/wc/genes/Bleeding_MYH9_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_MYH9_25_v1.bed', True)
-p.import_bed('Haems_Bleeding','VWF','/home/bioinfo/Natalie/wc/genes/Bleeding_VWF_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_VWF_25_v1.bed', True)
-p.import_bed('Haems_Bleeding','VWF_FVIII','/home/bioinfo/Natalie/wc/genes/Bleeding_VWF_FVIII_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_VWF_FVIII_25_v1.bed', True)
+#p.import_bed('Haems_Bleeding','FactorV','/home/bioinfo/Natalie/wc/genes/Bleeding_FactorV_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_FactorV_25_v1.bed', True)
+#p.import_bed('Haems_Bleeding','FactorVIII','/home/bioinfo/Natalie/wc/genes/Bleeding_FactorVIII_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_FactorVIII_25_v1.bed', True)
+#p.import_bed('Haems_Bleeding','FactorVIII_IX','/home/bioinfo/Natalie/wc/genes/Bleeding_FactorVIII_IX_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_FactorVIII_IX_25_v1.bed', True)
+#p.import_bed('Haems_Bleeding','FactorXIII','/home/bioinfo/Natalie/wc/genes/Bleeding_FactorXIII_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_FactorXIII_25_v1.bed', True)
+#p.import_bed('Haems_Bleeding','Fibrinogen','/home/bioinfo/Natalie/wc/genes/Bleeding_Fibrinogen_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_Fibrinogen_25_v1.bed', True)
+#p.import_bed('Haems_Bleeding','Glanzman','/home/bioinfo/Natalie/wc/genes/Bleeding_Glanzman_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_Glanzman_25_v1.bed', True)
+#p.import_bed('Haems_Bleeding','MYH9','/home/bioinfo/Natalie/wc/genes/Bleeding_MYH9_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_MYH9_25_v1.bed', True)
+#p.import_bed('Haems_Bleeding','VWF','/home/bioinfo/Natalie/wc/genes/Bleeding_VWF_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_VWF_25_v1.bed', True)
+#p.import_bed('Haems_Bleeding','VWF_FVIII','/home/bioinfo/Natalie/wc/genes/Bleeding_VWF_FVIII_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_VWF_FVIII_25_v1.bed', True)
 p.import_bed('Haems_BMF','DBA','/home/bioinfo/Natalie/wc/genes/Haems_DBA_25bp.txt','/results/Analysis/MiSeq/MasterBED/Haems_DBA_25bp.bed', True)
 p.import_bed('Haems_BMF','DKC','/home/bioinfo/Natalie/wc/genes/Haems_DKC_25bp.txt','/results/Analysis/MiSeq/MasterBED/Haems_DKC_25bp.bed', True)
 p.import_bed('Haems_BMF','Fanconi','/home/bioinfo/Natalie/wc/genes/Haems_Fanconi_25bp.txt','/results/Analysis/MiSeq/MasterBED/Haems_Fanconi_25bp.bed', True)
@@ -69,5 +68,6 @@ p.import_bed('Haems_BMF','SCN','/home/bioinfo/Natalie/wc/genes/Haems_SCN_25bp.tx
 p.import_bed('Haems_BMF','TAR','/home/bioinfo/Natalie/wc/genes/Haems_TAR_25bp.txt','/results/Analysis/MiSeq/MasterBED/Haems_TAR_25bp.bed', True)
 p.import_bed('Haems_TruSight','Fanconi','/home/bioinfo/Natalie/wc/genes/TruSight_Fanconi_25bp_v3.txt','/results/Analysis/MiSeq/MasterBED/TruSight_Fanconi_25bp_v3.bed', True)
 p.import_bed('Haems_TruSight','Fanconi_FANCA','/home/bioinfo/Natalie/wc/genes/TruSight_Fanconi_FANCA_v2.txt','/results/Analysis/MiSeq/MasterBED/TruSight_Fanconi_FANCA_v2.bed', True)
+
 
 
