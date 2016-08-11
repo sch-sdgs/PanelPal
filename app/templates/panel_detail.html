@@ -9,14 +9,14 @@
                 <p></p>
                 <form action="{{ url_for('add_gene') }}" method="POST" class="form">
                     <div class="form-group">
-                    {{ add_form.geneNameAdd.label }}
-                    {{ add_form.geneNameAdd(class_="form-control") }}
-                        {{ add_form.panelId.label }}
-                    {{ add_form.panelId(class_="form-control",readonly="readonly") }}
+                        {{ add_form.geneNameAdd.label }}
+                        {{ add_form.geneNameAdd(class_="form-control") }}
+                        {{ add_form.panelIdAdd.label }}
+                        {{ add_form.panelIdAdd(class_="form-control",readonly="readonly") }}
                     </div>
                     {{ add_form.submit(class_="btn btn-primary") }}
-                  </form>
-                  <button class="btn btn-danger btn-md" data-toggle="modal" data-target="#myModal">Cancel</button>
+                </form>
+                <button class="btn btn-danger btn-md" data-toggle="modal" data-target="#myModal">Cancel</button>
             </div>
         </div>
     </div>
@@ -30,13 +30,13 @@
 
                 <form action="{{ url_for('remove_gene') }}" method="POST" class="form">
                     <div class="form-group">
-                    {{ form.geneName.label }}
-                    {{ form.geneName(class_="form-control",readonly="readonly") }}
+                        {{ form.geneName.label }}
+                        {{ form.geneName(class_="form-control",readonly="readonly") }}
                         {{ form.panelId.label }}
-                    {{ form.panelId(class_="form-control",readonly="readonly") }}
+                        {{ form.panelId(class_="form-control",readonly="readonly") }}
                     </div>
                     {{ form.submit(class_="btn btn-primary") }}
-                  </form>
+                </form>
                 <button class="btn btn-danger btn-md" data-toggle="modal" data-target="#removeGene">Cancel</button>
             </div>
         </div>
@@ -45,11 +45,40 @@
 {% endblock %}
 
 {% block content %}
-  <h2>Panel | <strong>{{ panel_name }} (v{{ version }})</strong></h2>
+<div>
+    <div align="right">
+        <br>
+        <form action="{{ url_for('edit_panel') }}" id="regions" method="POST">
+            <input id="panel_id" name="panel_id" value="{{ panel_id }}" hidden>
+            <button type="button" class="btn btn-default"><span class="glyphicon glyphicon-download-alt"></span>
+                Download Current .BED
+            </button>
+            <button type="button" class="btn btn-default"><span class="glyphicon glyphicon-remove"></span> Exit</button>
+    </div>
+    <hr>
+    <h2>Editing Panel | <strong>{{ panel_name }} (v{{ version }})</strong></h2>
+    <hr>
+    <h4>Genes in Panel</h4>
+    <p>Click a gene to remove or click "Add Gene" to add a new gene</p>
+    <h3>{{ genes|safe }}
+        <button type="button" class="btn btn-success btn-md btngene" data-toggle="modal" data-id="" data-target="#addGene"><span
+                class="glyphicon glyphicon-plus"></span> Add Gene
+        </button>
+    </h3>
+    <hr>
 
-<h3>{{ genes|safe }} <button class="btn btn-success btn-md" data-toggle="modal" data-id="{{ panel_id }}" data-target="#addGene"><span class="glyphicon glyphicon-plus"></span> Add Gene</button></h3>
-{{ panel_detail }}
+    <div class="row">
+        <div class="col-md-6"><h4>Regions in Panel</h4>
+            <p>Adjust regions in the panel, click save to preserve changes</p></div>
+        <div class="col-md-6" align="right">
+            <button type="submit" id="mySubmitButton" class="btn btn-warning"><span
+                    class="glyphicon glyphicon-floppy-disk"></span> Save
+            </button>
+        </div>
+    </div>
 
+    {{ panel_detail }}
 
-
+    </form>
+</div>
 {% endblock %}
