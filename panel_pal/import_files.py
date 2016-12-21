@@ -17,38 +17,37 @@ p = Panels()
 #p.import_bed('NGD', 'Ataxia_Dystonia', '/home/bioinfo/Natalie/wc/genes/aptx.txt', '/home/bioinfo/Natalie/wc/genes/aptx.bed', True)
 
 #print 'Ataxia_Dystonia'
-#p.import_bed('NGD','Ataxia_Dystonia','/home/bioinfo/Natalie/wc/genes/NGD_ataxia_dystonia_v3_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_ataxia_dystonia_v3_25bp.bed', True)
+p.import_bed('NGD','Ataxia_Dystonia','/home/bioinfo/Natalie/wc/genes/NGD_ataxia_dystonia_v3_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_ataxia_dystonia_v3_25bp.bed', True)
 #bed = p.export_bed('Ataxia_Dystonia', 'ROI_25')
 #p.compare_bed('/results/Analysis/MiSeq/MasterBED/NGD_ataxia_dystonia_v3_25bp.bed', False, bed)
 #print 'Ataxia'
-#p.import_bed('NGD','Ataxia','/home/bioinfo/Natalie/wc/genes/NGD_ataxia_v4_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_ataxia_v4_25bp.bed', True)
+p.import_bed('NGD','Ataxia','/home/bioinfo/Natalie/wc/genes/NGD_ataxia_v4_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_ataxia_v4_25bp.bed', True)
 #print 'Dystonia'
-#p.import_bed('NGD','Dystonia','/home/bioinfo/Natalie/wc/genes/NGD_dystonia_v3_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_dystonia_v3_25bp.bed', True)
+p.import_bed('NGD','Dystonia','/home/bioinfo/Natalie/wc/genes/NGD_dystonia_v3_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_dystonia_v3_25bp.bed', True)
 #print 'DYT6'
 #p.import_bed('NGD','DYT6','/home/bioinfo/Natalie/wc/genes/NGD_DYT6.txt','/results/Analysis/MiSeq/MasterBED/NGD_DYT6.bed', True)
 #print 'EA_FHM'
-#p.import_bed('NGD','EA_FHM','/home/bioinfo/Natalie/wc/genes/NGD_EA_FHM_v4_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_EA_FHM_v4_25bp.bed', True)
+p.import_bed('NGD','EA_FHM','/home/bioinfo/Natalie/wc/genes/NGD_EA_FHM_v4_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_EA_FHM_v4_25bp.bed', True)
 #print 'EA'
-#p.import_bed('NGD','EA','/home/bioinfo/Natalie/wc/genes/NGD_EA_v3_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_EA_v3_25bp.bed', True)
+p.import_bed('NGD','EA','/home/bioinfo/Natalie/wc/genes/NGD_EA_v3_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_EA_v3_25bp.bed', True)
 #print 'FALS'
-#p.import_bed('NGD','FALS','/home/bioinfo/Natalie/wc/genes/NGD_FALS_v4_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_FALS_v4_25bp.bed', True)
+p.import_bed('NGD','FALS','/home/bioinfo/Natalie/wc/genes/NGD_FALS_v4_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_FALS_v4_25bp.bed', True)
 #print 'FHM'
-#p.import_bed('NGD','FHM','/home/bioinfo/Natalie/wc/genes/NGD_FHM_v4_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_FHM_v4_25bp.bed', True)
+p.import_bed('NGD','FHM','/home/bioinfo/Natalie/wc/genes/NGD_FHM_v4_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_FHM_v4_25bp.bed', True)
 #print 'HSPDominant'
-#p.import_bed('NGD','HSPDominant','/home/bioinfo/Natalie/wc/genes/NGD_HSPdominant_v1_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_HSPdominant_v1_25bp.bed', True)
+p.import_bed('NGD','HSPDominant','/home/bioinfo/Natalie/wc/genes/NGD_HSPdominant_v1_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_HSPdominant_v1_25bp.bed', True)
 #print 'HSPRecessive'
-#p.import_bed('NGD','HSPRecessive','/home/bioinfo/Natalie/wc/genes/NGD_HSPrecessive_v1.txt','/results/Analysis/MiSeq/MasterBED/NGD_HSPrecessive_v1.bed', True)
+p.import_bed('NGD','HSPRecessive','/home/bioinfo/Natalie/wc/genes/NGD_HSPrecessive_v1.txt','/results/Analysis/MiSeq/MasterBED/NGD_HSPrecessive_v1.bed', True)
 #print 'HSP'
-#p.import_bed('NGD','HSP','/home/bioinfo/Natalie/wc/genes/NGD_HSP_v4_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_HSP_v4_25bp.bed', True)
+p.import_bed('NGD','HSP','/home/bioinfo/Natalie/wc/genes/NGD_HSP_v4_25bp.txt','/results/Analysis/MiSeq/MasterBED/NGD_HSP_v4_25bp.bed', True)
 #print 'Motor Dementia'
-#p.import_bed('NGD_Motor','Motor_Dementia','/home/bioinfo/Natalie/wc/genes/Motor_Dementia_v1.txt','/results/Analysis/MiSeq/MasterBED/Motor_Dementia_v1.bed', True)
+p.import_bed('NGD_Motor','Motor_Dementia','/home/bioinfo/Natalie/wc/genes/Motor_Dementia_v1.txt','/results/Analysis/MiSeq/MasterBED/Motor_Dementia_v1.bed', True)
 #print 'Motor FALS'
-#p.import_bed('NGD_Motor','Motor_FALS','/home/bioinfo/Natalie/wc/genes/Motor_FALS_v2_25bp.txt','/results/Analysis/MiSeq/MasterBED/Motor_FALS_v2_25bp.bed', True)
+p.import_bed('NGD_Motor','Motor_FALS','/home/bioinfo/Natalie/wc/genes/Motor_FALS_v2_25bp.txt','/results/Analysis/MiSeq/MasterBED/Motor_FALS_v2_25bp.bed', True)
 #print 'Motor HSP'
-#p.import_bed('NGD_Motor','Motor_HSP','/home/bioinfo/Natalie/wc/genes/Motor_HSP_v2_25bp.txt','/results/Analysis/MiSeq/MasterBED/Motor_HSP_v2_25bp.bed', True)
+p.import_bed('NGD_Motor','Motor_HSP','/home/bioinfo/Natalie/wc/genes/Motor_HSP_v2_25bp.txt','/results/Analysis/MiSeq/MasterBED/Motor_HSP_v2_25bp.bed', True)
 #print 'Motor SMA'
-#p.import_bed('NGD_Motor','Motor_SMA','/home/bioinfo/Natalie/wc/genes/Motor_SMA_v1_25bp.txt','/results/Analysis/MiSeq/MasterBED/Motor_SMA_v1_25bp.bed', True)
-
+p.import_bed('NGD_Motor','Motor_SMA','/home/bioinfo/Natalie/wc/genes/Motor_SMA_v1_25bp.txt','/results/Analysis/MiSeq/MasterBED/Motor_SMA_v1_25bp.bed', True)
 
 p.import_bed('Haems_Bleeding','ADAMTS13','/home/bioinfo/Natalie/wc/genes/Bleeding_ADAMTS13_25_v1.txt','/results/Analysis/MiSeq/MasterBED/Bleeding_ADAMTS13_25_v1.bed', True)
 
@@ -69,5 +68,6 @@ p.import_bed('Haems_BMF','SCN','/home/bioinfo/Natalie/wc/genes/Haems_SCN_25bp.tx
 p.import_bed('Haems_BMF','TAR','/home/bioinfo/Natalie/wc/genes/Haems_TAR_25bp.txt','/results/Analysis/MiSeq/MasterBED/Haems_TAR_25bp.bed', True)
 p.import_bed('Haems_TruSight','Fanconi','/home/bioinfo/Natalie/wc/genes/TruSight_Fanconi_25bp_v3.txt','/results/Analysis/MiSeq/MasterBED/TruSight_Fanconi_25bp_v3.bed', True)
 p.import_bed('Haems_TruSight','Fanconi_FANCA','/home/bioinfo/Natalie/wc/genes/TruSight_Fanconi_FANCA_v2.txt','/results/Analysis/MiSeq/MasterBED/TruSight_Fanconi_FANCA_v2.bed', True)
+
 
 

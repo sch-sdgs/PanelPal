@@ -115,7 +115,8 @@ class BEDs(Resource):
     def get(self, bed_type, panel):
         db = db_panels()
         result = db.export_bed(panel, bed_type)
-        resp = app.make_response(result)
+        bed = "\n".join(str(x) for x in result)
+        resp = app.make_response(bed)
         return resp
 
 

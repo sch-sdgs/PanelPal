@@ -3,7 +3,7 @@ import sqlite3
 from enum import Enum
 import os
 from pybedtools import BedTool
-
+import os
 from app import models
 
 
@@ -403,17 +403,26 @@ class Panels(Database):
             print ("ERROR: " + str(exception))
 
     def compare_bed(self, bed_file, orig_from_string, pp_bed):
-        original_bed = BedTool(bed_file, from_string=orig_from_string)
+        d = '/home/bioinfo/Natalie/wc/genes/compare_beds/'
 
-        missing_from_pp = original_bed.intersect(pp_bed, v=True)
+        original_bed = BedTool(bed_file, from_string=orig_from_string)
+        original_name = os.path.basename(bed_file)
+        saveas = d + original_name
+        original_bed.saveas(saveas)
+        saveas_pp = d + 'pp_' + original_name
+        pp_bed.saveas(saveas_pp)
+
+        missing_from_pp = original_bed.subtract(pp_bed)
         print 'Missing from exported BED'
         print missing_from_pp
-        missing_from_orig = pp_bed.intersect(original_bed, v=True)
+        saveas_missing_pp = d + 'missing_pp_' + original_name
+        missing_from_pp.saveas(saveas_missing_pp)
+        missing_from_orig = pp_bed.subtract(original_bed)
         print 'Missing from original BED'
         print missing_from_orig
+        saveas_missing_orig = d+ 'missing_orig_' + original_name
+        missing_from_orig.saveas(saveas_missing_orig)
 
-
-    # TODO merge with develop_matt to change version update
     def remove_gene(self,panel_id,gene):
         pp = self.panelpal_conn.cursor()
         panel = self.get_panel(int(panel_id))
