@@ -39,7 +39,7 @@
 
             $("#genelabels").hide();
             // If JS enabled, disable main input
-            $("#listgenes").prop('disabled', true);
+            //$("#listgenes").prop('disabled', true);
             // $("#responsibilities").addClass("hidden");
 
             // If JS enabled then add fields
@@ -59,9 +59,13 @@
                     }
                 }
 
-                $('#listgenes').text($("<div>" + eachline + "</div>").text())
+                //$('#listgenes').text($("<div>" + eachline + "</div>").text())
 
                 $("<h3><span class='label label-warning test'>"+lines+"</span></h3>").appendTo('#addhere');
+                //$('#listgenes').val($(lines).text());
+                //document.getElementById('listgenes').innerHTML = lines;
+                var TheTextBox = document.getElementById("listgenes");
+                TheTextBox.value = TheTextBox.value + lines+",";
                 //$("<strong>"+lines+" </strong>").appendTo('#addhere');
 
 
@@ -121,6 +125,7 @@
                     </ul>
                 </li>
 
+
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">Panels <span class="caret"></span></a>
@@ -134,6 +139,26 @@
                     </ul>
                 </li>
 
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">Virtual Panels <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="">View Virtual Panels</a>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="/virtualpanels/create">Create a Virtual Panel</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="#">Export Virtual Panel</a></li>
+                    </ul>
+                </li>
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">Preferred TX <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="">View Transcripts</a>
+                        <li role="separator" class="divider"></li>
+                    </ul>
+                </li>
 
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"

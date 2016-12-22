@@ -12,8 +12,24 @@ class Users(db.Model):
 class Projects(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True)
-    panels = db.relationship('Panels', backref='author', lazy='dynamic')
+    studies = db.relationship('Panels', backref='author', lazy='dynamic')
     pref_tx = db.relationship('PrefTx', backref='author', lazy='dynamic')
+
+    def __repr__(self):
+        return '<name %r>' % (self.name)
+
+
+class Panels(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True)
+    current_version = db.Column(db.Integer)
+    versions = db.relationship('Versions', backref='author', lazy='dynamic')
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+
+    def __init__(self, name, project_id, current_version):
+        self.name = name
+        self.project_id = project_id
+        self.current_version = current_version
 
     def __repr__(self):
         return '<name %r>' % (self.name)
@@ -28,17 +44,34 @@ class PrefTx(db.Model):
         return '<id %r>' % (self.id)
 
 
-class Panels(db.Model):
+class VirtualPanels(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50))
-    team_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
     current_version = db.Column(db.Integer)
-    name = db.Column(db.String(50))
-    versions = db.relationship('Versions', backref='x', lazy='dynamic')
+    versions = db.relationship('VPRelationships', backref='author', lazy='dynamic')
+
+    def __init__(self, name, current_version):
+        self.name = name
+        self.current_version = current_version
 
     def __repr__(self):
         return '<name %r>' % (self.name)
 
+class VPRelationships(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50))
+    current_version = db.Column(db.Integer)
+    version_id = db.Column(db.Integer, db.ForeignKey('virtual_panels.id'))
+    panel_id = db.Column(db.Integer, db.ForeignKey('panels.id'))
+
+    def __init__(self, name, current_version, version_id, panel_id):
+        self.name = name
+        self.current_version = current_version
+        self.version_id = version_id
+        self.panel_id = panel_id
+
+    def __repr__(self):
+        return '<name %r>' % (self.name)
 
 class Versions(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -51,6 +84,15 @@ class Versions(db.Model):
     panel_id = db.Column(db.Integer, db.ForeignKey('panels.id'))
     region_id = db.Column(db.Integer, db.ForeignKey('regions.id'))
 
+    def __init__(self, intro, last, panel_id, region_id, comment, extension_3, extension_5):
+        self.intro = intro
+        self.last = last
+        self.panel_id = panel_id
+        self.region_id = region_id
+        self.comment = comment
+        self.extension_3 = extension_3
+        self.extension_5 = extension_5
+
     def __repr__(self):
         return '<id %r>' % (self.id)
 
@@ -60,6 +102,13 @@ class Genes(db.Model):
     name = db.Column(db.String(50), unique=True)
     tx = db.relationship('Tx', backref='y', lazy='dynamic')
 
+    def __init__(self, name, tx):
+        self.name = name
+        self.tx = tx
+
+    def __repr__(self):
+        return '<name %r>' % (self.name)
+
 
 class Tx(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -68,6 +117,14 @@ class Tx(db.Model):
     strand = db.Column(db.String(1))
     exons = db.relationship('Exons', backref='z', lazy='dynamic')
 
+    def __init__(self, accession, gene_id, strand, exons):
+        self.accession = accession
+        self.gene_id = gene_id
+        self.strand = strand
+        self.exons = exons
+
+    def __repr__(self):
+        return '<accession %r>' % (self.accession)
 
 class Exons(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -75,12 +132,29 @@ class Exons(db.Model):
     number = db.Column(db.Integer)
     region_id = db.Column(db.Integer, db.ForeignKey('regions.id'))
 
+    def __init__(self, tx_id, number, region_id):
+        self.tx_id = tx_id
+        self.number = number
+        self.region_id = region_id
+
+    def __repr__(self):
+        return '<id %r>' % (self.id)
 
 class Regions(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     chrom = db.Column(db.String(4), primary_key=True)
     start = db.Column(db.Integer)
     end = db.Column(db.Integer)
+    name = db.Column(db.String(50))
     versions = db.relationship('Versions', backref='i', lazy='dynamic')
     exons = db.relationship('Exons', backref='i', lazy='dynamic')
     db.UniqueConstraint('chrom', 'start', 'end', name='_chrom_start_end')
+
+    def __init__(self, chrom, start, end,name=None):
+        self.chrom = chrom
+        self.start = start
+        self.end = end
+        self.name = name
+
+    def __repr__(self):
+        return '<id %r>' % (self.id)

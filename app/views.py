@@ -69,19 +69,23 @@ class ItemTable(Table):
 
 class ItemTableProject(Table):
     name = Col('Name')
-    id = Col('Id')
     view = LinkCol('View Panels', 'view_panels', url_kwargs=dict(id='id'))
     #make = LinkCol('Make Panel', '', url_kwargs=dict())
     delete = LinkCol('Delete', 'delete_project', url_kwargs=dict(id='id'))
 
-
 class ItemTablePanels(Table):
-    projectname = Col('Project Name')
-    panelname = Col('Panel')
+    projectname = Col('Name')
+    view = LinkCol('View Panels', 'view_panels', url_kwargs=dict(id='projectid'))
     current_version = Col('Stable Version')
     status = LabelCol('Status')
-    make_live = LinkCol('Make Live', 'make_live', url_kwargs=dict(id='panelid'))
+    make_live = LinkCol('Make Live', 'make_live', url_kwargs=dict(id='projectid'))
+    #delete = LinkCol('Delete', 'delete_study', url_kwargs=dict(id='studyid'))
+
+class ItemTableVirtualPanels(Table):
+    paelname = Col('Panel Name')
+    virtualpanelname = Col('Virtual Panel')
     edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='panelid'))
+    make_live = LinkCol('Make Live', 'make_live', url_kwargs=dict(id='panelid'))
 
 
 class ItemTablePanel(Table):
@@ -111,6 +115,14 @@ def row2dict(row):
     return d
 
 
+def isgene(s,gene):
+    test = s.query(models.Genes).filter_by(name=gene).first()
+    if test is None:
+        return False
+    else:
+        return True
+
+
 @app.route('/')
 def index():
     return render_template('home.html', panels=3)
@@ -137,7 +149,6 @@ def view_panels(id=None):
     else:
         panels = get_panels(s)
     result = []
-    project_name = 'All'
     for i in panels:
         row = dict(zip(i.keys(), i))
         status = check_panel_status(s, row["panelid"])
@@ -157,14 +168,32 @@ def create_panel():
         #     flash('All fields are required.')
         #     return render_template('panel_create.html', form=form)
         # else:
-        print request.form
+        panelname = request.form["panelname"]
+        project = request.form["project"]
+        genesraw = request.form["listgenes"]
+        genes = genesraw.rstrip(',').split(",")
 
-        return edit_panel_page(panel_id=1)
+        result=[]
+        for gene in genes:
+            test = isgene(s,gene)
+            result.append(test)
+
+        if False not in result:
+            test_panel = s.query(models.Panels).filter_by(name=panelname).first()
+            if test_panel is not None:
+                return render_template('panel_create.html', form=form, message="Panel Name Exists")
+            else:
+                id = create_panel_query(s,project,panelname)
+
+                for gene in genes:
+                    add_genes_to_panel(s,id,gene)
+
+                return edit_panel_page(panel_id=id)
+        else:
+            return render_template('panel_create.html', form=form, message="One or more Gene Name(s) Invalid")
 
     elif request.method == 'GET':
         return render_template('panel_create.html', form=form)
-
-
 
 
 @app.route('/panels/live', methods=['GET', 'POST'])
@@ -173,26 +202,37 @@ def make_live():
     panel = s.query(models.Panels).filter_by(id=id).first()
     new_version = panel.current_version + 1
     s.query(models.Panels).filter_by(id=id).update({models.Panels.current_version: new_version})
-    project = s.query(models.Panels, models.Projects).filter_by(id=id).join(models.Projects).values(
-        models.Projects.id.label("projectid"))
+    s.commit()
+    project = s.query(models.Projects, models.Panels).filter_by(id=id).join(models.Panels).values(
+        models.Panels.id.label("panelid"))
     for i in project:
         projectid = i.projectid
-    s.commit()
     return view_panels(id=projectid)
 
 
 @app.route('/panels/edit')
 def edit_panel_page(panel_id=None):
+
     id = request.args.get('id')
     if id is None:
         id = panel_id
-    panel_info = s.query(models.Panels).filter_by(id=id).first()
-    version = panel_info.current_version
-    name = panel_info.name
+    panel_info = s.query(models.Panels,models.Projects).filter_by(id=id).join(models.Projects).values(
+        models.Projects.current_version,
+        models.Panels.name
+    )
+    for i in panel_info:
+        print i
+        version = i.current_version
+        name = i.name
+
+
     panel = get_panel_edit(s, id=id, version=version)
 
-    form = RemoveGene()
-    add_form = AddGene()
+    form = RemoveGene(panelId=id)
+    add_form = AddGene(panelIdAdd=id)
+
+
+
     result = []
     genes = []
     for i in panel:
@@ -221,6 +261,7 @@ def edit_panel():
     if request.method == 'POST':
         panel_id = request.form["panel_id"]
         for v in request.form:
+            print v
             if v.startswith("region"):
                 value = int(request.form[v])
                 region, region_id, intro, last, current_version, id, start, ext_5, end, ext_3, scope = v.split("_")
@@ -306,8 +347,10 @@ def delete_region():
 def add_gene():
     form = AddGene()
     if request.method == 'POST':
-        id = form.data['panelId']
-        gene = form.data['geneName']
+        id = form.data['panelIdAdd']
+        gene = form.data['genes']
+        if isgene(s,gene):
+            add_genes_to_panel(s,id,gene)
     return edit_panel_page(id)
 
 
@@ -350,7 +393,31 @@ def delete_users():
     db.session.commit()
     return view_users()
 
-
+# ########################
+# # STUDIES
+# ########################
+#
+# @app.route('/studies', methods=['GET', 'POST'])
+# def view_studies(id=None):
+#     result = []
+#     if not id:
+#         id = request.args.get('id')
+#     if id:
+#         studies = get_studies_by_project_id(s, id)
+#     else:
+#         studies = get_studies(s)
+#     project_name = 'All'
+#     for i in studies:
+#         row = dict(zip(i.keys(), i))
+#         status = check_study_status(s, row["studyid"])
+#         row["status"] = status
+#         # if id:
+#         #     project_name = row['projectname']
+#         result.append(row)
+#     table = ItemTableStudies(result, classes=['table', 'table-striped'])
+#     print result
+#     print table
+#     return render_template('studies.html', studies=table)
 ########################
 # PROJECTS
 ########################
@@ -361,6 +428,7 @@ def view_projects():
     result = []
     for i in projects:
         print type(i)
+        print i
         row = row2dict(i)
         result.append(row)
     table = ItemTableProject(projects, classes=['table', 'table-striped'])

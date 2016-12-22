@@ -20,16 +20,19 @@ class RemoveGene(Form):
     submit = SubmitField("Remove Gene")
 
 class AddGene(Form):
-    geneNameAdd = TextField("Gene Name")
-    panelIdAdd = TextField("Panel ID")
+    genes = TextField("Gene Name")
+    panelIdAdd = HiddenField("Panel ID")
     submit = SubmitField("Add Gene")
 
 def projects():
     return s.query(models.Projects)
 
+def studies():
+    return s.query(models.Studies)
+
 class CreatePanel(Form):
-    project = QuerySelectField(query_factory=projects,get_label='name')
+    study = QuerySelectField(query_factory=studies,get_label='name')
     panelname = TextField("Panel Name")
-    listgenes = TextAreaField("Selected Genes",)
+    listgenes = TextField("Selected Genes")
     genes = TextField("Genes")
     submit = SubmitField("Create Panel")
