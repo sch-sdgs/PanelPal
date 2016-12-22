@@ -15,6 +15,9 @@ class Projects(db.Model):
     panels = db.relationship('Panels', backref='author', lazy='dynamic')
     pref_tx = db.relationship('PrefTx', backref='author', lazy='dynamic')
 
+    def __init__(self,name):
+        self.name = name
+
     def __repr__(self):
         return '<name %r>' % (self.name)
 
@@ -40,8 +43,29 @@ class PrefTx(db.Model):
     tx_id = db.Column(db.Integer)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
 
+    def __init__(self, project_id, tx_id):
+        self.project_id = project_id
+        self.tx_id - tx_id
+
     def __repr__(self):
         return '<id %r>' % (self.id)
+
+
+class VPRelationships(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50))
+    current_version = db.Column(db.Integer)
+    version_id = db.Column(db.Integer, db.ForeignKey('versions.id'))
+    vpanel_id = db.Column(db.Integer, db.ForeignKey('virtual_panels.id'))
+
+    def __init__(self, name, current_version, version_id, vpanel_id):
+        self.name = name
+        self.current_version = current_version
+        self.version_id = version_id
+        self.panel_id = vpanel_id
+
+    def __repr__(self):
+        return '<name %r>' % (self.name)
 
 
 class VirtualPanels(db.Model):
@@ -57,21 +81,6 @@ class VirtualPanels(db.Model):
     def __repr__(self):
         return '<name %r>' % (self.name)
 
-class VPRelationships(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50))
-    current_version = db.Column(db.Integer)
-    version_id = db.Column(db.Integer, db.ForeignKey('virtual_panels.id'))
-    panel_id = db.Column(db.Integer, db.ForeignKey('panels.id'))
-
-    def __init__(self, name, current_version, version_id, panel_id):
-        self.name = name
-        self.current_version = current_version
-        self.version_id = version_id
-        self.panel_id = panel_id
-
-    def __repr__(self):
-        return '<name %r>' % (self.name)
 
 class Versions(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -126,6 +135,7 @@ class Tx(db.Model):
     def __repr__(self):
         return '<accession %r>' % (self.accession)
 
+
 class Exons(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tx_id = db.Column(db.Integer, db.ForeignKey('tx.id'))
@@ -140,6 +150,7 @@ class Exons(db.Model):
     def __repr__(self):
         return '<id %r>' % (self.id)
 
+
 class Regions(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     chrom = db.Column(db.String(4), primary_key=True)
@@ -150,7 +161,7 @@ class Regions(db.Model):
     exons = db.relationship('Exons', backref='i', lazy='dynamic')
     db.UniqueConstraint('chrom', 'start', 'end', name='_chrom_start_end')
 
-    def __init__(self, chrom, start, end,name=None):
+    def __init__(self, chrom, start, end, name=None):
         self.chrom = chrom
         self.start = start
         self.end = end

@@ -33,6 +33,6 @@ def panels():
 class CreatePanel(Form):
     project = QuerySelectField(query_factory=projects,get_label='name')
     panelname = TextField("Panel Name")
-    listgenes = TextField("Selected Genes")
+    listgenes = HiddenField("Selected Genes")
     genes = TextField("Genes")
     submit = SubmitField("Create Panel")

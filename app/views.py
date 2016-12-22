@@ -1,20 +1,12 @@
 from flask import render_template, request, flash, url_for, Markup, jsonify, redirect
-from flask_table import Table, Col, LinkCol
-
-from app import app, db, s,models
-from app.queries import *
-from forms import UserForm, ProjectForm, RemoveGene, AddGene, CreatePanel
-from panel_pal.db_commands import *
 from sqlalchemy.orm import scoped_session
-from sqlalchemy import Table as TableSQL
-from flask import session
+
+from app import app, s, models
+from app.queries import *
+from flask_table import Table, Col, LinkCol
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel
 
 app.secret_key = 'development key'
-
-d = Database()
-p = Panels()
-u = Users()
-pro = Projects()
 
 
 class NumberCol(Col):
@@ -27,6 +19,12 @@ class NumberCol(Col):
             **kwargs)
 
     def td_contents(self, item, attr_list):
+        """
+        special td contents for editing a panel - so includes form input fields etc
+        :param item:
+        :param attr_list:
+        :return:
+        """
         id = "region_" + str(self.from_attr_list(item, ['region_id'])) + "_" + str(
             self.from_attr_list(item, ['intro'])) + "_" + str(
             self.from_attr_list(item, ['last'])) + "_" + str(
@@ -51,6 +49,13 @@ class LabelCol(Col):
             **kwargs)
 
     def td_contents(self, item, attr_list):
+        """
+        This is the contents of a status column to indicate whether a panel is live or has changes
+
+        :param item:
+        :param attr_list:
+        :return:
+        """
         if self.from_attr_list(item, attr_list):
             type = "success"
             status = "OK"
@@ -67,11 +72,17 @@ class ItemTable(Table):
     delete = LinkCol('Delete', 'delete_users', url_kwargs=dict(id='id'))
 
 
+class ItemTableVirtualPanel(Table):
+    name = Col('Name')
+    id = Col('Id')
+
+
 class ItemTableProject(Table):
     name = Col('Name')
     view = LinkCol('View Panels', 'view_panels', url_kwargs=dict(id='id'))
-    #make = LinkCol('Make Panel', '', url_kwargs=dict())
+    # make = LinkCol('Make Panel', '', url_kwargs=dict())
     delete = LinkCol('Delete', 'delete_project', url_kwargs=dict(id='id'))
+
 
 class ItemTablePanels(Table):
     panelname = Col('Name')
@@ -80,7 +91,8 @@ class ItemTablePanels(Table):
     status = LabelCol('Status')
     view = LinkCol('View Virtual Panels', 'view_panels', url_kwargs=dict(id='panelid'))
     make_live = LinkCol('Make Live', 'make_live', url_kwargs=dict(id='panelid'))
-    #delete = LinkCol('Delete', 'delete_study', url_kwargs=dict(id='studyid'))
+    # delete = LinkCol('Delete', 'delete_study', url_kwargs=dict(id='studyid'))
+
 
 class ItemTableVirtualPanels(Table):
     paelname = Col('Panel Name')
@@ -109,6 +121,11 @@ class ItemTablePanel(Table):
 
 
 def row2dict(row):
+    """
+    converts a database row from certain queries (I think .all() style queries) to a dict
+    :param row: row from db
+    :return: dict
+    """
     d = {}
     for column in row.__table__.columns:
         d[column.name] = str(getattr(row, column.name))
@@ -116,7 +133,14 @@ def row2dict(row):
     return d
 
 
-def isgene(s,gene):
+def isgene(s, gene):
+    """
+    checks if a gene is in refflad
+
+    :param s: db session
+    :param gene: gene name
+    :return: true or false
+    """
     test = s.query(models.Genes).filter_by(name=gene).first()
     if test is None:
         return False
@@ -124,14 +148,41 @@ def isgene(s,gene):
         return True
 
 
+def check_panel_status(s, id):
+    """
+    checks the status of a panel - i.e. whether it is live or not live (it has uncommited changes)
+
+    :param s: db session
+    :param id: panel id
+    :return: true - panel is live or false - panel has changes
+    """
+    panels = check_panel_status_query(s, id)
+    status = True
+    for i in panels:
+        if i.intro > i.current_version:
+            status = False
+            break
+        if i.last is not None:
+            if i.last == i.current_version:
+                status = False
+                break
+
+    return status
+
+
 @app.route('/')
 def index():
     return render_template('home.html', panels=3)
 
+
 @app.route('/autocomplete', methods=['GET'])
 def autocomplete():
+    """
+    this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it
+    :return: jsonified gene list
+    """
     value = str(request.args.get('q'))
-    result = s.query(models.Genes).filter(models.Genes.name.like("%"+value+"%")).all()
+    result = s.query(models.Genes).filter(models.Genes.name.like("%" + value + "%")).all()
     data = [i.name for i in result]
     print data
     return jsonify(matching_results=data)
@@ -143,6 +194,12 @@ def autocomplete():
 
 @app.route('/panels', methods=['GET', 'POST'])
 def view_panels(id=None):
+    """
+    method to view panels, if project ID given then only return panels from that project
+    matt
+    :param id: project id
+    :return: rendered template panels.html
+    """
     if not id:
         id = request.args.get('id')
     if id:
@@ -150,7 +207,7 @@ def view_panels(id=None):
     else:
         panels = get_panels(s)
     result = []
-    project_name="All"
+    project_name = "All"
     for i in panels:
         row = dict(zip(i.keys(), i))
         status = check_panel_status(s, row["panelid"])
@@ -177,9 +234,9 @@ def create_panel():
         genesraw = request.form["listgenes"]
         genes = genesraw.rstrip(',').split(",")
 
-        result=[]
+        result = []
         for gene in genes:
-            test = isgene(s,gene)
+            test = isgene(s, gene)
             result.append(test)
 
         if False not in result:
@@ -187,10 +244,10 @@ def create_panel():
             if test_panel is not None:
                 return render_template('panel_create.html', form=form, message="Panel Name Exists")
             else:
-                id = create_panel_query(s,project,panelname)
+                id = create_panel_query(s, project, panelname)
 
                 for gene in genes:
-                    add_genes_to_panel(s,id,gene)
+                    add_genes_to_panel(s, id, gene)
                 return redirect(url_for('edit_panel_page', id=id))
         else:
             return render_template('panel_create.html', form=form, message="One or more Gene Name(s) Invalid")
@@ -201,25 +258,25 @@ def create_panel():
 
 @app.route('/panels/live', methods=['GET', 'POST'])
 def make_live():
-    id = request.args.get('id')
-    panel = s.query(models.Panels).filter_by(id=id).first()
-    new_version = panel.current_version + 1
-    s.query(models.Panels).filter_by(id=id).update({models.Panels.current_version: new_version})
-    s.commit()
-    project = s.query(models.Projects, models.Panels).filter_by(id=id).join(models.Panels).values(
-        models.Panels.id.label("panelid"),models.Projects.id.label("projectid"))
-    for i in project:
-        projectid = i.projectid
+    """
+    given a panel id this method makes a panel live
+
+    :return: redirection to view panels
+    """
+    panelid = request.args.get('id')
+    current_version = get_current_version(s, panelid)
+    new_version = current_version + 1
+    make_panel_live(s, panelid, new_version)
+
     return redirect(url_for('view_panels'))
 
 
 @app.route('/panels/edit')
 def edit_panel_page(panel_id=None):
-
     id = request.args.get('id')
     if id is None:
         id = panel_id
-    panel_info = s.query(models.Panels,models.Projects).filter_by(id=id).join(models.Projects).values(
+    panel_info = s.query(models.Panels, models.Projects).filter_by(id=id).join(models.Projects).values(
         models.Panels.current_version,
         models.Panels.name
     )
@@ -228,14 +285,12 @@ def edit_panel_page(panel_id=None):
         version = i.current_version
         name = i.name
 
-
     panel = get_panel_edit(s, id=id, version=version)
 
     form = RemoveGene(panelId=id)
     print "PANEL ID" + str(id)
     add_form = AddGene(panelIdAdd=id)
     print add_form.panelIdAdd
-
 
     result = []
     genes = []
@@ -342,86 +397,28 @@ def remove_gene():
     s.commit()
     return edit_panel_page(id)
 
+
 @app.route('/panels/delete/gene', methods=['POST'])
 def delete_region():
     pass
     return edit_panel_page(id)
 
+
 @app.route('/panels/delete/add', methods=['POST'])
 def add_gene():
+    """
+    adds a gene to a panel
+    :return: edit panel page
+    """
     form = AddGene()
     if request.method == 'POST':
         id = form.data['panelIdAdd']
         gene = form.data['genes']
-        if isgene(s,gene):
-            add_genes_to_panel(s,id,gene)
+        if isgene(s, gene):
+            add_genes_to_panel(s, id, gene)
     return edit_panel_page(id)
 
 
-########################
-# USERS
-########################
-
-@app.route('/users')
-def view_users():
-    users = models.Users.query.all()
-    result = []
-    for i in users:
-        row = row2dict(i)
-        result.append(row)
-    table = ItemTable(result, classes=['table', 'table-striped'])
-    return render_template('users.html', users=table, )
-
-
-@app.route('/users/add', methods=['GET', 'POST'])
-def add_users():
-    form = UserForm()
-    if request.method == 'POST':
-        if form.validate() == False:
-            flash('All fields are required.')
-            return render_template('users_add.html', form=form)
-        else:
-            u = models.Users(username=form.data["name"])
-            db.session.add(u)
-            db.session.commit()
-            return view_users()
-
-    elif request.method == 'GET':
-        return render_template('users_add.html', form=form)
-
-
-@app.route('/users/delete', methods=['GET', 'POST'])
-def delete_users():
-    u = db.session.query(models.Users).filter_by(id=request.args.get('id')).first()
-    db.session.delete(u)
-    db.session.commit()
-    return view_users()
-
-# ########################
-# # STUDIES
-# ########################
-#
-# @app.route('/studies', methods=['GET', 'POST'])
-# def view_studies(id=None):
-#     result = []
-#     if not id:
-#         id = request.args.get('id')
-#     if id:
-#         studies = get_studies_by_project_id(s, id)
-#     else:
-#         studies = get_studies(s)
-#     project_name = 'All'
-#     for i in studies:
-#         row = dict(zip(i.keys(), i))
-#         status = check_study_status(s, row["studyid"])
-#         row["status"] = status
-#         # if id:
-#         #     project_name = row['projectname']
-#         result.append(row)
-#     table = ItemTableStudies(result, classes=['table', 'table-striped'])
-#     print result
-#     print table
-#     return render_template('studies.html', studies=table)
 ########################
 # PROJECTS
 ########################
@@ -448,8 +445,8 @@ def add_projects():
             return render_template('project_add.html', form=form)
         else:
             u = models.Projects(name=form.data["name"])
-            db.session.add(u)
-            db.session.commit()
+            s.add(u)
+            s.commit()
             return view_projects()
 
     elif request.method == 'GET':
@@ -463,10 +460,21 @@ def delete_project():
     db.session.commit()
     return view_projects()
 
+
 #################
-# VIRTUAL PANLS
+# VIRTUAL PANELS
 ################
 
 @app.route('/virtualpanels')
 def view_virtual_panels():
+    result = get_virtual_panels_simple(s)
+    all_results = []
+    print result
+    for i in result:
+        print i
+        row = dict(zip(i.keys(), i))
+        print row
+        all_results.append(row)
 
+    table = ItemTableVirtualPanel(all_results, classes=['table', 'table-striped'])
+    return render_template("virtualpanels.html", virtualpanels=table)
