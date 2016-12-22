@@ -1,4 +1,4 @@
-from panel_pal import db
+from app import db
 
 
 class Users(db.Model):
@@ -12,7 +12,7 @@ class Users(db.Model):
 class Projects(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True)
-    studies = db.relationship('Panels', backref='author', lazy='dynamic')
+    panels = db.relationship('Panels', backref='author', lazy='dynamic')
     pref_tx = db.relationship('PrefTx', backref='author', lazy='dynamic')
 
     def __repr__(self):

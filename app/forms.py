@@ -27,11 +27,11 @@ class AddGene(Form):
 def projects():
     return s.query(models.Projects)
 
-def studies():
-    return s.query(models.Studies)
+def panels():
+    return s.query(models.Panels)
 
 class CreatePanel(Form):
-    study = QuerySelectField(query_factory=studies,get_label='name')
+    project = QuerySelectField(query_factory=projects,get_label='name')
     panelname = TextField("Panel Name")
     listgenes = TextField("Selected Genes")
     genes = TextField("Genes")

@@ -1,4 +1,4 @@
-from flask import render_template, request, flash, url_for, Markup, jsonify
+from flask import render_template, request, flash, url_for, Markup, jsonify, redirect
 from flask_table import Table, Col, LinkCol
 
 from app import app, db, s,models
@@ -74,11 +74,12 @@ class ItemTableProject(Table):
     delete = LinkCol('Delete', 'delete_project', url_kwargs=dict(id='id'))
 
 class ItemTablePanels(Table):
-    projectname = Col('Name')
-    view = LinkCol('View Panels', 'view_panels', url_kwargs=dict(id='projectid'))
+    panelname = Col('Name')
     current_version = Col('Stable Version')
+    edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='panelid'))
     status = LabelCol('Status')
-    make_live = LinkCol('Make Live', 'make_live', url_kwargs=dict(id='projectid'))
+    view = LinkCol('View Virtual Panels', 'view_panels', url_kwargs=dict(id='panelid'))
+    make_live = LinkCol('Make Live', 'make_live', url_kwargs=dict(id='panelid'))
     #delete = LinkCol('Delete', 'delete_study', url_kwargs=dict(id='studyid'))
 
 class ItemTableVirtualPanels(Table):
@@ -149,13 +150,16 @@ def view_panels(id=None):
     else:
         panels = get_panels(s)
     result = []
+    project_name="All"
     for i in panels:
         row = dict(zip(i.keys(), i))
         status = check_panel_status(s, row["panelid"])
         row["status"] = status
+        print row
         if id:
             project_name = row['projectname']
         result.append(row)
+    print result
     table = ItemTablePanels(result, classes=['table', 'table-striped'])
     return render_template('panels.html', panels=table, project_name=project_name)
 
@@ -187,8 +191,7 @@ def create_panel():
 
                 for gene in genes:
                     add_genes_to_panel(s,id,gene)
-
-                return edit_panel_page(panel_id=id)
+                return redirect(url_for('edit_panel_page', id=id))
         else:
             return render_template('panel_create.html', form=form, message="One or more Gene Name(s) Invalid")
 
@@ -204,10 +207,10 @@ def make_live():
     s.query(models.Panels).filter_by(id=id).update({models.Panels.current_version: new_version})
     s.commit()
     project = s.query(models.Projects, models.Panels).filter_by(id=id).join(models.Panels).values(
-        models.Panels.id.label("panelid"))
+        models.Panels.id.label("panelid"),models.Projects.id.label("projectid"))
     for i in project:
         projectid = i.projectid
-    return view_panels(id=projectid)
+    return redirect(url_for('view_panels'))
 
 
 @app.route('/panels/edit')
@@ -217,7 +220,7 @@ def edit_panel_page(panel_id=None):
     if id is None:
         id = panel_id
     panel_info = s.query(models.Panels,models.Projects).filter_by(id=id).join(models.Projects).values(
-        models.Projects.current_version,
+        models.Panels.current_version,
         models.Panels.name
     )
     for i in panel_info:
@@ -229,8 +232,9 @@ def edit_panel_page(panel_id=None):
     panel = get_panel_edit(s, id=id, version=version)
 
     form = RemoveGene(panelId=id)
+    print "PANEL ID" + str(id)
     add_form = AddGene(panelIdAdd=id)
-
+    print add_form.panelIdAdd
 
 
     result = []
@@ -458,3 +462,11 @@ def delete_project():
     db.session.delete(u)
     db.session.commit()
     return view_projects()
+
+#################
+# VIRTUAL PANLS
+################
+
+@app.route('/virtualpanels')
+def view_virtual_panels():
+

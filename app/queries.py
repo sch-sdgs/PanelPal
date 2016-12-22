@@ -1,6 +1,10 @@
 from app import models
 from sqlalchemy import or_,bindparam,desc
 
+def get_virtual_panels_simple(s):
+    vpanels = s.query(models.VirtualPanels).values(models.VirtualPanels.current_version,models.VirtualPanels.name,models.VirtualPanels.id)
+    return vpanels
+
 def get_virtual_panels(s):
     """
     gets all virtual panels
@@ -31,7 +35,11 @@ def get_panels(s):
     :return: sql alchemy object with study name and study id
     """
     panels = s.query(models.Projects,models.Panels).join(models.Panels). \
-        values(models.Panels.name.label("panelname"),models.Panels.current_version,models.Panels.id.label("panelid"))
+        values(models.Panels.name.label("panelname"), \
+               models.Panels.current_version, \
+               models.Panels.id.label("panelid"),\
+               models.Projects.name.label("projectname"), \
+               models.Projects.id.label("projectid"))
 
     return panels
 
@@ -50,7 +58,7 @@ def get_virtual_panels_by_panel_id(s,id):
 
 def get_panels_by_project_id(s,id):
     panels = s.query(models.Projects,models.Panels).join(models.Panels).filter_by(project_id=id). \
-        values(models.Panels.name.label("panelname"),models.Panels.current_version,models.Panels.id.label("panelid"))
+        values(models.Projects.id.label("projectid"),models.Projects.name.label("projectname"),models.Panels.name.label("panelname"),models.Panels.current_version,models.Panels.id.label("panelid"))
 
     return panels
 
