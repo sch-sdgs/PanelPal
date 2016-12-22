@@ -43,8 +43,6 @@ class Database():
     def __del__(self):
         self.panelpal_conn.commit()
         self.panelpal_conn.close()
-        self.refflat_conn.commit()
-        self.refflat_conn.close()
 
 
 class Projects(Database):
@@ -164,7 +162,7 @@ class Panels(Database):
         try:
             pp.execute(command, versions)
             self.panelpal_conn.commit()
-            return 0
+            return pp.lastrowid
         except self.panelpal_conn.Error as e:
             self.panelpal_conn.rollback()
             print 'Error'
@@ -180,6 +178,8 @@ class Panels(Database):
                 current_regions.append(c.get('region_id'))
         current_regions = set(current_regions)
 
+        version_ids = []
+
         for gene in genes:
             results = self.query_db(pp,
                                '''SELECT regions.id, regions.start, regions.end, tx.strand, tx.cds_start, tx.cds_end
@@ -187,7 +187,7 @@ class Panels(Database):
                                     JOIN tx ON genes.id=tx.gene_id
                                     JOIN exons ON tx.id=exons.tx_id
                                     JOIN regions ON exons.region_id=regions.id
-                                    WHERE name = ?
+                                    WHERE genes.name = ?
                                     ORDER BY start''',
                                (gene,))
             regions = {}
@@ -202,7 +202,7 @@ class Panels(Database):
                     regions[r_id] = {'start':r_start, 'end':r_end, 'tx':[tx]}
                 elif tx not in regions[r_id]['tx']:
                     regions[r_id]['tx'].append(tx)
-            for region in regions:
+            for region in regions.keys():
                 if region not in current_regions and use_cds:
                     region_start = regions[region].get('start')
                     region_end = regions[region].get('end')
@@ -216,20 +216,34 @@ class Panels(Database):
                             gene_cds_end = tx.get('cds_end')
                     #add extensions to region to exclude UTRs when exporting BED
                     if gene_cds_start > region_end or gene_cds_end < region_start:
+                        v_id = None
                         pass
                     elif region_start < gene_cds_start < region_end:
                         extension_5 = region_start - gene_cds_start #negative number required
-                        self.add_to_version(panel_id, region, version, None, extension_5)
+                        v_id = self.add_to_version(panel_id, region, version, None, extension_5)
                     elif region_start < gene_cds_end < region_end:
                         extension_3 = gene_cds_end - region_end #negative number required
-                        self.add_to_version(panel_id, region, version, extension_3, None)
+                        v_id = self.add_to_version(panel_id, region, version, extension_3, None)
                     else:
-                        self.add_to_version(panel_id, region, version, None, None)
+                        v_id = self.add_to_version(panel_id, region, version, None, None)
                 #if UTRs are required, just add region to versions table
                 elif region not in current_regions:
-                    self.add_to_version(panel_id, region, version, None, None)
+                    v_id = self.add_to_version(panel_id, region, version, None, None)
+                else:
+                    try:
+                        v_id = self.query_db(pp, 'SELECT id fROM versions WHERE panel_id = ? AND region_id = ?', (panel_id,region))[0].get('id')
+                    except IndexError:
+                        v_id = 0
+                        print('Get version id error')
+                        exit(1)
+                if v_id == -1:
+                    print('Add region error')
+                    exit(1)
+                elif v_id is not None:
+                    version_ids.append(v_id)
+        return version_ids
 
-    def import_bed(self, project, panel, gene_file, bed_file, use_cds=True):
+    def import_bed(self, project, panel, vpanel, gene_file, use_cds=True):
 
         f = open(gene_file, 'r')
         genes = [line.strip('\n') for line in f.readlines()]
@@ -251,7 +265,10 @@ class Panels(Database):
             print('Add Panel error')
             exit(1)
         else:
-            self.insert_versions(genes, panel_id, 1, True)
+            version_ids = self.insert_versions(genes, panel_id, 1, use_cds)
+            v = VirtualPanels()
+            v.import_virtual_panel(vpanel, version_ids)
+
 
 
 
@@ -433,9 +450,48 @@ class Panels(Database):
         pp.execute('UPDATE panels SET current_version = ? WHERE id = ?',(new_version,panel_id,))
         self.panelpal_conn.commit()
 
+class VirtualPanels(Database):
+    def query_db(self, c, query, args=(), one=False):
+        return Database.query_db(self, c, query, args, one)
+
+    def get_virtual_panel(self, panel_id):
+        pass
+
+    def add_virtual_panel(self, name):
+        pp = self.panelpal_conn.cursor()
+        try:
+            pp.execute("INSERT OR IGNORE INTO virtual_panels(name, current_version) VALUES (?,0)", (name,))
+            self.panelpal_conn.commit()
+            return pp.lastrowid
+        except self.panelpal_conn.Error as e:
+            self.panelpal_conn.rollback()
+            print(e.args[0])
+            return -1
+
+    def import_virtual_panel(self, name, versions):
+        pp = self.panelpal_conn.cursor()
+        print(name)
+        try:
+            panel_id = self.query_db(pp, 'SELECT id fROM virtual_panels WHERE name = ?', (name,))[0].get('id')
+        except IndexError:
+            panel_id = self.add_virtual_panel(name)
+            if panel_id == -1:
+                print('Add virtual project error')
+                exit(1)
+        print(panel_id)
+        for version in versions:
+            print(version)
+            try:
+                pp.execute("INSERT INTO VP_relationships(version_id, vpanel_id, intro) VALUES (?,?,1)", (version,panel_id))
+                self.panelpal_conn.commit()
+            except self.panelpal_conn.Error as e:
+                self.panelpal_conn.rollback()
+                print(e.args[0])
+
+
 class Users(Database):
     def query_db(self, c, query, args=(), one=False):
-        return Database.query_db(self, c, query, args, one=False)
+        return Database.query_db(self, c, query, args, one)
 
     def get_users(self):
         # pp = self.panelpal_conn.cursor()
@@ -461,7 +517,7 @@ class Regions(Database):
 
     def get_regions_by_gene(self,gene):
 
-        c = self.refflat_conn.cursor()
+        c = self.panelpal_conn.cursor()
         result = self.query_db(c,"SELECT * FROM genes join tx on genes.id=tx.gene_id join exons on tx.id = exons.tx_id join regions on exons.region_id = regions.id WHERE name=?", (gene,))
         formatted_result = {}
         formatted_result[gene] = {}
@@ -488,7 +544,7 @@ class Regions(Database):
         return formatted_result
 
     def get_regions_by_tx(self, tx):
-        c = self.refflat_conn.cursor()
+        c = self.panelpal_conn.cursor()
         result = self.query_db(c,
                           "SELECT * FROM tx join genes on tx.gene_id=genes.id join exons on tx.id = exons.tx_id WHERE accession=?",
                           (tx,))
@@ -517,7 +573,7 @@ class Regions(Database):
 
     def genes_in_region(self,chrom,start,end):
         # TODO will only get if exon is in region need to do introns too
-        c = self.refflat_conn.cursor()
+        c = self.panelpal_conn.cursor()
         fully_within = self.query_db(c,
                           "SELECT * FROM tx join genes on tx.gene_id=genes.id join exons on tx.id = exons.tx_id WHERE chrom=? AND (start >= ? AND end <= ?)",
                           (chrom,start,end,))
