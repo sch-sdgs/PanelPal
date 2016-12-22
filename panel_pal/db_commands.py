@@ -9,14 +9,10 @@ import os
 
 class Database():
     def __init__(self):
-        path = os.path.dirname(__file__)
-        self.refflat = path + '/resources/refflat.db'
-        self.refflat_conn = sqlite3.connect(self.refflat,check_same_thread=False)
+        path = os.path.dirname(os.path.dirname(__file__))
+        print(path)
         self.panelpal = path + '/resources/panel_pal.db'
         self.panelpal_conn = sqlite3.connect(self.panelpal,check_same_thread=False)
-        pp = self.panelpal_conn.cursor()
-        pp.execute('ATTACH database ? as rf;', (self.refflat,))
-        pp.close()
 
     def delete(self,conn, table, id):
         pp = conn.cursor()
