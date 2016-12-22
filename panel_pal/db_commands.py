@@ -10,10 +10,9 @@ import os
 class Database():
     def __init__(self):
         path = os.path.dirname(os.path.dirname(__file__))
-        print path + '/resources/panel_pal.db'
+        print(path)
         self.panelpal = path + '/resources/panel_pal.db'
         self.panelpal_conn = sqlite3.connect(self.panelpal,check_same_thread=False)
-
 
     def delete(self,conn, table, id):
         pp = conn.cursor()
