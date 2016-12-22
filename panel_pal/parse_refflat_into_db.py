@@ -19,7 +19,7 @@ def create_tables(c):
         (id INTEGER PRIMARY KEY AUTOINCREMENT, tx_id, region_id INTEGER, number INTEGER, FOREIGN KEY(tx_id) REFERENCES tx(id), FOREIGN KEY(region_id) REFERENCES regions(id) )''')
 
     c.execute('''CREATE TABLE regions
-        (id INTEGER PRIMARY KEY AUTOINCREMENT, chrom CHAR(4), start INTEGER, end INTEGER, CONSTRAINT unq UNIQUE (chrom,start,end))''')
+        (id INTEGER PRIMARY KEY AUTOINCREMENT, chrom CHAR(4), start INTEGER, end INTEGER, name VARCHAR(50), CONSTRAINT unq UNIQUE (chrom,start,end))''')
 
 
 def parse_reflat(c,refflat):
