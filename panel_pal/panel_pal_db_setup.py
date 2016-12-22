@@ -1,6 +1,6 @@
 import sqlite3
 import argparse
-from db_commands import Projects, Users, Studies
+from db_commands import Projects, Users, Panels
 import parse_refflat_into_db
 
 def create_db(conn):
@@ -8,6 +8,9 @@ def create_db(conn):
     pp.executescript('drop table if exists projects;')
     pp.executescript('drop table if exists panels;')
     pp.executescript('drop table if exists versions;')
+    pp.executescript('drop table if exists VP_relationships')
+    pp.executescript('drop table if exists virtual_panels')
+    pp.executescript('drop table if exists pref_tx;')
     pp.executescript('drop table if exists users;')
     pp.executescript('drop table if exists ref_logtable;')
 
@@ -16,12 +19,14 @@ def create_db(conn):
         pp.executescript("""
         CREATE TABLE projects
             (id INTEGER PRIMARY KEY, name VARCHAR(50), UNIQUE(name));
-        CREATE TABLE studies
-            (id INTEGER PRIMARY KEY, project_id INTEGER, name VARCHAR(50), current_version INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id), UNIQUE(name));
         CREATE TABLE panels
-            (id INTEGER PRIMARY KEY, name VARCHAR(50), study_id INTEGER, FOREIGN KEY(study_id) REFERENCES studies(id), UNIQUE(name));
+            (id INTEGER PRIMARY KEY, project_id INTEGER, name VARCHAR(50), current_version INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id), UNIQUE(name));
         CREATE TABLE versions
             (id INTEGER PRIMARY KEY, intro INTEGER, last INTEGER, panel_id INTEGER, region_id INTEGER, comment VARCHAR(100), extension_3 INTEGER, extension_5 INTEGER, FOREIGN KEY(panel_id) REFERENCES panels(id), FOREIGN KEY(region_id) REFERENCES regions(id));
+        CREATE TABLE VP_relationships
+            (id INTEGER PRIMARY KEY, intro INTEGER, last INTEGER, version_id INTEGER, vpanel_id INTEGER, FOREIGN KEY(version_id) REFERENCES versions(id), FOREIGN KEY(vpanel_id) REFERENCES virtual_panels(id));
+        CREATE TABLE virtual_panels
+            (id INTEGER PRIMARY KEY, name VARCHAR(50), current_version INTEGER, UNIQUE(name));
         CREATE TABLE pref_tx
             (id INTEGER PRIMARY KEY, project_id INTEGER, tx_id INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id), FOREIGN KEY(tx_id) REFERENCES tx(id));
         CREATE TABLE users
@@ -33,13 +38,13 @@ def create_db(conn):
         return True
     except conn.Error as e:
         pp.executescript("rollback")
-        print e.args[0]
+        print(e.args[0])
         return False
 
 def main():
     p=Projects()
     u=Users()
-    s=Studies()
+    pan=Panels()
 
     parser = argparse.ArgumentParser(description='creates db tables required for PanelPal program')
     parser.add_argument('--db', default="resources/")
@@ -75,7 +80,7 @@ def main():
             if project_id == -1:
                 print project + " is not a project; cannot add " + study
             else:
-                complete = s.add_study(study,project_id)
+                complete = pan.add_panel(study,project_id)
                 if complete == -1:
                     print study + " not added to database"
     if args.users is not None:

@@ -146,4 +146,4 @@ api.add_resource(BEDs, '/api/bed/<string:bed_type>/<string:panel>')
 
 
 if __name__ == '__main__':
-    app.run(debug=True,host= '10.182.131.21',port=5001)
+    app.run(debug=True,host= '10.182.131.21',port=5002)

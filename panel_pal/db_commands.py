@@ -4,7 +4,7 @@ from enum import Enum
 import os
 from pybedtools import BedTool
 import os
-from app import models
+#from app import models
 
 
 class Database():
@@ -111,14 +111,14 @@ class Panels(Database):
     def query_db(self,c, query, args=(), one=False):
         return Database.query_db(self, c, query, args, one=False)
 
-    def add_panel(self,panel, project_id, conn):
-        pp = conn.cursor()
+    def add_panel(self,panel, project_id):
+        pp = self.panelpal_conn.cursor()
         try:
-            pp.execute("INSERT OR IGNORE INTO panels(name, study_id) VALUES (?, ?)", (panel,project_id))
-            conn.commit()
+            pp.execute("INSERT OR IGNORE INTO panels(name, project_id, current_version) VALUES (?, ?, 0)", (panel,project_id))
+            self.panelpal_conn.commit()
             return pp.lastrowid
-        except conn.Error as e:
-            conn.rollback()
+        except self.panelpal_conn.Error as e:
+            self.panelpal_conn.rollback()
             print e.args[0]
             return -1
 
@@ -233,31 +233,29 @@ class Panels(Database):
                 elif region not in current_regions:
                     self.add_to_version(panel_id, region, version, None, None)
 
-    def import_bed(self, study, panel, gene_file, bed_file, use_cds=True):
+    def import_bed(self, project, panel, gene_file, bed_file, use_cds=True):
 
         f = open(gene_file, 'r')
         genes = [line.strip('\n') for line in f.readlines()]
 
-        s = Studies()
-        project_id = s.get_study(study)
-        print study + " id = " + str(project_id)
-        if project_id == -1:
-            print 'Could not insert project ' + study + "; exiting."
-            exit()
-        panel_id = self.get_panel_id(panel, project_id)
-        print panel + " id = " + str(panel_id)
-        if panel_id == -1:
-            print 'Could not insert panel ' + panel + "; exiting."
-            exit()
-
         pp = self.panelpal_conn.cursor()
-        version = self.query_db(pp, 'SELECT current_version FROM studies WHERE id = ?', (project_id,))
-        pp.close()
-        self.insert_versions(genes, panel_id, version[0].get('current_version'), use_cds)
 
-        pp_bed = self.export_bed(panel, 'ROI_25')
-        self.compare_bed(bed_file, False, pp_bed)
+        try:
+            project_id = self.query_db(pp, 'SELECT id fROM projects WHERE name = ?', (project,))[0].get('id')
+        except IndexError:
+            p = Projects()
+            project_id = p.add_project(project=project)
+            if project_id == -1:
+                print('Add project error')
+                exit(1)
 
+        panel_id = self.add_panel(panel, project_id)
+
+        if panel_id == -1:
+            print('Add Panel error')
+            exit(1)
+        else:
+            self.insert_versions(genes, panel_id, 1, True)
 
 
 
@@ -447,7 +445,8 @@ class Users(Database):
         # pp = self.panelpal_conn.cursor()
         # users = self.query_db(pp,"SELECT * FROM users")
         # return users
-        print models.Users.query.all()
+        #print models.Users.query.all()
+        pass
 
     def add_user(self,user):
         pp = self.panelpal_conn.cursor()
