@@ -10,6 +10,7 @@ from app import models
 class Database():
     def __init__(self):
         path = os.path.dirname(__file__)
+        print path + '/resources/panel_pal.db'
         self.refflat = path + '/resources/refflat.db'
         self.refflat_conn = sqlite3.connect(self.refflat,check_same_thread=False)
         self.panelpal = path + '/resources/panel_pal.db'

@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block popup %}
-<div id="addGene" class="modal">
+<div id="addGene" class="modal ui-front">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-body">
@@ -9,10 +9,9 @@
                 <p></p>
                 <form action="{{ url_for('add_gene') }}" method="POST" class="form">
                     <div class="form-group">
-                        {{ add_form.geneNameAdd.label }}
-                        {{ add_form.geneNameAdd(class_="form-control") }}
-                        {{ add_form.panelIdAdd.label }}
-                        {{ add_form.panelIdAdd(class_="form-control",readonly="readonly") }}
+                        {{ add_form.genes.label }}
+                        {{ add_form.genes(class_="form-control") }}
+                        {{ add_form.panelIdAdd(class_="form-control") }}
                     </div>
                     {{ add_form.submit(class_="btn btn-primary") }}
                 </form>
@@ -33,7 +32,7 @@
                         {{ form.geneName.label }}
                         {{ form.geneName(class_="form-control",readonly="readonly") }}
                         {{ form.panelId.label }}
-                        {{ form.panelId(class_="form-control",readonly="readonly") }}
+                        {{ form.panelId(class_="form-control") }}
                     </div>
                     {{ form.submit(class_="btn btn-primary") }}
                 </form>

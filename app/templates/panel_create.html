@@ -3,8 +3,12 @@
 {% block content %}
 <h2>Create Panel</h2>
 
+{% if message %}
+<div class="alert alert-danger"><strong>Oh Snap!</strong> {{ message }}</div>
+{% endif %}
+
 {% for message in form.genes.errors %}
-<div class="alert alert-danger">Oh Snap! {{ message }}</div>
+<div class="alert alert-danger"><strong>Oh Snap!</strong> {{ message }}</div>
 {% endfor %}
 
 <div class="container">
@@ -15,15 +19,15 @@
 
 <form action="{{ url_for('create_panel') }}" method="POST" class="form">
     <div class="form-group">
-        {{ form.project.label }}
-        {{ form.project(class_="form-control") }}
+        {{ form.study.label }}
+        {{ form.study(class_="form-control") }}
     </div>
      <div class="form-group">
         {{ form.panelname.label }}
         {{ form.panelname(class_="form-control") }}
     </div>
     <div class="form-group">
-        {{ form.listgenes(class_="hide") }}
+         {{ form.listgenes(class_="form-control") }}
     </div>
     {{ form.genes.label }}
     <div class="input-group">
@@ -32,6 +36,7 @@
             <button class="btn btn-primary" type="button" id="add">Add</button>
         </span>
     </div>
+
     <div class="panel panel-default restrict" id="genelabels">
         <div class="panel-heading"><h5>Genes Selected</h5></div>
         <div class="panel-body" id="addhere"></div>
