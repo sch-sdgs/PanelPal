@@ -73,7 +73,7 @@ class ItemTable(Table):
 
 
 class ItemTableVirtualPanel(Table):
-    name = Col('Name')
+    vp_name = Col('Name')
     current_version = Col('Version')
     status = LabelCol('Status')
     edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='id'))
@@ -517,6 +517,7 @@ def view_virtual_panels(id=None):
         id = request.args.get('id')
     print(id)
     if id:
+        print('by id')
         result = get_virtual_panels_by_panel_id(s, id)
     else:
         result = get_virtual_panels_simple(s)

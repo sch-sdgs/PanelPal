@@ -3,14 +3,11 @@ from sqlalchemy import or_, desc
 from app.models import *
 
 def get_virtual_panels_simple(s):
-    vpanels = s.query(VPRelationships, VirtualPanels). \
-        distinct(VirtualPanels.name). \
+    vpanels = s.query(VirtualPanels). \
         group_by(VirtualPanels.name). \
-        join(VirtualPanels). \
         values(VirtualPanels.current_version, \
-               VirtualPanels.name, \
-               VirtualPanels.id,
-               VPRelationships.version_id)
+               VirtualPanels.name.label('vp_name'), \
+               VirtualPanels.id)
 
     return vpanels
 
@@ -51,17 +48,16 @@ def get_panels(s):
 
 
 def get_virtual_panels_by_panel_id(s, id):
-    vpanels = s.query(Panels, Versions, VPRelationships, VirtualPanels). \
-        join(Versions). \
-        filter_by(panel_id=id). \
+    vpanels = s.query(VirtualPanels, VPRelationships, Versions, Panels). \
+        distinct(VirtualPanels.name). \
+        group_by(VirtualPanels.name). \
         join(VPRelationships). \
-        join(VirtualPanels). \
-        values(VirtualPanels.current_version, VirtualPanels.id.label("virtualpanelid"), \
-               VirtualPanels.name.label("virtualpanelname"), \
-               VPRelationships.version_id, \
-               Panels.id, \
-               Panels.name.label("panelname"))
-
+        join(Versions). \
+        join(Panels). \
+        filter(Panels.id == id). \
+        values(VirtualPanels.id, \
+               VirtualPanels.current_version, \
+               VirtualPanels.name.label('vp_name'))
     return vpanels
 
 
