@@ -45,7 +45,7 @@ class PrefTx(db.Model):
 
     def __init__(self, project_id, tx_id):
         self.project_id = project_id
-        self.tx_id - tx_id
+        self.tx_id = tx_id
 
     def __repr__(self):
         return '<id %r>' % (self.id)

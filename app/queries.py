@@ -280,3 +280,14 @@ def get_genes_by_projectid(s, projectid):
                Tx.strand)
     return genes
 
+def add_preftx_to_panel(s,project_id,tx_id):
+    preftx = PrefTx(project_id=project_id,tx_id=tx_id)
+    s.add(preftx)
+    return preftx.id
+
+
+def add_preftxs_to_panel(s,project_id,tx_ids):
+    for tx_id in tx_ids:
+        add_preftx_to_panel(s,project_id=project_id,tx_id=tx_id)
+    s.commit()
+

@@ -39,3 +39,4 @@ class CreatePanel(Form):
 
 class PrefTxCreate(Form):
     gene = RadioField(u'Genes',choices=[],coerce=int)
+    project_id = TextField("Project ID")

@@ -511,25 +511,41 @@ def view_preftx():
         table = ItemTablePrefTx(all_results, classes=['table', 'table-striped'])
     return render_template("preftx.html", preftx=table, project_name=project)
 
-@app.route('/preftx/create')
+@app.route('/preftx/create', methods=['GET', 'POST'])
 def create_preftx():
     id = request.args.get('id')
-    result = get_genes_by_projectid(s=s, projectid=id)
-    genes = {}
-    for i in result:
-        print i.genename
-        if i.genename not in genes:
-            genes[i.genename] = list()
-            genes[i.genename].append((i.txid,i.accession))
-        else:
-            genes[i.genename].append((i.txid,i.accession))
+    if request.method == 'GET':
+        result = get_genes_by_projectid(s=s, projectid=id)
+        genes = {}
+        for i in result:
+            print i.genename
+            if i.genename not in genes:
+                genes[i.genename] = list()
+                genes[i.genename].append((i.txid,i.accession))
+            else:
+                genes[i.genename].append((i.txid,i.accession))
 
-    list_of_forms = []
-    for gene in genes:
-        form = PrefTxCreate(request.form)
-        form.gene.choices=genes[gene]
-        form.gene.name=gene
-        list_of_forms.append(form)
+        list_of_forms = []
+        for gene in genes:
+            form = PrefTxCreate(request.form)
+            form.gene.choices=genes[gene]
+            form.gene.name=gene
+            list_of_forms.append(form)
 
-    print list_of_forms
-    return render_template("preftx_create.html",genes = genes, list_of_forms = list_of_forms)
+        print list_of_forms
+        return render_template("preftx_create.html",genes = genes, list_of_forms = list_of_forms, project_id = id)
+
+    elif request.method == 'POST':
+        print request.form
+        tx_ids = []
+        for i in request.form:
+            print i
+            if i == "project_id":
+                project_id = request.form["project_id"]
+            else:
+                tx_ids.append(request.form[i])
+
+        add_preftxs_to_panel(s,project_id,tx_ids)
+
+
+
