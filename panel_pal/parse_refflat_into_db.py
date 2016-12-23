@@ -53,12 +53,12 @@ def parse_reflat(c,refflat):
 
     c.close()
 
-def main():
+def main(db):
     parser = argparse.ArgumentParser(description='creates db of genes, tx and exons for PanelPal')
     parser.add_argument('--refflat',default="/results/Pipeline/reference/UCSCRefSeqTable_refflat_format.txt")
     args = parser.parse_args()
 
-    conn = sqlite3.connect('resources/panel_pal.db')
+    conn = sqlite3.connect(db)
     c = conn.cursor()
 
     create_tables(c)
