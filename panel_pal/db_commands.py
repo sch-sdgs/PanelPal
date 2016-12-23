@@ -54,6 +54,7 @@ class Projects(Database):
         try:
             pp.execute("INSERT OR IGNORE INTO projects(name) VALUES (?)", (project,))
             self.panelpal_conn.commit()
+            print(pp.lastrowid)
             return pp.lastrowid
         except self.panelpal_conn.Error as e:
             self.panelpal_conn.rollback()
@@ -110,6 +111,7 @@ class Panels(Database):
         try:
             pp.execute("INSERT OR IGNORE INTO panels(name, project_id, current_version) VALUES (?, ?, 0)", (panel,project_id))
             self.panelpal_conn.commit()
+            print(pp.lastrowid)
             return pp.lastrowid
         except self.panelpal_conn.Error as e:
             self.panelpal_conn.rollback()
@@ -146,6 +148,7 @@ class Panels(Database):
         return panel
 
     def add_to_version(self,panel_id, region_id, version, extension_3, extension_5):
+        print(panel_id)
         pp=self.panelpal_conn.cursor()
         command = 'INSERT INTO versions(intro, panel_id, region_id'
         values = 'VALUES(?,?,?'
@@ -162,6 +165,7 @@ class Panels(Database):
         try:
             pp.execute(command, versions)
             self.panelpal_conn.commit()
+            print('added to versions')
             return pp.lastrowid
         except self.panelpal_conn.Error as e:
             self.panelpal_conn.rollback()
@@ -170,6 +174,7 @@ class Panels(Database):
             return -1
 
     def insert_versions(self,genes, panel_id, version, use_cds):
+        print(panel_id)
         pp = self.panelpal_conn.cursor()
         current_regions = []
         current = self.query_db(pp, "SELECT region_id FROM versions WHERE panel_id=?;", (panel_id,))
@@ -252,15 +257,23 @@ class Panels(Database):
 
         try:
             project_id = self.query_db(pp, 'SELECT id fROM projects WHERE name = ?', (project,))[0].get('id')
+            print(project)
+            print(project_id)
         except IndexError:
+            print('index error')
             p = Projects()
             project_id = p.add_project(project=project)
             if project_id == -1:
                 print('Add project error')
                 exit(1)
 
-        panel_id = self.add_panel(panel, project_id)
+        try:
+            panel_id = self.query_db(pp, 'SELECT id FROM panels WHERE project_id = ?', (project_id,))[0].get('id')
+            print(panel_id)
+        except IndexError:
+            panel_id = self.add_panel(panel, project_id)
 
+        print(panel_id)
         if panel_id == -1:
             print('Add Panel error')
             exit(1)
@@ -473,7 +486,6 @@ class VirtualPanels(Database):
 
     def import_virtual_panel(self, name, versions):
         pp = self.panelpal_conn.cursor()
-        print(name)
         try:
             panel_id = self.query_db(pp, 'SELECT id fROM virtual_panels WHERE name = ?', (name,))[0].get('id')
         except IndexError:
@@ -483,7 +495,6 @@ class VirtualPanels(Database):
                 exit(1)
         print(panel_id)
         for version in versions:
-            print(version)
             try:
                 pp.execute("INSERT INTO VP_relationships(version_id, vpanel_id, intro) VALUES (?,?,1)", (version,panel_id))
                 self.panelpal_conn.commit()
