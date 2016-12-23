@@ -2,6 +2,7 @@ import sqlite3
 import argparse
 from db_commands import Projects, Users, Panels
 import parse_refflat_into_db
+import os
 
 def create_db(conn):
     pp = conn.cursor()
@@ -11,7 +12,9 @@ def create_db(conn):
     pp.executescript('drop table if exists VP_relationships')
     pp.executescript('drop table if exists virtual_panels')
     pp.executescript('drop table if exists pref_tx;')
+    pp.executescript('drop table if exists pref_tx_versions')
     pp.executescript('drop table if exists users;')
+    pp.executescript('drop table if exists user_relationships;')
     pp.executescript('drop table if exists ref_logtable;')
 
     try:
@@ -28,9 +31,13 @@ def create_db(conn):
         CREATE TABLE virtual_panels
             (id INTEGER PRIMARY KEY, name VARCHAR(50), current_version INTEGER, UNIQUE(name));
         CREATE TABLE pref_tx
-            (id INTEGER PRIMARY KEY, project_id INTEGER, tx_id INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id), FOREIGN KEY(tx_id) REFERENCES tx(id));
+            (id INTEGER PRIMARY KEY, project_id INTEGER, current_version INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id));
+        CREATE TABLE pref_tx_versions
+            (id INTEGER PRIMARY KEY, pref_tx_id INTEGER, tx_id INTEGER, intro INTEGER, last INTEGER, FOREIGN KEY(pref_tx_id) REFERENCES pref_tx(id), FOREIGN KEY(tx_id) REFERENCES tx(id));
         CREATE TABLE users
             (id INTEGER PRIMARY KEY, username varchar(20), UNIQUE(username));
+        CREATE TABLE user_relationships
+            (id INTEGER PRIMARY KEY, user_id INTEGER, project_id INTEGER, FOREIGN KEY(user_id) REFERENCES users(id), FOREIGN KEY(project_id) REFERENCES projects(id));
         CREATE TABLE ref_logtable
             (id INTEGER PRIMARY KEY, project_id INTEGER, version_id INTEGER, region_id INTEGER, user_id INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id), FOREIGN KEY(version_id) REFERENCES versions(id), FOREIGN KEY(user_id) REFERENCES users(id));
         """)
@@ -47,17 +54,19 @@ def main():
     pan=Panels()
 
     parser = argparse.ArgumentParser(description='creates db tables required for PanelPal program')
-    parser.add_argument('--db', default="resources/")
+    parser.add_argument('--db')
     parser.add_argument('--projects', default="CTD,IEM,Haems,HeredCancer,DevDel,NGD,Research")
     parser.add_argument('--studies', default="CTD,IEM,Haems_Bleeding,Haems_BMF,Haems_TruSight,HeredCancer_TruSight,HeredCancer_SureSelect,DevDel,NGD,NGD_Motor,NGD_Movement")
-    parser.add_argument('--users')
+    parser.add_argument('--users', default='dnamdp,cytng,gencph,genes,dnanhc')
     args = parser.parse_args()
 
-    db = args.db + 'panel_pal.db'
+
+    db = '/home/bioinfo/Natalie/wc/panel_pal/resources/panel_pal.db'
+    print(db)
 
     conn_main = sqlite3.connect(db)
 
-    parse_refflat_into_db.main()
+    parse_refflat_into_db.main(db)
     complete = create_db(conn_main)
 
     if not complete:
