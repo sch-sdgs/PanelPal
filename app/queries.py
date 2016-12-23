@@ -214,3 +214,69 @@ def make_panel_live(s, panelid, new_version):
     s.commit()
 
     return True
+
+
+def get_preftx_by_project_id(s, id):
+    """
+    gets pref transcripts by project id
+
+    :param s: db session
+    :param id: project id
+    :return: sql alchemy object
+    """
+    preftx = s.query(Genes, Tx, PrefTx, Projects). \
+        join(Tx). \
+        join(PrefTx). \
+        join(Projects). \
+        filter_by(id=id). \
+        values(Projects.id, \
+               Projects.name.label("projectname"), \
+               Genes.name.label("genename"), \
+               Tx.accession, \
+               Tx.tx_start, \
+               Tx.tx_end, \
+               Tx.strand)
+
+    return preftx
+
+
+def get_project_name(s, projectid):
+    """
+    gets project name by project id
+
+    :param s: db session
+    :param id: project id
+    :return: sql alchemy object
+    """
+    name= s.query(Projects).filter_by(id=projectid)
+    for i in name:
+        return i.name
+
+def get_genes_by_projectid(s, projectid):
+    """
+    gets transcripts by project id
+
+    :param s: db session
+    :param id: project id
+    :return: sql alchemy object
+    """
+    genes =s.query(Genes, Tx, Exons, Regions, Versions, Panels, Projects). \
+        distinct(Tx.accession). \
+        group_by(Tx.accession). \
+        join(Tx). \
+        join(Exons). \
+        join(Regions). \
+        join(Versions). \
+        join(Panels). \
+        join(Projects). \
+        filter_by(id=projectid). \
+        values(Tx.id.label("txid"), \
+               Projects.name.label("projectname"), \
+               Projects.id.label("projectid"), \
+               Genes.name.label("genename"), \
+               Tx.accession, \
+               Tx.tx_start, \
+               Tx.tx_end, \
+               Tx.strand)
+    return genes
+
