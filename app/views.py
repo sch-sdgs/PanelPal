@@ -4,7 +4,7 @@ from sqlalchemy.orm import scoped_session
 from app import app, s, models
 from app.queries import *
 from flask_table import Table, Col, LinkCol
-from forms import ProjectForm, RemoveGene, AddGene, CreatePanel
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login
 
 app.secret_key = 'development key'
 

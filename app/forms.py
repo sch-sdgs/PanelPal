@@ -1,5 +1,5 @@
 from flask.ext.wtf import Form
-from wtforms.fields import TextField, TextAreaField, SubmitField, HiddenField
+from wtforms.fields import TextField, TextAreaField, SubmitField, HiddenField, PasswordField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.validators import Required
 from app import app,db,s,models
@@ -36,3 +36,5 @@ class CreatePanel(Form):
     listgenes = HiddenField("Selected Genes")
     genes = TextField("Genes")
     submit = SubmitField("Create Panel")
+
+
