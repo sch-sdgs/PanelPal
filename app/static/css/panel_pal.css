@@ -1,0 +1,45 @@
+body {
+  padding-top: 50px;
+}
+.starter-template {
+  padding: 40px 15px;
+  text-align: center;
+}
+.jumbotron{
+  margin-top: 100px;
+  background-color: #69B5EC;
+  color: #ffffff;
+}
+
+.btngene{
+  margin-bottom: 5px;
+}
+
+.hide
+{
+    display:none;
+}
+
+
+h3
+{
+  display: inline;
+}
+
+.test{
+  display: inline-block;
+}
+
+
+.label
+{
+  margin-right:5px;
+}
+
+.panel{
+  margin-top: 10px;
+}
+.addhere{
+  white-space:normal;
+}
+
