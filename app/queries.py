@@ -216,5 +216,16 @@ def make_panel_live(s, panelid, new_version):
     return True
 
 
+def get_user_by_username(s, username):
+
+    user = s.query(Users).filter_by(username = username)
+    return user
+
+
+    # Select count (*) from users where username = 'username'
+
+
+
+
 
 

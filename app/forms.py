@@ -37,4 +37,9 @@ class CreatePanel(Form):
     genes = TextField("Genes")
     submit = SubmitField("Create Panel")
 
+class Login(Form):
+    username  = TextField("Username")
+    password = PasswordField("Password")
+    submit = SubmitField("Login")
+
 

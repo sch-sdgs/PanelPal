@@ -1,13 +1,49 @@
-from flask import render_template, request, flash, url_for, Markup, jsonify, redirect
+from flask import render_template, request, flash, url_for, Markup, jsonify, redirect, Response
 from sqlalchemy.orm import scoped_session
-
-from app import app, s, models
+from app import app, s, models, activedirectory
 from app.queries import *
 from flask_table import Table, Col, LinkCol
 from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login
-
+from flask.ext.login import LoginManager, UserMixin, \
+                                login_required, login_user, logout_user
 app.secret_key = 'development key'
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
+
+class User(UserMixin):
+
+    def __init__(self,id,password=None):
+        self.id = id
+        self.password = password
+
+    def is_authenticated(self, s, id,password):
+        validuser = get_user_by_username(s, id)
+        if len(list(validuser)) == 0:
+            return False
+        else:
+            check = activedirectory.UserAuthentication().authenticate(id, password)
+            print "CHECK"
+            print check
+            if check != "False":
+                return True
+            else:
+                return False
+    # def is_active(self):
+    #     pass
+    # def is_anonymous(self):
+    #     pass
+    # def get_id(self,username):
+    #     validuser = get_user_by_username(s, username)
+    #     if validuser:
+    #         return username
+    #     else:
+    #         return None
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User(user_id)
 
 class NumberCol(Col):
     def __init__(self, name, valmin=False, attr=None, attr_list=None, **kwargs):
@@ -148,6 +184,10 @@ def isgene(s, gene):
         return True
 
 
+
+
+
+
 def check_panel_status(s, id):
     """
     checks the status of a panel - i.e. whether it is live or not live (it has uncommited changes)
@@ -193,7 +233,9 @@ def autocomplete():
 ########################
 
 @app.route('/panels', methods=['GET', 'POST'])
+@login_required
 def view_panels(id=None):
+
     """
     method to view panels, if project ID given then only return panels from that project
     matt
@@ -222,6 +264,7 @@ def view_panels(id=None):
 
 
 @app.route('/panels/create', methods=['GET', 'POST'])
+@login_required
 def create_panel():
     form = CreatePanel()
     if request.method == 'POST':
@@ -257,6 +300,7 @@ def create_panel():
 
 
 @app.route('/panels/live', methods=['GET', 'POST'])
+@login_required
 def make_live():
     """
     given a panel id this method makes a panel live
@@ -272,6 +316,7 @@ def make_live():
 
 
 @app.route('/panels/edit')
+@login_required
 def edit_panel_page(panel_id=None):
     id = request.args.get('id')
     if id is None:
@@ -316,6 +361,7 @@ def edit_panel_page(panel_id=None):
 
 
 @app.route('/panels/edit', methods=['POST', 'GET'])
+@login_required
 def edit_panel():
     if request.method == 'POST':
         panel_id = request.form["panel_id"]
@@ -382,6 +428,7 @@ def edit_panel():
 
 
 @app.route('/panels/delete/gene', methods=['POST'])
+@login_required
 def remove_gene():
     s = scoped_session(db.session)
     form = RemoveGene()
@@ -399,12 +446,14 @@ def remove_gene():
 
 
 @app.route('/panels/delete/gene', methods=['POST'])
+@login_required
 def delete_region():
     pass
     return edit_panel_page(id)
 
 
 @app.route('/panels/delete/add', methods=['POST'])
+@login_required
 def add_gene():
     """
     adds a gene to a panel
@@ -424,6 +473,7 @@ def add_gene():
 ########################
 
 @app.route('/projects')
+@login_required
 def view_projects():
     projects = models.Projects.query.all()
     result = []
@@ -437,6 +487,7 @@ def view_projects():
 
 
 @app.route('/projects/add', methods=['GET', 'POST'])
+@login_required
 def add_projects():
     form = ProjectForm()
     if request.method == 'POST':
@@ -454,6 +505,7 @@ def add_projects():
 
 
 @app.route('/projects/delete', methods=['GET', 'POST'])
+@login_required
 def delete_project():
     u = db.session.query(models.Projects).filter_by(id=request.args.get('id')).first()
     db.session.delete(u)
@@ -466,6 +518,7 @@ def delete_project():
 ################
 
 @app.route('/virtualpanels')
+@login_required
 def view_virtual_panels():
     result = get_virtual_panels_simple(s)
     all_results = []
@@ -478,3 +531,43 @@ def view_virtual_panels():
 
     table = ItemTableVirtualPanel(all_results, classes=['table', 'table-striped'])
     return render_template("virtualpanels.html", virtualpanels=table)
+
+#################
+# USER LOGIN
+#################
+
+@app.route('/login',  methods=['GET', 'POST'])
+def login():
+    form = Login()
+    if request.method == 'GET':
+        return render_template("login.html", form=form)
+    elif request.method == 'POST':
+        user = User(form.data["username"], password=form.data["password"])
+        result = user.is_authenticated(s, id=form.data["username"], password=form.data["password"])
+        print "RESULT"
+        print result
+        if result:
+            login_user(user)
+            return redirect(url_for('view_projects'))
+        else:
+            return render_template("login.html",form=form, modifier = "Oh Snap!", message="Wrong username or password")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    form = Login()
+    #return Response('<p>Logged out</p>')
+    return render_template("login.html", form=form, message = "You have logged out of PanelPal")
+
+
+    ##if count in get_valid_user != 1:
+        # Print "Not permitted to use PanelPal"
+    #elif count in get_valid_user = 1:
+        #Call C# Webservice (UserAuthentication)
+            #if UserAuthentication returns: "Invalid Login" || "Invalid Permission":
+                 # "Not permitted to use PanelPal"
+            #elif:
+                # Grant access and open PanelPal Homepage
+
+
