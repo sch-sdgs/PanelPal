@@ -55,6 +55,8 @@ class VPRelationships(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50))
     current_version = db.Column(db.Integer)
+    intro = db.Column(db.Integer)
+    last = db.Column(db.Integer)
     version_id = db.Column(db.Integer, db.ForeignKey('versions.id'))
     vpanel_id = db.Column(db.Integer, db.ForeignKey('virtual_panels.id'))
 
