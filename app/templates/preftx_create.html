@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block content %}
+  <h2>{{ project_name }} Preferred Transcripts</h2>
+
+
+
+    <table class="table table-stripped">
+    {% for form in list_of_forms %}
+        <tr>
+            <td>{{ form.gene.name }}</td>
+        {% for subfield in form.gene %}
+            <td>{{ subfield }}</td>
+            <td>{{ subfield.label }}</td>
+        {% endfor %}
+        </tr>
+    {% endfor %}
+    </table>
+{% endblock %}

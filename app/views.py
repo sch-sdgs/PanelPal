@@ -1,10 +1,10 @@
 from flask import render_template, request, flash, url_for, Markup, jsonify, redirect
 from sqlalchemy.orm import scoped_session
-
+import json
 from app import app, s, models
 from app.queries import *
 from flask_table import Table, Col, LinkCol
-from forms import ProjectForm, RemoveGene, AddGene, CreatePanel
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, PrefTxCreate
 
 app.secret_key = 'development key'
 
@@ -86,6 +86,7 @@ class ItemTableVirtualPanel(Table):
 class ItemTableProject(Table):
     name = Col('Name')
     view = LinkCol('View Panels', 'view_panels', url_kwargs=dict(id='id'))
+    pref_tx = LinkCol('View Preferred Tx', 'view_preftx', url_kwargs=dict(id='id'))
     # make = LinkCol('Make Panel', '', url_kwargs=dict())
     delete = LinkCol('Delete', 'delete_project', url_kwargs=dict(id='id'))
 
@@ -124,6 +125,14 @@ class ItemTablePanel(Table):
         else:
             direction = 'asc'
         return url_for('edit_panel_page', sort=col_key, direction=direction)
+
+
+class ItemTablePrefTx(Table):
+    genename = Col('Gene Name')
+    accession = Col('Accession')
+    tx_start = Col('Transcript Start')
+    tx_end = Col('Transcript End')
+    strand = Col('Strand')
 
 
 def row2dict(row):
@@ -353,6 +362,7 @@ def edit_panel_page(panel_id=None):
                            panel_detail=table, genes=" ".join(sorted(set(genes))), form=form, add_form=add_form,
                            panel_id=id)
 
+
 @app.route('/panels/edit', methods=['POST', 'GET'])
 def edit_panel():
     if request.method == 'POST':
@@ -535,3 +545,47 @@ def view_virtual_panels(id=None):
     return render_template("virtualpanels.html", virtualpanels=table)
 
 
+#################
+# Preferred transcripts
+################
+
+@app.route('/preftx')
+def view_preftx():
+    id = request.args.get('id')
+    print "hello"
+    print id
+    project=get_project_name(s, id)
+    result = get_preftx_by_project_id(s=s, id=id)
+    if len(list(result)) == 0:
+        return redirect(url_for('create_preftx', id=id))
+    else:
+        result = get_preftx_by_project_id(s=s, id=id)
+        all_results = []
+        for i in result:
+            row = dict(zip(i.keys(), i))
+            all_results.append(row)
+        table = ItemTablePrefTx(all_results, classes=['table', 'table-striped'])
+    return render_template("preftx.html", preftx=table, project_name=project)
+
+@app.route('/preftx/create')
+def create_preftx():
+    id = request.args.get('id')
+    result = get_genes_by_projectid(s=s, projectid=id)
+    genes = {}
+    for i in result:
+        print i.genename
+        if i.genename not in genes:
+            genes[i.genename] = list()
+            genes[i.genename].append((i.txid,i.accession))
+        else:
+            genes[i.genename].append((i.txid,i.accession))
+
+    list_of_forms = []
+    for gene in genes:
+        form = PrefTxCreate(request.form)
+        form.gene.choices=genes[gene]
+        form.gene.name=gene
+        list_of_forms.append(form)
+
+    print list_of_forms
+    return render_template("preftx_create.html",genes = genes, list_of_forms = list_of_forms)
