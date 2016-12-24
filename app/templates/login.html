@@ -7,8 +7,8 @@
 {% if message %}
 <div class="alert alert-danger"><strong>{{ modifier }}</strong> {{ message }}</div>
 {% endif %}
-
-<form action="{{ url_for('login') }}" method="POST" class="form">
+  <div class="wrapper">
+<form action="{{ url_for('login') }}" method="POST" class="form-signin">
     <div class="form-group">
         {{ form.username.label }}
         {{ form.username(class_="form-control") }}
@@ -21,5 +21,6 @@
         {{ form.submit(class_="btn btn-primary") }}
     </div>
 </form>
+      </div>
 
 {% endblock %}
