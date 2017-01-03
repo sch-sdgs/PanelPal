@@ -3,14 +3,11 @@ from sqlalchemy import or_, desc
 from app.models import *
 
 def get_virtual_panels_simple(s):
-    vpanels = s.query(VPRelationships, VirtualPanels). \
-        distinct(VirtualPanels.name). \
+    vpanels = s.query(VirtualPanels). \
         group_by(VirtualPanels.name). \
-        join(VirtualPanels). \
         values(VirtualPanels.current_version, \
-               VirtualPanels.name, \
-               VirtualPanels.id,
-               VPRelationships.version_id)
+               VirtualPanels.name.label('vp_name'), \
+               VirtualPanels.id)
 
     return vpanels
 
@@ -51,16 +48,16 @@ def get_panels(s):
 
 
 def get_virtual_panels_by_panel_id(s, id):
-    vpanels = s.query(Panels, Versions, VPRelationships, VirtualPanels). \
-        join(Versions). \
+    vpanels = s.query(VirtualPanels, VPRelationships, Versions, Panels). \
+        distinct(VirtualPanels.name). \
+        group_by(VirtualPanels.name). \
         join(VPRelationships). \
-        join(VirtualPanels). \
-        filter_by(panel_id=id). \
-        values(Panels.current_version, VirtualPanels.id.label("virtualpanelid"), \
-               Panels.name.label("virtualpanelname"), \
-               Panels.id, \
-               Panels.name.label("panelname"))
-
+        join(Versions). \
+        join(Panels). \
+        filter(Panels.id == id). \
+        values(VirtualPanels.id, \
+               VirtualPanels.current_version, \
+               VirtualPanels.name.label('vp_name'))
     return vpanels
 
 
@@ -97,6 +94,23 @@ def check_panel_status_query(s, id):
                Panels.current_version, \
                Versions.last, \
                Versions.intro)
+    return panels
+
+def check_virtualpanel_status_query(s, id):
+    """
+    query to check the status of a virtual panel - returns fields required to decide status of a panel
+
+    :param s: db session
+    :param id: panel id
+    :return: result of query
+    """
+
+    panels = s.query(VirtualPanels, VPRelationships).filter_by(id=id).join(VPRelationships). \
+        values(VirtualPanels.name, \
+               VirtualPanels.current_version, \
+               VPRelationships.last, \
+               VPRelationships.intro)
+
     return panels
 
 
@@ -146,6 +160,18 @@ def get_current_version(s, panelid):
     :return: the panel id
     """
     version = s.query(Panels).filter_by(id=panelid).values(Panels.current_version)
+    for i in version:
+        return i.current_version
+
+def get_current_vp_version(s, panelid):
+    """
+    gets current version of a panel given the panel id
+
+    :param s: db session
+    :param panelid: panel id
+    :return: the panel id
+    """
+    version = s.query(VirtualPanels).filter_by(id=panelid).values(VirtualPanels.current_version)
     for i in version:
         return i.current_version
 
@@ -211,6 +237,20 @@ def make_panel_live(s, panelid, new_version):
     :param new_version: the new version number of the panel
     """
     s.query(Panels).filter_by(id=panelid).update({Panels.current_version: new_version})
+    s.commit()
+
+    return True
+
+def make_vp_panel_live(s, panelid, new_version):
+    """
+    makes a panel line
+
+    :return: True
+    :param s: db session
+    :param panelid: panel id
+    :param new_version: the new version number of the panel
+    """
+    s.query(VirtualPanels).filter_by(id=panelid).update({VirtualPanels.current_version: new_version})
     s.commit()
 
     return True

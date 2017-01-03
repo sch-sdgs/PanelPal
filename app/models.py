@@ -53,8 +53,8 @@ class PrefTx(db.Model):
 
 class VPRelationships(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50))
-    current_version = db.Column(db.Integer)
+    intro = db.Column(db.Integer)
+    last = db.Column(db.Integer)
     version_id = db.Column(db.Integer, db.ForeignKey('versions.id'))
     vpanel_id = db.Column(db.Integer, db.ForeignKey('virtual_panels.id'))
 
@@ -72,7 +72,7 @@ class VirtualPanels(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50))
     current_version = db.Column(db.Integer)
-    versions = db.relationship('VPRelationships', backref='author', lazy='dynamic')
+    vprelationship = db.relationship('VPRelationships', backref='i', lazy='dynamic')
 
     def __init__(self, name, current_version):
         self.name = name
@@ -92,6 +92,7 @@ class Versions(db.Model):
 
     panel_id = db.Column(db.Integer, db.ForeignKey('panels.id'))
     region_id = db.Column(db.Integer, db.ForeignKey('regions.id'))
+    vrelationship = db.relationship('VPRelationships', backref='z', lazy='dynamic')
 
     def __init__(self, intro, last, panel_id, region_id, comment, extension_3, extension_5):
         self.intro = intro

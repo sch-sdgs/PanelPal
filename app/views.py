@@ -111,8 +111,14 @@ class ItemTable(Table):
 
 
 class ItemTableVirtualPanel(Table):
-    name = Col('Name')
-    id = Col('Id')
+    vp_name = Col('Name')
+    current_version = Col('Version')
+    status = LabelCol('Status')
+    edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='id'))
+    #todo make edit_vp_panel_page
+    #id = Col('Id')
+    make_live = LinkCol('Make Live', 'make_virtualpanel_live', url_kwargs=dict(id='id'))
+    delete = LinkCol('Delete', 'delete_virtualpanel', url_kwargs=dict(id='id'))
 
 
 class ItemTableProject(Table):
@@ -128,7 +134,7 @@ class ItemTablePanels(Table):
     current_version = Col('Stable Version')
     edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='panelid'))
     status = LabelCol('Status')
-    view = LinkCol('View Virtual Panels', 'view_panels', url_kwargs=dict(id='panelid'))
+    view = LinkCol('View Virtual Panels', 'view_virtual_panels', url_kwargs=dict(id='panelid'))
     make_live = LinkCol('Make Live', 'make_live', url_kwargs=dict(id='panelid'))
     # delete = LinkCol('Delete', 'delete_study', url_kwargs=dict(id='studyid'))
 
@@ -216,6 +222,26 @@ def check_panel_status(s, id):
 
     return status
 
+def check_virtualpanel_status(s, id):
+    """
+    checks the status of a panel - i.e. whether it is live or not live (it has uncommited changes)
+
+    :param s: db session
+    :param id: panel id
+    :return: true - panel is live or false - panel has changes
+    """
+    panels = check_virtualpanel_status_query(s, id)
+    status = True
+    for i in panels:
+        if i.intro > i.current_version:
+            status = False
+            break
+        if i.last is not None:
+            if i.last == i.current_version:
+                status = False
+                break
+
+    return status
 
 @app.route('/')
 def index():
@@ -320,6 +346,19 @@ def make_live():
 
     return redirect(url_for('view_panels'))
 
+@app.route('/virtualpanels/live', methods=['GET', 'POST'])
+def make_virtualpanel_live():
+    """
+    given a panel id this method makes a panel live
+
+    :return: redirection to view panels
+    """
+    panelid = request.args.get('id')
+    current_version = get_current_vp_version(s, panelid)
+    new_version = current_version + 1
+    make_vp_panel_live(s, panelid, new_version)
+
+    return redirect(url_for('view_virtual_panels'))
 
 @app.route('/panels/edit')
 @login_required
@@ -518,6 +557,13 @@ def delete_project():
     db.session.commit()
     return view_projects()
 
+@app.route('/virtualpanels/delete', methods=['GET', 'POST'])
+def delete_virtualpanel():
+    u = db.session.query(models.VirtualPanels).filter_by(id=request.args.get('id')).first()
+    db.session.delete(u)
+    db.session.commit()
+    return view_virtual_panels()
+
 
 #################
 # VIRTUAL PANELS
@@ -525,13 +571,23 @@ def delete_project():
 
 @app.route('/virtualpanels')
 @login_required
-def view_virtual_panels():
-    result = get_virtual_panels_simple(s)
+def view_virtual_panels(id=None):
+    if not id:
+        print('request')
+        id = request.args.get('id')
+    print(id)
+    if id:
+        print('by id')
+        result = get_virtual_panels_by_panel_id(s, id)
+    else:
+        result = get_virtual_panels_simple(s)
     all_results = []
     print result
     for i in result:
         print i
         row = dict(zip(i.keys(), i))
+        status = check_virtualpanel_status(s, row["id"])
+        row["status"] = status
         print row
         all_results.append(row)
 
