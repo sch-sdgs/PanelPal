@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>{{ project_name }} Preferred Transcripts</h2>
+
+ <form action="{{ url_for('create_preftx') }}" method="POST" class="form"> <input type="hidden" name="project_id" value="{{ project_id }}">
+<table class="table table-striped">
+    <thead>
+    <tr>
+        <th>Gene</th>
+        <th>Transcripts</th>
+    </tr>
+    </thead>
+        {% for form in list_of_forms %}
+        <tr>
+            <td>{{ form.gene.name }}</td>
+            <td>
+                {% for subfield in form.gene %}
+                {{ subfield }}
+                {{ subfield.label }}
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+        <tr>
+            <td colspan="2">
+                <div class="form-group">
+                    <input type="submit" value="Submit">
+                </div>
+            </td>
+        </tr>
+
+</table>
+       </form>
+{% endblock %}

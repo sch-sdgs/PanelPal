@@ -40,12 +40,12 @@ class Panels(db.Model):
 
 class PrefTx(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    tx_id = db.Column(db.Integer)
+    tx_id = db.Column(db.Integer, db.ForeignKey('tx.id'))
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
 
     def __init__(self, project_id, tx_id):
         self.project_id = project_id
-        self.tx_id - tx_id
+        self.tx_id = tx_id
 
     def __repr__(self):
         return '<id %r>' % (self.id)
@@ -124,13 +124,21 @@ class Tx(db.Model):
     accession = db.Column(db.String(30), unique=True)
     gene_id = db.Column(db.Integer, db.ForeignKey('genes.id'))
     strand = db.Column(db.String(1))
+    tx_start = db.Column(db.Integer)
+    tx_end = db.Column(db.Integer)
+    cds_start = db.Column(db.Integer)
+    cds_end = db.Column(db.Integer)
     exons = db.relationship('Exons', backref='z', lazy='dynamic')
 
-    def __init__(self, accession, gene_id, strand, exons):
+    def __init__(self, accession, gene_id, strand, exons,tx_start,tx_end,cds_start,cds_end):
         self.accession = accession
         self.gene_id = gene_id
         self.strand = strand
         self.exons = exons
+        self.tx_start = tx_start
+        self.tx_end = tx_end
+        self.cds_start = cds_start
+        self.cds_end = cds_end
 
     def __repr__(self):
         return '<accession %r>' % (self.accession)
