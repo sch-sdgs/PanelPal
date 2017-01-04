@@ -1,6 +1,7 @@
 from flask import render_template, request, flash, url_for, Markup, jsonify, redirect, Response
 from sqlalchemy.orm import scoped_session
 from app import app, s, models, activedirectory
+from collections import OrderedDict
 from functools import wraps
 import json
 from app import app, s, models
@@ -48,6 +49,7 @@ class User(UserMixin):
 def load_user(user_id):
     return User(user_id)
 
+
 class NumberCol(Col):
     def __init__(self, name, valmin=False, attr=None, attr_list=None, **kwargs):
         self.valmin = valmin
@@ -89,10 +91,11 @@ class LockCol(Col):
         print "HELLO"
         print item
         if item["locked"] is not None:
-            username = get_username_by_user_id(s,item["locked"])
-            return '<span class="glyphicon glyphicon-lock"  data-toggle="tooltip" data-placement="bottom" title="Locked by: '+username+'" aria-hidden="true"></span>'
+            username = get_username_by_user_id(s, item["locked"])
+            return '<span class="glyphicon glyphicon-lock"  data-toggle="tooltip" data-placement="bottom" title="Locked by: ' + username + '" aria-hidden="true"></span>'
         else:
             return ''
+
 
 class LabelCol(Col):
     def __init__(self, name, valmin=False, attr=None, attr_list=None, **kwargs):
@@ -270,6 +273,7 @@ def check_virtualpanel_status(s, id):
 
     return status
 
+
 @app.context_processor
 def logged_in():
     if current_user.is_authenticated:
@@ -296,6 +300,7 @@ def autocomplete():
     print data
     return jsonify(matching_results=data)
 
+
 # test=None
 #
 # def lock_check(f):
@@ -313,7 +318,7 @@ def autocomplete():
 
 @app.route('/panels', methods=['GET', 'POST'])
 @login_required
-#@lock_check
+# @lock_check
 def view_panels(id=None):
     """
     method to view panels, if project ID given then only return panels from that project
@@ -415,7 +420,7 @@ def make_virtualpanel_live():
 def edit_panel_page(panel_id=None):
     id = request.args.get('id')
     print "LOCKING_PANEL"
-    lock_panel(s,current_user.id,id)
+    lock_panel(s, current_user.id, id)
     if id is None:
         id = panel_id
     panel_info = s.query(models.Panels, models.Projects).filter_by(id=id).join(models.Projects).values(
@@ -537,7 +542,7 @@ def remove_gene():
         ids = []
         for i in panel_info:
             if i.genename == gene:
-                #todo add if in here - if the gene is not already in a live panel it is okay to delete completely
+                # todo add if in here - if the gene is not already in a live panel it is okay to delete completely
                 s.query(models.Versions).filter_by(id=i.id).update({models.Versions.last: i.current_version})
                 ids.append(i.id)
     s.commit()
@@ -578,10 +583,11 @@ def view_projects(delete=False, project_name=None, project_id=None):
     result = []
     for i in projects:
         row = row2dict(i)
-        if check_user_has_permission(s,current_user.id,row["id"]):
+        if check_user_has_permission(s, current_user.id, row["id"]):
             result.append(row)
     table = ItemTableProject(result, classes=['table', 'table-striped'])
-    return render_template('projects.html', projects=table,delete=delete,project_name=project_name,project_id=project_id)
+    return render_template('projects.html', projects=table, delete=delete, project_name=project_name,
+                           project_id=project_id)
 
 
 @app.route('/projects/add', methods=['GET', 'POST'])
@@ -603,7 +609,7 @@ def add_projects():
 @app.route('/projects/delete', methods=['GET', 'POST'])
 @login_required
 def delete_project():
-    #todo display a modal here with "do you really want to delete?" message
+    # todo display a modal here with "do you really want to delete?" message
     id = request.args.get('id')
     if request.args.get('check'):
         print "I AM DELETEING"
@@ -612,7 +618,7 @@ def delete_project():
         s.commit()
         return view_projects()
     else:
-        return view_projects(delete=True,project_name="Test",project_id=id)
+        return view_projects(delete=True, project_name="Test", project_id=id)
 
 
 @app.route('/virtualpanels/delete', methods=['GET', 'POST'])
@@ -646,7 +652,7 @@ def view_virtual_panels(id=None):
         row = dict(zip(i.keys(), i))
         status = check_virtualpanel_status(s, row["id"])
         row["status"] = status
-        if check_user_has_permission(s,current_user.id,row["projectid"]):
+        if check_user_has_permission(s, current_user.id, row["projectid"]):
             all_results.append(row)
 
     table = ItemTableVirtualPanel(all_results, classes=['table', 'table-striped'])
@@ -682,7 +688,7 @@ def edit_permissions():
     form = EditPermissions(project_id=id)
     message = None
     if request.method == 'POST':
-        if check_user_has_permission(s,current_user.id,form.data["project_id"]):
+        if check_user_has_permission(s, current_user.id, form.data["project_id"]):
             add_user_project_rel(s, form.data["user_id"].id, form.data["project_id"])
         else:
             message = "You do not have permission to edit this project"
@@ -701,7 +707,7 @@ def edit_permissions():
 @app.route("/logout")
 @login_required
 def logout():
-    #todo unlock all users locked
+    # todo unlock all users locked
     logout_user()
     form = Login()
     return render_template("login.html", form=form, message="You have logged out of PanelPal")
@@ -771,27 +777,115 @@ def create_preftx():
         return redirect(url_for('view_preftx', id=project_id))
 
 
-
 ####
 # API
 ######
 
+class ChrSorter():
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def lt_helper(a):
+        """
+        helper to sort chromosmes properly
+
+        :param a: sort object
+        :return:
+        """
+        try:
+            return int(a)
+        except ValueError:
+            if a == "X":
+                return 24
+            elif a == "Y":
+                return 25
+            elif a == "MT" or a == "M":
+                return 26
+            else:
+                return 27
+
+    @staticmethod
+    def __lt__(a, b):
+        """
+        run the chromosome sort helper
+
+        :param a:
+        :param b:
+        :return: proper sorted chromosomes
+        """
+        return cmp(ChrSorter.lt_helper(a), ChrSorter.lt_helper(b))
+
+
 from flask_restful_swagger import swagger
-from flask_restful import Resource, Api,reqparse,fields, marshal
+from flask_restful import Resource, Api, reqparse, fields, marshal
 from sqlalchemy.ext.serializer import loads, dumps
 
 # app = Flask(__name__)
 # app.config['BUNDLE_ERRORS'] = True
 
-api =swagger.docs(Api(app,default_mediatype='text/plain'),apiVersion='0.1',description="PanelPal API")
+api = swagger.docs(Api(app), apiVersion='0.0', description="Test PanelPal API")
 
-@api.representation('text/plain')
-def output_plain(data, headers=None):
-    resp = app.make_response(data+"\n")
+region_fields = {
+    'start': fields.Integer,
+    'end': fields.Integer,
+    'chrom': fields.String,
+    'annotation': fields.String
+}
+
+details_fields = {
+    'version': fields.Integer,
+    'panel': fields.String
+}
+
+panel_fields = {
+    'details': fields.Nested(details_fields),
+    'regions': fields.List(fields.Nested(region_fields))
+
+}
+
+#todo - need to add extensions from db here
+def region_result_to_json(data,scope=None):
+    result = dict()
+    result['details'] = dict()
+    result['regions'] = list()
+    regions = dict()
+    for i in data:
+        region = dict()
+        if scope == 'exonic':
+            region['start'] = i.Regions.start - 25
+            region['end'] = i.Regions.end + 25
+        else:
+            region['start'] = i.Regions.start
+            region['end'] = i.Regions.end
+        region["annotation"] = "ex" + str(i.Exons.number) + "_" + i.Genes.name + "_" + str(i.Tx.accession)
+        if i.Regions.chrom.replace('chr', '') not in regions:
+            regions[i.Regions.chrom.replace('chr', '')] = list()
+        regions[i.Regions.chrom.replace('chr', '')].append(region)
+
+    for i in sorted(regions, cmp=ChrSorter.__lt__):
+
+        for details in regions[i]:
+            region = dict()
+            region["chrom"] = "chr" + str(i)
+            region["start"] = details["start"]
+            region["end"] = details["end"]
+            region["annotation"] = details["annotation"]
+            result['regions'].append(region)
+
+    return result
+
+
+@api.representation('application/json')
+def output_json(data, code, headers=None):
+    #todo marshal breaks swagger here - swaggermodels?
+    resp = app.make_response(json.dumps(data))
     resp.headers.extend(headers or {})
     return resp
 
+
 parser = reqparse.RequestParser()
+
 
 # @app.errorhandler(404)
 # def not_found(error=None):
@@ -804,59 +898,12 @@ parser = reqparse.RequestParser()
 #
 #     return resp
 
-class RegionsGene(Resource):
-    @swagger.operation(
-        notes='some really good notes',
-        responseClass='x',
-        nickname='upload',
-        parameters=[
-            {
-                "name": "body",
-                "description": "blueprint object that needs to be added. YAML.",
-                "required": True,
-                "allowMultiple": False,
-                "dataType": 'x',
-                "paramType": "body"
-            }
-        ],
-        responseMessages=[
-            {
-                "code": 201,
-                "message": "Created. The URL of the created blueprint should be in the Location header"
-            },
-            {
-                "code": 405,
-                "message": "Invalid input"
-            }
-        ]
-    )
-
-    def get(self,gene):
-        r = Regions()
-        result = r.get_regions_by_gene(gene)
-        resp = output_csv(result)
-        print resp
-        resp.status_code = 200
-        return resp
-
-class RegionsTx(Resource):
-
-    def get(self, tx):
-        r = Regions()
-        result = r.get_regions_by_tx(tx)
-        return result
-
-class Projects(Resource):
-    def get(self):
-        pass
-
 class Panels(Resource):
     @swagger.operation(
-        notes='some really good notes',
+        notes='Gets a JSON of all regions in the panel - this is equivalent to the broad panel',
         responseClass='x',
-        nickname='upload',
+        nickname='broad',
         parameters=[
-
         ],
         responseMessages=[
             {
@@ -869,51 +916,70 @@ class Panels(Resource):
             }
         ]
     )
-
-
-    def get(self,id,version):
-        result = get_panel_api(s,id)
-        all = []
-        for i in result:
-            line = [str(i.Regions.chrom),str(i.Regions.start),str(i.Regions.end),"ex"+str(i.Exons.number)+"_"+i.Genes.name+"_"+str(i.Tx.accession)]
-            processed = "\t".join(line)
-            all.append(processed)
-        to_return = "\n".join(all)
-        resp = output_plain(to_return)
-        resp.headers['content-type']='text/plain'
+    def get(self, name, version):
+        result = get_panel_api(s, name, version)
+        result_json = region_result_to_json(result.panel)
+        result_json["details"]["panel"] = name
+        result_json["details"]["version"] = int(result.current_version)
+        resp = output_json(result_json, 200)
+        resp.headers['content-type'] = 'application/json'
         return resp
 
-
-class BEDs(Resource):
-    def get(self, bed_type, panel):
-        db = db_panels()
-        result = db.export_bed(panel, bed_type)
-        bed = "\n".join(str(x) for x in result)
-        resp = app.make_response(bed)
+class VirtualPanels(Resource):
+    @swagger.operation(
+        notes='Gets a JSON of regions in a virtual panel - this is equivalent to the small panel',
+        responseClass='x',
+        nickname='small',
+        parameters=[
+        ],
+        responseMessages=[
+            {
+                "code": 201,
+                "message": "Created. The URL of the created blueprint should be in the Location header"
+            },
+            {
+                "code": 405,
+                "message": "Invalid input"
+            }
+        ]
+    )
+    def get(self, name, version):
+        result = get_vpanel_api(s, name, version)
+        result_json = region_result_to_json(result.panel)
+        result_json["details"]["panel"] = name
+        result_json["details"]["version"] = int(result.current_version)
+        resp = output_json(result_json, 200)
+        resp.headers['content-type'] = 'application/json'
         return resp
 
+class Exonic(Resource):
+    @swagger.operation(
+        notes='Gets a JSON of regions in a virtual panel and adjusts for "exnoic" - equivalent to the exon file',
+        responseClass='x',
+        nickname='small',
+        parameters=[
+        ],
+        responseMessages=[
+            {
+                "code": 201,
+                "message": "Created. The URL of the created blueprint should be in the Location header"
+            },
+            {
+                "code": 405,
+                "message": "Invalid input"
+            }
+        ]
+    )
+    def get(self, name, version):
+        result = get_exonic_api(s, name, version)
+        result_json = region_result_to_json(result.panel,scope="exonic")
+        result_json["details"]["panel"] = name
+        result_json["details"]["version"] = int(result.current_version)
+        resp = output_json(result_json, 200)
+        resp.headers['content-type'] = 'application/json'
+        return resp
 
-class Helpers():
-    def convert_to_bed(self,json_data):
-        lines = []
-        print json_data
-        for i in json_data:
-            if "exons" not in i:
-                for j in json_data[i]:
-                    chrom = json_data[i]["chrom"]
-                    if "exons" in json_data[i][j]:
-                        for k in json_data[i][j]["exons"]:
-                            start = k["start"]
-                            end = k["end"]
-                            number = k["number"]
-                            out = [chrom,start,end,"ex"+str(number)+"_"+i+"_"+j]
-                            lines.append("\t".join(str(x) for x in out))
-
-        return "\n".join(lines)
-
-
-api.add_resource(RegionsGene, '/api/regions/gene/<string:gene>')
-api.add_resource(RegionsTx, '/api/regions/tx/<string:tx>')
-api.add_resource(Panels, '/api/panel/<string:id>/<string:version>',)
-api.add_resource(Panels, '/api/virtualpanel/<string:id>/<string:version>',)
+api.add_resource(Panels, '/api/panel/<string:name>/<string:version>', )
+api.add_resource(VirtualPanels, '/api/virtualpanel/<string:name>/<string:version>', )
+api.add_resource(Exonic, '/api/exonic/<string:name>/<string:version>', )
 

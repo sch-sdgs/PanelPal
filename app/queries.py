@@ -172,6 +172,17 @@ def get_current_version(s, panelid):
     for i in version:
         return i.current_version
 
+def get_current_version_vp(s, panelid):
+    """
+    gets current version of a panel given the panel id
+
+    :param s: db session
+    :param panelid: panel id
+    :return: the panel id
+    """
+    version = s.query(VirtualPanels).filter_by(id=panelid).values(VirtualPanels.current_version)
+    for i in version:
+        return i.current_version
 
 def get_current_vp_version(s, panelid):
     """
@@ -488,15 +499,61 @@ def get_username_by_user_id(s, user_id):
     for i in username:
         return i.username
 
+class PanelApiReturn(object):
+  def __init__(self, current_version, panel):
+     self.current_version = current_version
+     self.panel = panel
 
-def get_panel_api(s, panel_id):
-    current_version = get_current_version(s, panel_id)
+def get_panel_api(s, panel_name, version='current'):
+    panel_ids = s.query(Panels).filter_by(name=panel_name).values(Panels.id)
+    for i in panel_ids:
+        panel_id = i.id
+    if version == "current":
+        current_version = get_current_version(s, panel_id)
+    else:
+        current_version = version
     panel = s.query(Panels,Versions,Regions,Exons,Tx,Genes).\
         join(Versions).\
         join(Regions).\
         join(Exons).\
         join(Tx).\
         join(Genes).\
-        filter(and_(Panels.id == panel_id,Versions.intro <= current_version,or_(Versions.last >= current_version, Versions.last == None)))
-    return panel
+        filter(and_(Panels.id == panel_id,Versions.intro <= current_version,or_(Versions.last >= current_version, Versions.last == None))).order_by(Regions.start)
+    return PanelApiReturn(current_version,panel)
+
+def get_vpanel_api(s, panel_name, version='current'):
+    panel_ids = s.query(VirtualPanels).filter_by(name=panel_name).values(VirtualPanels.id)
+    for i in panel_ids:
+        panel_id = i.id
+    if version == "current":
+        current_version = get_current_version_vp(s, panel_id)
+    else:
+        current_version = version
+    panel = s.query(VirtualPanels,VPRelationships,Versions,Regions,Exons,Tx,Genes).\
+        join(VPRelationships).\
+        join(Versions).\
+        join(Regions).\
+        join(Exons).\
+        join(Tx).\
+        join(Genes).\
+        filter(and_(VirtualPanels.id == panel_id,VPRelationships.intro <= current_version,or_(VPRelationships.last >= current_version, VPRelationships.last == None))).order_by(Regions.start)
+    return PanelApiReturn(current_version,panel)
+
+def get_exonic_api(s, panel_name, version='current'):
+    panel_ids = s.query(VirtualPanels).filter_by(name=panel_name).values(VirtualPanels.id)
+    for i in panel_ids:
+        panel_id = i.id
+    if version == "current":
+        current_version = get_current_version_vp(s, panel_id)
+    else:
+        current_version = version
+    panel = s.query(VirtualPanels,VPRelationships,Versions,Regions,Exons,Tx,Genes).\
+        join(VPRelationships).\
+        join(Versions).\
+        join(Regions).\
+        join(Exons).\
+        join(Tx).\
+        join(Genes).\
+        filter(and_(VirtualPanels.id == panel_id,VPRelationships.intro <= current_version,or_(VPRelationships.last >= current_version, VPRelationships.last == None))).order_by(Regions.start)
+    return PanelApiReturn(current_version,panel)
 
