@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+
+{% block content %}
+  <h2>{{ project_name }} Permissions</h2>
+
+{{ table |safe }}
+
+{% if message %}
+<div class="alert alert-danger"><strong>{{ modifier }}</strong> {{ message }}</div>
+{% endif %}
+
+<form action="{{ url_for('edit_permissions') }}" method="POST" class="form">
+    <div class="form-group">
+        {{ form.user_id.label }}
+        {{ form.user_id(class_="form-control") }}
+        {{ form.project_id(class_="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ form.submit(class_="btn btn-primary") }}
+    </div>
+</form>
+
+
+{% endblock %}

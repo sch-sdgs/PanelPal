@@ -1,13 +1,18 @@
-from sqlalchemy import or_, desc
+from sqlalchemy import and_, or_, desc
 
 from app.models import *
 
+
 def get_virtual_panels_simple(s):
-    vpanels = s.query(VirtualPanels). \
+    vpanels = s.query(VirtualPanels, VPRelationships, Versions, Panels). \
         group_by(VirtualPanels.name). \
+        join(VPRelationships). \
+        join(Versions). \
+        join(Panels). \
         values(VirtualPanels.current_version, \
                VirtualPanels.name.label('vp_name'), \
-               VirtualPanels.id)
+               VirtualPanels.id,
+               Panels.project_id.label('projectid'))
 
     return vpanels
 
@@ -42,7 +47,8 @@ def get_panels(s):
                Panels.current_version, \
                Panels.id.label("panelid"), \
                Projects.name.label("projectname"), \
-               Projects.id.label("projectid"))
+               Projects.id.label("projectid"),
+               Panels.locked)
 
     return panels
 
@@ -76,7 +82,8 @@ def get_panels_by_project_id(s, id):
                Projects.name.label("projectname"), \
                Panels.name.label("panelname"), \
                Panels.current_version, \
-               Panels.id.label("panelid"))
+               Panels.id.label("panelid"), \
+               Panels.locked)
 
     return panels
 
@@ -96,6 +103,7 @@ def check_panel_status_query(s, id):
                Versions.intro)
     return panels
 
+
 def check_virtualpanel_status_query(s, id):
     """
     query to check the status of a virtual panel - returns fields required to decide status of a panel
@@ -114,6 +122,7 @@ def check_virtualpanel_status_query(s, id):
     return panels
 
 
+# todo do we need start filter here
 def get_panel_edit(s, id, version):
     """
     gets a version of a panel
@@ -133,20 +142,20 @@ def get_panel_edit(s, id, version):
         join(Exons). \
         join(Tx). \
         join(Genes).values(Panels.id.label("panelid"), \
-                                  Panels.current_version, \
-                                  Panels.name.label("panelname"), \
-                                  Versions.intro, \
-                                  Versions.last, \
-                                  Versions.region_id, \
-                                  Versions.id, \
-                                  Versions.extension_3, \
-                                  Versions.extension_5, \
-                                  Genes.name.label("genename"), \
-                                  Regions.chrom, \
-                                  Regions.start, \
-                                  Regions.end, \
-                                  Exons.number, \
-                                  Tx.accession)
+                           Panels.current_version, \
+                           Panels.name.label("panelname"), \
+                           Versions.intro, \
+                           Versions.last, \
+                           Versions.region_id, \
+                           Versions.id, \
+                           Versions.extension_3, \
+                           Versions.extension_5, \
+                           Genes.name.label("genename"), \
+                           Regions.chrom, \
+                           Regions.start, \
+                           Regions.end, \
+                           Exons.number, \
+                           Tx.accession)
 
     return query
 
@@ -162,6 +171,7 @@ def get_current_version(s, panelid):
     version = s.query(Panels).filter_by(id=panelid).values(Panels.current_version)
     for i in version:
         return i.current_version
+
 
 def get_current_vp_version(s, panelid):
     """
@@ -185,7 +195,7 @@ def create_panel_query(s, projectid, name):
     :param name: panel name
     :return: panel id
     """
-    panel = Panels(name, int(projectid), 0)
+    panel = Panels(name, int(projectid), 0, None)
     s.add(panel)
     s.commit()
     return panel.id
@@ -204,7 +214,7 @@ def add_region_to_panel(s, regionid, panelid):
     current = get_current_version(s, panelid)
 
     version = Versions(intro=int(current) + 1, last=None, panel_id=panelid, region_id=regionid, comment=None,
-                              extension_3=None, extension_5=None)
+                       extension_3=None, extension_5=None)
     s.add(version)
     return version.id
 
@@ -241,6 +251,7 @@ def make_panel_live(s, panelid, new_version):
 
     return True
 
+
 def make_vp_panel_live(s, panelid, new_version):
     """
     makes a panel line
@@ -258,17 +269,52 @@ def make_vp_panel_live(s, panelid, new_version):
 
 def get_preftx_by_project_id(s, id):
     """
-    gets pref transcripts by project id
+    gets pref transcripts by project id - only gets transcripts in the current version
 
     :param s: db session
     :param id: project id
     :return: sql alchemy object
     """
-    preftx = s.query(Genes, Tx, PrefTx, Projects). \
+
+    preftx = s.query(Genes, Tx, PrefTxVersions, PrefTx, Projects). \
+        filter(and_(PrefTx.project_id == id, \
+                    or_(PrefTxVersions.last >= PrefTx.current_version, PrefTxVersions.last == None), \
+                    PrefTxVersions.intro <= PrefTx.current_version)). \
         join(Tx). \
+        join(PrefTxVersions). \
         join(PrefTx). \
         join(Projects). \
-        filter_by(id=id). \
+        values(Projects.id, \
+               Projects.name.label("projectname"), \
+               Genes.name.label("genename"), \
+               Tx.accession, \
+               Tx.tx_start, \
+               Tx.tx_end, \
+               Tx.strand, \
+               PrefTxVersions.intro, \
+               PrefTxVersions.last, \
+               PrefTx.current_version)
+
+    return preftx
+
+
+def get_changes_preftx_by_project_id(s, id):
+    """
+    gets changes to pf transcripts that are not yet live by project id
+
+    :param s: db session
+    :param id: project id
+    :return: sql alchemy object
+    """
+
+    preftx = s.query(Genes, Tx, PrefTxVersions, PrefTx, Projects). \
+        filter(and_(PrefTx.project_id == id, \
+                    or_(PrefTxVersions.last == PrefTx.current_version, PrefTxVersions.last == None), \
+                    PrefTxVersions.intro >= PrefTx.current_version)). \
+        join(Tx). \
+        join(PrefTxVersions). \
+        join(PrefTx). \
+        join(Projects). \
         values(Projects.id, \
                Projects.name.label("projectname"), \
                Genes.name.label("genename"), \
@@ -288,9 +334,10 @@ def get_project_name(s, projectid):
     :param id: project id
     :return: sql alchemy object
     """
-    name= s.query(Projects).filter_by(id=projectid)
+    name = s.query(Projects).filter_by(id=projectid)
     for i in name:
         return i.name
+
 
 def get_genes_by_projectid(s, projectid):
     """
@@ -300,7 +347,7 @@ def get_genes_by_projectid(s, projectid):
     :param id: project id
     :return: sql alchemy object
     """
-    genes =s.query(Genes, Tx, Exons, Regions, Versions, Panels, Projects). \
+    genes = s.query(Genes, Tx, Exons, Regions, Versions, Panels, Projects). \
         distinct(Tx.accession). \
         group_by(Tx.accession). \
         join(Tx). \
@@ -320,29 +367,136 @@ def get_genes_by_projectid(s, projectid):
                Tx.strand)
     return genes
 
-def add_preftx_to_panel(s,project_id,tx_id):
-    preftx = PrefTx(project_id=project_id,tx_id=tx_id)
+
+def create_project(s, name, user):
+    project = Projects(name=name)
+    s.add(project)
+    s.flush()
+    create_preftx_entry(s, project.id)
+    user_id = get_user_id_by_username(s, user)
+    user_rel = UserRelationships(user_id=user_id, project_id=project.id)
+    s.add(user_rel)
+    s.flush()
+    s.commit()
+    return project.id
+
+
+def create_preftx_entry(s, project_id):
+    """
+    DOSEN'T COMMIT DATA TO DB - to be used within another method that does.
+
+    :param s:
+    :param project_id:
+    :return:
+    """
+    preftx = PrefTx(project_id=project_id, current_version=0)
     s.add(preftx)
     return preftx.id
 
 
-def add_preftxs_to_panel(s,project_id,tx_ids):
+def get_preftx_current_version(s, project_id):
+    version = s.query(PrefTx).filter(PrefTx.project_id == project_id).values(PrefTx.current_version, PrefTx.id)
+    for i in version:
+        return [i.current_version, i.id]
+
+
+def add_preftxs_to_panel(s, project_id, tx_ids):
+    query = get_preftx_current_version(s, project_id)
+    current_version = query[0]
+    preftx_id = query[1]
+    print preftx_id
+    print "current_version:" + str(current_version)
     for tx_id in tx_ids:
-        add_preftx_to_panel(s,project_id=project_id,tx_id=tx_id)
+        print tx_id
+        preftx = PrefTxVersions(s, pref_tx_id=preftx_id, tx_id=tx_id, intro=current_version + 1, last=None)
+        s.add(preftx)
+        s.flush()
+        print preftx.id
     s.commit()
 
+    return True
+
+
+def get_user_id_by_username(s, username):
+    user = s.query(Users).filter_by(username=username).values(Users.username, Users.id)
+    for i in user:
+        return i.id
 
 
 def get_user_by_username(s, username):
-
-    user = s.query(Users).filter_by(username = username)
+    user = s.query(Users).filter_by(username=username)
     return user
 
 
-    # Select count (*) from users where username = 'username'
+def get_user_rel_by_project_id(s, project_id):
+    rels = s.query(Projects, UserRelationships, Users). \
+        distinct(Users.username). \
+        group_by(Users.username). \
+        join(UserRelationships). \
+        join(Users). \
+        filter(UserRelationships.project_id == project_id).values(Users.username, Projects.name,
+                                                                  UserRelationships.id.label("rel_id"),
+                                                                  UserRelationships.project_id.label("project_id"),
+                                                                  UserRelationships.user_id.label("user_id"))
+    return rels
 
 
+def add_user_project_rel(s, user_id, project_id):
+    rel = UserRelationships(user_id=user_id, project_id=project_id)
+    s.add(rel)
+    s.commit()
+    return True
 
 
+def get_projects_by_user(s, username):
+    user_id = get_user_id_by_username(s, username)
+    projects = s.query(Projects, UserRelationships).join(UserRelationships).filter_by(user_id=user_id).values(
+        Projects.id.label('id'), Projects.name.label('name'))
+    print type(projects)
+    return projects
 
+
+def check_user_has_permission(s, username, project_id):
+    if username == "dnamdp":
+        return True
+    check = s.query(Users, UserRelationships).join(UserRelationships).filter(
+        and_(Users.username == username, UserRelationships.project_id == project_id)).count()
+    print check
+    if check == 0:
+        return False
+    else:
+        return True
+
+
+def lock_panel(s, username, panel_id):
+    user_id = get_user_id_by_username(s, username)
+    lock = s.query(Panels).filter_by(id=panel_id).update(
+        {Panels.locked: user_id})
+    s.commit()
+    return True
+
+
+def unlock_panel(s, panel_id):
+    lock = s.query(Panels).filter_by(id=panel_id).update(
+        {Panels.locked: None})
+    s.commit()
+    return True
+
+
+def get_username_by_user_id(s, user_id):
+    username = s.query(Users).filter_by(id=user_id).values(Users.username)
+    for i in username:
+        return i.username
+
+
+def get_panel_api(s, panel_id):
+    current_version = get_current_version(s, panel_id)
+    panel = s.query(Panels,Versions,Regions,Exons,Tx,Genes).\
+        join(Versions).\
+        join(Regions).\
+        join(Exons).\
+        join(Tx).\
+        join(Genes).\
+        filter(and_(Panels.id == panel_id,Versions.intro <= current_version,or_(Versions.last >= current_version, Versions.last == None)))
+    return panel
 

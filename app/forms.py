@@ -3,7 +3,9 @@ from wtforms.fields import TextField, TextAreaField, SubmitField, HiddenField, P
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.validators import Required
 from app import app,db,s,models
-
+from queries import *
+from flask.ext.login import LoginManager, UserMixin, \
+    login_required, login_user, logout_user, current_user
 
 class UserForm(Form):
     name = TextField("Username",  [Required("Enter a Username")])
@@ -25,7 +27,7 @@ class AddGene(Form):
     submit = SubmitField("Add Gene")
 
 def projects():
-    return s.query(models.Projects)
+    return s.query(models.Projects).filter(models.Projects.user.any(models.UserRelationships.user.has(models.Users.username == current_user.id))).all()
 
 def panels():
     return s.query(models.Panels)
@@ -46,5 +48,13 @@ class Login(Form):
     username  = TextField("Username")
     password = PasswordField("Password")
     submit = SubmitField("Login")
+    next = HiddenField("Next")
 
+def users():
+    return s.query(models.Users)
+
+class EditPermissions(Form):
+    user_id  = QuerySelectField(query_factory=users,get_label='username')
+    project_id = HiddenField("Project Id")
+    submit = SubmitField("Grant Permission")
 

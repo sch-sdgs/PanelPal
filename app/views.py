@@ -1,47 +1,48 @@
 from flask import render_template, request, flash, url_for, Markup, jsonify, redirect, Response
 from sqlalchemy.orm import scoped_session
 from app import app, s, models, activedirectory
+from functools import wraps
 import json
 from app import app, s, models
 from app.queries import *
 from flask_table import Table, Col, LinkCol
-from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions
 from flask.ext.login import LoginManager, UserMixin, \
-                                login_required, login_user, logout_user
+    login_required, login_user, logout_user, current_user
+
 app.secret_key = 'development key'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
-class User(UserMixin):
 
-    def __init__(self,id,password=None):
+class User(UserMixin):
+    def __init__(self, id, password=None):
         self.id = id
         self.password = password
 
-    def is_authenticated(self, s, id,password):
+    def is_authenticated(self, s, id, password):
         validuser = get_user_by_username(s, id)
         if len(list(validuser)) == 0:
             return False
         else:
-            check = activedirectory.UserAuthentication().authenticate(id, password)
-            print "CHECK"
-            print check
-            if check != "False":
+            check_activdir = activedirectory.UserAuthentication().authenticate(id, password)
+
+            if check_activdir != "False":
                 return True
             else:
                 return False
-    # def is_active(self):
-    #     pass
-    # def is_anonymous(self):
-    #     pass
-    # def get_id(self,username):
-    #     validuser = get_user_by_username(s, username)
-    #     if validuser:
-    #         return username
-    #     else:
-    #         return None
+
+    def is_active(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -75,6 +76,23 @@ class NumberCol(Col):
         return '<input class="form-control" value="{number}" name="{id}">'.format(
             number=self.from_attr_list(item, attr_list), id=id)
 
+
+class LockCol(Col):
+    def __init__(self, name, attr=None, attr_list=None, **kwargs):
+        super(LockCol, self).__init__(
+            name,
+            attr=attr,
+            attr_list=attr_list,
+            **kwargs)
+
+    def td_contents(self, item, attr_list):
+        print "HELLO"
+        print item
+        if item["locked"] is not None:
+            username = get_username_by_user_id(s,item["locked"])
+            return '<span class="glyphicon glyphicon-lock"  data-toggle="tooltip" data-placement="bottom" title="Locked by: '+username+'" aria-hidden="true"></span>'
+        else:
+            return ''
 
 class LabelCol(Col):
     def __init__(self, name, valmin=False, attr=None, attr_list=None, **kwargs):
@@ -110,13 +128,19 @@ class ItemTable(Table):
     delete = LinkCol('Delete', 'delete_users', url_kwargs=dict(id='id'))
 
 
+class ItemTablePermissions(Table):
+    # username = Col('Username')
+    username = Col('User')
+    # delete = LinkCol('Delete', 'delete_users', url_kwargs=dict(id='id'))
+
+
 class ItemTableVirtualPanel(Table):
     vp_name = Col('Name')
     current_version = Col('Version')
     status = LabelCol('Status')
     edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='id'))
-    #todo make edit_vp_panel_page
-    #id = Col('Id')
+    # todo make edit_vp_panel_page
+    # id = Col('Id')
     make_live = LinkCol('Make Live', 'make_virtualpanel_live', url_kwargs=dict(id='id'))
     delete = LinkCol('Delete', 'delete_virtualpanel', url_kwargs=dict(id='id'))
 
@@ -125,6 +149,7 @@ class ItemTableProject(Table):
     name = Col('Name')
     view = LinkCol('View Panels', 'view_panels', url_kwargs=dict(id='id'))
     pref_tx = LinkCol('View Preferred Tx', 'view_preftx', url_kwargs=dict(id='id'))
+    permissions = LinkCol('Edit Permissions', 'edit_permissions', url_kwargs=dict(id='id'))
     # make = LinkCol('Make Panel', '', url_kwargs=dict())
     delete = LinkCol('Delete', 'delete_project', url_kwargs=dict(id='id'))
 
@@ -133,6 +158,7 @@ class ItemTablePanels(Table):
     panelname = Col('Name')
     current_version = Col('Stable Version')
     edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='panelid'))
+    locked = LockCol('Locked')
     status = LabelCol('Status')
     view = LinkCol('View Virtual Panels', 'view_virtual_panels', url_kwargs=dict(id='panelid'))
     make_live = LinkCol('Make Live', 'make_live', url_kwargs=dict(id='panelid'))
@@ -222,6 +248,7 @@ def check_panel_status(s, id):
 
     return status
 
+
 def check_virtualpanel_status(s, id):
     """
     checks the status of a panel - i.e. whether it is live or not live (it has uncommited changes)
@@ -243,6 +270,15 @@ def check_virtualpanel_status(s, id):
 
     return status
 
+@app.context_processor
+def logged_in():
+    if current_user.is_authenticated:
+        userid = current_user.id
+        return {'logged_in': True, 'userid': userid}
+    else:
+        return {'logged_in': False}
+
+
 @app.route('/')
 def index():
     return render_template('home.html', panels=3)
@@ -260,6 +296,16 @@ def autocomplete():
     print data
     return jsonify(matching_results=data)
 
+# test=None
+#
+# def lock_check(f):
+#     @wraps(f)
+#     def decorated_function(*args,**kwargs):
+#         if test is None:
+#             return redirect('/')
+#         return f(*args, **kwargs)
+#     return decorated_function
+
 
 ########################
 # PANELS
@@ -267,6 +313,7 @@ def autocomplete():
 
 @app.route('/panels', methods=['GET', 'POST'])
 @login_required
+#@lock_check
 def view_panels(id=None):
     """
     method to view panels, if project ID given then only return panels from that project
@@ -289,7 +336,8 @@ def view_panels(id=None):
         print row
         if id:
             project_name = row['projectname']
-        result.append(row)
+        if check_user_has_permission(s, current_user.id, row["projectid"]):
+            result.append(row)
     print result
     table = ItemTablePanels(result, classes=['table', 'table-striped'])
     return render_template('panels.html', panels=table, project_name=project_name)
@@ -346,6 +394,7 @@ def make_live():
 
     return redirect(url_for('view_panels'))
 
+
 @app.route('/virtualpanels/live', methods=['GET', 'POST'])
 def make_virtualpanel_live():
     """
@@ -360,15 +409,19 @@ def make_virtualpanel_live():
 
     return redirect(url_for('view_virtual_panels'))
 
+
 @app.route('/panels/edit')
 @login_required
 def edit_panel_page(panel_id=None):
     id = request.args.get('id')
+    print "LOCKING_PANEL"
+    lock_panel(s,current_user.id,id)
     if id is None:
         id = panel_id
     panel_info = s.query(models.Panels, models.Projects).filter_by(id=id).join(models.Projects).values(
         models.Panels.current_version,
-        models.Panels.name
+        models.Panels.name,
+        models.Panels.locked
     )
     for i in panel_info:
         print i
@@ -484,6 +537,7 @@ def remove_gene():
         ids = []
         for i in panel_info:
             if i.genename == gene:
+                #todo add if in here - if the gene is not already in a live panel it is okay to delete completely
                 s.query(models.Versions).filter_by(id=i.id).update({models.Versions.last: i.current_version})
                 ids.append(i.id)
     s.commit()
@@ -519,16 +573,15 @@ def add_gene():
 
 @app.route('/projects')
 @login_required
-def view_projects():
+def view_projects(delete=False, project_name=None, project_id=None):
     projects = models.Projects.query.all()
     result = []
     for i in projects:
-        print type(i)
-        print i
         row = row2dict(i)
-        result.append(row)
-    table = ItemTableProject(projects, classes=['table', 'table-striped'])
-    return render_template('projects.html', projects=table)
+        if check_user_has_permission(s,current_user.id,row["id"]):
+            result.append(row)
+    table = ItemTableProject(result, classes=['table', 'table-striped'])
+    return render_template('projects.html', projects=table,delete=delete,project_name=project_name,project_id=project_id)
 
 
 @app.route('/projects/add', methods=['GET', 'POST'])
@@ -540,9 +593,7 @@ def add_projects():
             flash('All fields are required.')
             return render_template('project_add.html', form=form)
         else:
-            u = models.Projects(name=form.data["name"])
-            s.add(u)
-            s.commit()
+            create_project(s, name=form.data["name"], user=current_user.id)
             return view_projects()
 
     elif request.method == 'GET':
@@ -552,10 +603,17 @@ def add_projects():
 @app.route('/projects/delete', methods=['GET', 'POST'])
 @login_required
 def delete_project():
-    u = db.session.query(models.Projects).filter_by(id=request.args.get('id')).first()
-    db.session.delete(u)
-    db.session.commit()
-    return view_projects()
+    #todo display a modal here with "do you really want to delete?" message
+    id = request.args.get('id')
+    if request.args.get('check'):
+        print "I AM DELETEING"
+        u = s.query(models.Projects).filter_by(id=id).first()
+        s.delete(u)
+        s.commit()
+        return view_projects()
+    else:
+        return view_projects(delete=True,project_name="Test",project_id=id)
+
 
 @app.route('/virtualpanels/delete', methods=['GET', 'POST'])
 def delete_virtualpanel():
@@ -588,63 +646,78 @@ def view_virtual_panels(id=None):
         row = dict(zip(i.keys(), i))
         status = check_virtualpanel_status(s, row["id"])
         row["status"] = status
-        print row
-        all_results.append(row)
+        if check_user_has_permission(s,current_user.id,row["projectid"]):
+            all_results.append(row)
 
     table = ItemTableVirtualPanel(all_results, classes=['table', 'table-striped'])
     return render_template("virtualpanels.html", virtualpanels=table)
+
 
 #################
 # USER LOGIN
 #################
 
-@app.route('/login',  methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    form = Login()
+    form = Login(next=request.args.get('next'))
     if request.method == 'GET':
         return render_template("login.html", form=form)
     elif request.method == 'POST':
         user = User(form.data["username"], password=form.data["password"])
         result = user.is_authenticated(s, id=form.data["username"], password=form.data["password"])
-        print "RESULT"
-        print result
         if result:
             login_user(user)
-            return redirect(url_for('view_projects'))
+            if form.data["next"] != "":
+                return redirect(form.data["next"])
+            else:
+                return redirect(url_for('index'))
         else:
-            return render_template("login.html",form=form, modifier = "Oh Snap!", message="Wrong username or password")
+            return render_template("login.html", form=form, modifier="Oh Snap!", message="Wrong username or password")
+
+
+@app.route("/edit_permissions", methods=['GET', 'POST'])
+@login_required
+def edit_permissions():
+    id = request.args.get('id')
+    form = EditPermissions(project_id=id)
+    message = None
+    if request.method == 'POST':
+        if check_user_has_permission(s,current_user.id,form.data["project_id"]):
+            add_user_project_rel(s, form.data["user_id"].id, form.data["project_id"])
+        else:
+            message = "You do not have permission to edit this project"
+        id = form.data["project_id"]
+    result = get_user_rel_by_project_id(s, project_id=id)
+    all_results = []
+    for i in result:
+        row = dict(zip(i.keys(), i))
+        all_results.append(row)
+
+    project = get_project_name(s, id)
+    table = ItemTablePermissions(all_results, classes=['table', 'table-striped'])
+    return render_template("permissions.html", table=table, form=form, project_name=project, message=message)
+
 
 @app.route("/logout")
 @login_required
 def logout():
+    #todo unlock all users locked
     logout_user()
     form = Login()
-    #return Response('<p>Logged out</p>')
-    return render_template("login.html", form=form, message = "You have logged out of PanelPal")
-
-
-    ##if count in get_valid_user != 1:
-        # Print "Not permitted to use PanelPal"
-    #elif count in get_valid_user = 1:
-        #Call C# Webservice (UserAuthentication)
-            #if UserAuthentication returns: "Invalid Login" || "Invalid Permission":
-                 # "Not permitted to use PanelPal"
-            #elif:
-                # Grant access and open PanelPal Homepage
-
-
+    return render_template("login.html", form=form, message="You have logged out of PanelPal")
 
 
 #################
-# Preferred transcripts
-################
+# PREFTX
+#################
 
 @app.route('/preftx')
+@login_required
 def view_preftx():
     id = request.args.get('id')
     print "hello"
     print id
-    project=get_project_name(s, id)
+    project = get_project_name(s, id)
     result = get_preftx_by_project_id(s=s, id=id)
     if len(list(result)) == 0:
         return redirect(url_for('create_preftx', id=id))
@@ -654,10 +727,13 @@ def view_preftx():
         for i in result:
             row = dict(zip(i.keys(), i))
             all_results.append(row)
+        print all_results
         table = ItemTablePrefTx(all_results, classes=['table', 'table-striped'])
     return render_template("preftx.html", preftx=table, project_name=project)
 
+
 @app.route('/preftx/create', methods=['GET', 'POST'])
+@login_required
 def create_preftx():
     id = request.args.get('id')
     if request.method == 'GET':
@@ -667,19 +743,19 @@ def create_preftx():
             print i.genename
             if i.genename not in genes:
                 genes[i.genename] = list()
-                genes[i.genename].append((i.txid,i.accession))
+                genes[i.genename].append((i.txid, i.accession))
             else:
-                genes[i.genename].append((i.txid,i.accession))
+                genes[i.genename].append((i.txid, i.accession))
 
         list_of_forms = []
         for gene in genes:
             form = PrefTxCreate(request.form)
-            form.gene.choices=genes[gene]
-            form.gene.name=gene
+            form.gene.choices = genes[gene]
+            form.gene.name = gene
             list_of_forms.append(form)
 
         print list_of_forms
-        return render_template("preftx_create.html",genes = genes, list_of_forms = list_of_forms, project_id = id)
+        return render_template("preftx_create.html", genes=genes, list_of_forms=list_of_forms, project_id=id)
 
     elif request.method == 'POST':
         print request.form
@@ -691,7 +767,153 @@ def create_preftx():
             else:
                 tx_ids.append(request.form[i])
 
-        add_preftxs_to_panel(s,project_id,tx_ids)
+        add_preftxs_to_panel(s, project_id, tx_ids)
+        return redirect(url_for('view_preftx', id=project_id))
 
 
+
+####
+# API
+######
+
+from flask_restful_swagger import swagger
+from flask_restful import Resource, Api,reqparse,fields, marshal
+from sqlalchemy.ext.serializer import loads, dumps
+
+# app = Flask(__name__)
+# app.config['BUNDLE_ERRORS'] = True
+
+api =swagger.docs(Api(app,default_mediatype='text/plain'),apiVersion='0.1',description="PanelPal API")
+
+@api.representation('text/plain')
+def output_plain(data, headers=None):
+    resp = app.make_response(data+"\n")
+    resp.headers.extend(headers or {})
+    return resp
+
+parser = reqparse.RequestParser()
+
+# @app.errorhandler(404)
+# def not_found(error=None):
+#     message = {
+#             'status': 404,
+#             'message': 'Not Found: ' + request.url,
+#     }
+#     resp = jsonify(message)
+#     resp.status_code = 404
+#
+#     return resp
+
+class RegionsGene(Resource):
+    @swagger.operation(
+        notes='some really good notes',
+        responseClass='x',
+        nickname='upload',
+        parameters=[
+            {
+                "name": "body",
+                "description": "blueprint object that needs to be added. YAML.",
+                "required": True,
+                "allowMultiple": False,
+                "dataType": 'x',
+                "paramType": "body"
+            }
+        ],
+        responseMessages=[
+            {
+                "code": 201,
+                "message": "Created. The URL of the created blueprint should be in the Location header"
+            },
+            {
+                "code": 405,
+                "message": "Invalid input"
+            }
+        ]
+    )
+
+    def get(self,gene):
+        r = Regions()
+        result = r.get_regions_by_gene(gene)
+        resp = output_csv(result)
+        print resp
+        resp.status_code = 200
+        return resp
+
+class RegionsTx(Resource):
+
+    def get(self, tx):
+        r = Regions()
+        result = r.get_regions_by_tx(tx)
+        return result
+
+class Projects(Resource):
+    def get(self):
+        pass
+
+class Panels(Resource):
+    @swagger.operation(
+        notes='some really good notes',
+        responseClass='x',
+        nickname='upload',
+        parameters=[
+
+        ],
+        responseMessages=[
+            {
+                "code": 201,
+                "message": "Created. The URL of the created blueprint should be in the Location header"
+            },
+            {
+                "code": 405,
+                "message": "Invalid input"
+            }
+        ]
+    )
+
+
+    def get(self,id,version):
+        result = get_panel_api(s,id)
+        all = []
+        for i in result:
+            line = [str(i.Regions.chrom),str(i.Regions.start),str(i.Regions.end),"ex"+str(i.Exons.number)+"_"+i.Genes.name+"_"+str(i.Tx.accession)]
+            processed = "\t".join(line)
+            all.append(processed)
+        to_return = "\n".join(all)
+        resp = output_plain(to_return)
+        resp.headers['content-type']='text/plain'
+        return resp
+
+
+class BEDs(Resource):
+    def get(self, bed_type, panel):
+        db = db_panels()
+        result = db.export_bed(panel, bed_type)
+        bed = "\n".join(str(x) for x in result)
+        resp = app.make_response(bed)
+        return resp
+
+
+class Helpers():
+    def convert_to_bed(self,json_data):
+        lines = []
+        print json_data
+        for i in json_data:
+            if "exons" not in i:
+                for j in json_data[i]:
+                    chrom = json_data[i]["chrom"]
+                    if "exons" in json_data[i][j]:
+                        for k in json_data[i][j]["exons"]:
+                            start = k["start"]
+                            end = k["end"]
+                            number = k["number"]
+                            out = [chrom,start,end,"ex"+str(number)+"_"+i+"_"+j]
+                            lines.append("\t".join(str(x) for x in out))
+
+        return "\n".join(lines)
+
+
+api.add_resource(RegionsGene, '/api/regions/gene/<string:gene>')
+api.add_resource(RegionsTx, '/api/regions/tx/<string:tx>')
+api.add_resource(Panels, '/api/panel/<string:id>/<string:version>',)
+api.add_resource(Panels, '/api/virtualpanel/<string:id>/<string:version>',)
 
