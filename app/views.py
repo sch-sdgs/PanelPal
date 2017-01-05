@@ -7,7 +7,7 @@ import json
 from app import app, s, models
 from app.queries import *
 from flask_table import Table, Col, LinkCol
-from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanel, SelectVPGenes
 from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
 
@@ -273,7 +273,6 @@ def check_virtualpanel_status(s, id):
 
     return status
 
-
 @app.context_processor
 def logged_in():
     if current_user.is_authenticated:
@@ -413,21 +412,6 @@ def make_live():
     make_panel_live(s, panelid, new_version)
 
     return redirect(url_for('view_panels'))
-
-
-@app.route('/virtualpanels/live', methods=['GET', 'POST'])
-def make_virtualpanel_live():
-    """
-    given a panel id this method makes a panel live
-
-    :return: redirection to view panels
-    """
-    panelid = request.args.get('id')
-    current_version = get_current_vp_version(s, panelid)
-    new_version = current_version + 1
-    make_vp_panel_live(s, panelid, new_version)
-
-    return redirect(url_for('view_virtual_panels'))
 
 
 @app.route('/panels/edit')
@@ -636,14 +620,6 @@ def delete_project():
         return view_projects(delete=True, project_name="Test", project_id=id)
 
 
-@app.route('/virtualpanels/delete', methods=['GET', 'POST'])
-def delete_virtualpanel():
-    u = db.session.query(models.VirtualPanels).filter_by(id=request.args.get('id')).first()
-    db.session.delete(u)
-    db.session.commit()
-    return view_virtual_panels()
-
-
 #################
 # VIRTUAL PANELS
 ################
@@ -673,6 +649,67 @@ def view_virtual_panels(id=None):
     table = ItemTableVirtualPanel(all_results, classes=['table', 'table-striped'])
     return render_template("virtualpanels.html", virtualpanels=table)
 
+@app.route('/virtualpanels/create', methods=['GET', 'POST'])
+@login_required
+def create_virtual_panel():
+    """
+
+    :return:
+    """
+    form = CreateVirtualPanel()
+
+    if request.method == "POST":
+        name = request.form["vpanelname"]
+        testvpanel = s.query(models.VirtualPanels).filter_by(name=name).first()
+        print(testvpanel)
+        if testvpanel is not None:
+            return render_template('virtualpanels_create.html', form=form, message='Virtual panel name exists')
+        else:
+            panel_id = request.form["panel"]
+            create_virtualpanel_query(s, name)
+            return redirect(url_for('select_vp_genes', vp=name, panel=panel_id))
+    elif request.method == 'GET':
+        return render_template('virtualpanels_create.html', form=form)
+
+
+@app.route('/virtualpanels/select', methods=['GET', 'POST'])
+@login_required
+def select_vp_genes():
+    """
+
+    :return:
+    """
+    form = SelectVPGenes()
+
+    if request.method == "POST":
+        pass
+    else:
+        vp = request.args.get("vp")
+        panel_id = request.args.get("panel")
+        current_version = get_current_version(s, panel_id)
+        genes = get_genes_by_panelid(s, panel_id, current_version)
+        return render_template('virtualpanels_selectgenes.html', form=form, vp_name=vp, panel_id=panel_id, genes=genes)
+
+@app.route('/virtualpanels/live', methods=['GET', 'POST'])
+def make_virtualpanel_live():
+    """
+    given a panel id this method makes a panel live
+
+    :return: redirection to view panels
+    """
+    panelid = request.args.get('id')
+    current_version = get_current_vp_version(s, panelid)
+    new_version = current_version + 1
+    make_vp_panel_live(s, panelid, new_version)
+
+    return redirect(url_for('view_virtual_panels'))
+
+@app.route('/virtualpanels/delete', methods=['GET', 'POST'])
+def delete_virtualpanel():
+    u = db.session.query(models.VirtualPanels).filter_by(id=request.args.get('id')).first()
+    db.session.delete(u)
+    db.session.commit()
+    return view_virtual_panels()
 
 #################
 # USER LOGIN

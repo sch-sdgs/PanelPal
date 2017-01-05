@@ -1,5 +1,5 @@
 from flask.ext.wtf import Form
-from wtforms.fields import TextField, TextAreaField, SubmitField, HiddenField, PasswordField, RadioField
+from wtforms.fields import TextField, TextAreaField, SubmitField, HiddenField, PasswordField, RadioField, BooleanField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.validators import Required
 from app import app,db,s,models
@@ -38,6 +38,15 @@ class CreatePanel(Form):
     listgenes = HiddenField("Selected Genes")
     genes = TextField("Genes")
     submit = SubmitField("Create Panel")
+
+class CreateVirtualPanel(Form):
+    panel = QuerySelectField(query_factory=panels,get_label='name')
+    vpanelname = TextField("Virtual Panel Name")
+    submit = SubmitField("Create Virtual Panel")
+
+class SelectVPGenes(Form):
+    pass
+    #genes = BooleanField(choices=[])
 
 class PrefTxCreate(Form):
     gene = RadioField(u'Genes',choices=[],coerce=int)
