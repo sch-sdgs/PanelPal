@@ -347,6 +347,21 @@ def view_panels(id=None):
     table = ItemTablePanels(result, classes=['table', 'table-striped'])
     return render_template('panels.html', panels=table, project_name=project_name)
 
+@app.route('/panel', methods=['GET', 'POST'])
+@login_required
+def view_panel():
+    id = request.args.get('id')
+    if id:
+        panel = get_panel_by_id(s, id)
+        result=[]
+        for i in panel:
+            row = dict(zip(i.keys(), i))
+            # status = check_panel_status(s, row["panelid"])
+            # row["status"] = status
+            print row
+    else:
+        return redirect(url_for('view_panels'))
+
 
 @app.route('/panels/create', methods=['GET', 'POST'])
 @login_required
@@ -458,7 +473,7 @@ def edit_panel_page(panel_id=None):
         genes.append(Markup("<button type=\"button\" class=\"btn btn-danger btn-md btngene\" data-id=\"" + str(
             i.panelid) + "\" data-name=\"" + i.genename + "\" data-toggle=\"modal\" data-target=\"#removeGene\" id=\"myDeleteButton\"><span class=\"glyphicon glyphicon-remove\"></span> " + i.genename + "</button>"))
     table = ItemTablePanel(result, classes=['table', 'table-striped'])
-    return render_template('panel_detail.html', panel_name=name, version=version,
+    return render_template('panel_edit.html', panel_name=name, version=version,
                            panel_detail=table, genes=" ".join(sorted(set(genes))), form=form, add_form=add_form,
                            panel_id=id)
 
@@ -845,19 +860,26 @@ panel_fields = {
 }
 
 #todo - need to add extensions from db here
-def region_result_to_json(data,scope=None):
+def region_result_to_json(data,extension=0):
+    args = request.args
+    if 'extension' in args:
+        extension = int(args["extension"])
+    else:
+        extension = 0
     result = dict()
     result['details'] = dict()
     result['regions'] = list()
     regions = dict()
     for i in data:
         region = dict()
-        if scope == 'exonic':
-            region['start'] = i.Regions.start - 25
-            region['end'] = i.Regions.end + 25
+        if i.Versions.extension_5 is not None:
+            region['start'] = i.Regions.start - extension + i.Versions.extension_5
         else:
-            region['start'] = i.Regions.start
-            region['end'] = i.Regions.end
+            region['start'] = i.Regions.start - extension
+        if i.Versions.extension_3 is not None:
+            region['end'] = i.Regions.end + extension + i.Versions.extension_3
+        else:
+            region['end'] = i.Regions.end + extension
         region["annotation"] = "ex" + str(i.Exons.number) + "_" + i.Genes.name + "_" + str(i.Tx.accession)
         if i.Regions.chrom.replace('chr', '') not in regions:
             regions[i.Regions.chrom.replace('chr', '')] = list()
@@ -931,6 +953,13 @@ class VirtualPanels(Resource):
         responseClass='x',
         nickname='small',
         parameters=[
+            {
+                "name": "extension",
+                "paramType": "query",
+                "required": False,
+                "allowMultiple": False,
+                "dataType": "integer"
+            }
         ],
         responseMessages=[
             {
@@ -952,34 +981,34 @@ class VirtualPanels(Resource):
         resp.headers['content-type'] = 'application/json'
         return resp
 
-class Exonic(Resource):
-    @swagger.operation(
-        notes='Gets a JSON of regions in a virtual panel and adjusts for "exnoic" - equivalent to the exon file',
-        responseClass='x',
-        nickname='small',
-        parameters=[
-        ],
-        responseMessages=[
-            {
-                "code": 201,
-                "message": "Created. The URL of the created blueprint should be in the Location header"
-            },
-            {
-                "code": 405,
-                "message": "Invalid input"
-            }
-        ]
-    )
-    def get(self, name, version):
-        result = get_exonic_api(s, name, version)
-        result_json = region_result_to_json(result.panel,scope="exonic")
-        result_json["details"]["panel"] = name
-        result_json["details"]["version"] = int(result.current_version)
-        resp = output_json(result_json, 200)
-        resp.headers['content-type'] = 'application/json'
-        return resp
+# class Exonic(Resource):
+#     @swagger.operation(
+#         notes='Gets a JSON of regions in a virtual panel and adjusts for "exnoic" - equivalent to the exon file',
+#         responseClass='x',
+#         nickname='small',
+#         parameters=[
+#         ],
+#         responseMessages=[
+#             {
+#                 "code": 201,
+#                 "message": "Created. The URL of the created blueprint should be in the Location header"
+#             },
+#             {
+#                 "code": 405,
+#                 "message": "Invalid input"
+#             }
+#         ]
+#     )
+#     def get(self, name, version):
+#         result = get_exonic_api(s, name, version)
+#         result_json = region_result_to_json(result.panel,scope="exonic")
+#         result_json["details"]["panel"] = name
+#         result_json["details"]["version"] = int(result.current_version)
+#         resp = output_json(result_json, 200)
+#         resp.headers['content-type'] = 'application/json'
+#         return resp
 
 api.add_resource(Panels, '/api/panel/<string:name>/<string:version>', )
 api.add_resource(VirtualPanels, '/api/virtualpanel/<string:name>/<string:version>', )
-api.add_resource(Exonic, '/api/exonic/<string:name>/<string:version>', )
+#api.add_resource(Exonic, '/api/exonic/<string:name>/<string:version>', )
 

@@ -557,3 +557,15 @@ def get_exonic_api(s, panel_name, version='current'):
         filter(and_(VirtualPanels.id == panel_id,VPRelationships.intro <= current_version,or_(VPRelationships.last >= current_version, VPRelationships.last == None))).order_by(Regions.start)
     return PanelApiReturn(current_version,panel)
 
+def get_panel_by_id(s,panel_id):
+    current_version = get_current_version(s,panel_id)
+    panel = s.query(Panels, Versions, Regions, Exons, Tx, Genes). \
+        join(Versions). \
+        join(Regions). \
+        join(Exons). \
+        join(Tx). \
+        join(Genes). \
+        filter(and_(Panels.id == panel_id, Versions.intro <= current_version,
+                    or_(Versions.last >= current_version, Versions.last == None))).order_by(Regions.start)
+
+    return panel
