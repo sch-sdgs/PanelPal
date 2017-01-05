@@ -12,6 +12,8 @@ def get_virtual_panels_simple(s):
         values(VirtualPanels.current_version, \
                VirtualPanels.name.label('vp_name'), \
                VirtualPanels.id,
+               Panels.id.label('panelid'),
+               Panels.locked,
                Panels.project_id.label('projectid'))
 
     return vpanels
@@ -54,15 +56,20 @@ def get_panels(s):
 
 
 def get_virtual_panels_by_panel_id(s, id):
-    vpanels = s.query(VirtualPanels, VPRelationships, Versions, Panels). \
+    vpanels = s.query(VirtualPanels, VPRelationships, Versions, Panels, Projects). \
         distinct(VirtualPanels.name). \
         group_by(VirtualPanels.name). \
         join(VPRelationships). \
         join(Versions). \
         join(Panels). \
+        join(Projects). \
         filter(Panels.id == id). \
         values(VirtualPanels.id, \
                VirtualPanels.current_version, \
+               Panels.name.label('panelname'),
+               Panels.id.label('panelid'),
+               Projects.id.label('projectid'),
+               Panels.locked,
                VirtualPanels.name.label('vp_name'))
     return vpanels
 
@@ -172,6 +179,18 @@ def get_current_version(s, panelid):
     for i in version:
         return i.current_version
 
+def get_current_vpanel_version(s, vpanelid):
+    """
+    gets current version of a panel given the panel id
+
+    :param s: db session
+    :param panelid: panel id
+    :return: the panel id
+    """
+    version = s.query(VirtualPanels).filter_by(id=vpanelid).values(VirtualPanels.current_version)
+    for i in version:
+        return i.current_version
+
 def get_current_version_vp(s, panelid):
     """
     gets current version of a panel given the panel id
@@ -183,6 +202,7 @@ def get_current_version_vp(s, panelid):
     version = s.query(VirtualPanels).filter_by(id=panelid).values(VirtualPanels.current_version)
     for i in version:
         return i.current_version
+
 
 def get_current_vp_version(s, panelid):
     """
@@ -248,7 +268,7 @@ def add_genes_to_panel(s, panelid, gene):
     s.commit()
 
 
-def make_panel_live(s, panelid, new_version):
+def make_panel_live(s, panelid, new_version, username):
     """
     makes a panel line
 
@@ -257,10 +277,19 @@ def make_panel_live(s, panelid, new_version):
     :param panelid: panel id
     :param new_version: the new version number of the panel
     """
-    s.query(Panels).filter_by(id=panelid).update({Panels.current_version: new_version})
-    s.commit()
+    project_id = get_project_id_by_panel_id(s, panelid)
+    if check_user_has_permission(s, username, project_id):
+        s.query(Panels).filter_by(id=panelid).update({Panels.current_version: new_version})
+        s.commit()
+        return True
+    else:
+        return False
 
-    return True
+
+def get_project_id_by_panel_id(s, panelid):
+    project = s.query(Projects, Panels).join(Panels).filter(Panels.id == panelid).values(Projects.id)
+    for i in project:
+        return i.id
 
 
 def make_vp_panel_live(s, panelid, new_version):
@@ -453,9 +482,13 @@ def get_user_rel_by_project_id(s, project_id):
 
 
 def add_user_project_rel(s, user_id, project_id):
-    rel = UserRelationships(user_id=user_id, project_id=project_id)
-    s.add(rel)
-    s.commit()
+    check = s.query(UserRelationships).filter(
+        and_(UserRelationships.user_id == user_id, UserRelationships.project_id == project_id)).count()
+    print check
+    if check == 0:
+        rel = UserRelationships(user_id=user_id, project_id=project_id)
+        s.add(rel)
+        s.commit()
     return True
 
 
@@ -468,7 +501,7 @@ def get_projects_by_user(s, username):
 
 
 def check_user_has_permission(s, username, project_id):
-    if username == "dnamdp":
+    if username == "":
         return True
     check = s.query(Users, UserRelationships).join(UserRelationships).filter(
         and_(Users.username == username, UserRelationships.project_id == project_id)).count()
@@ -487,8 +520,8 @@ def lock_panel(s, username, panel_id):
     return True
 
 
-def unlock_panel(s, panel_id):
-    lock = s.query(Panels).filter_by(id=panel_id).update(
+def unlock_panel_query(s, panel_id):
+    unlock = s.query(Panels).filter_by(id=panel_id).update(
         {Panels.locked: None})
     s.commit()
     return True
@@ -499,10 +532,12 @@ def get_username_by_user_id(s, user_id):
     for i in username:
         return i.username
 
+
 class PanelApiReturn(object):
-  def __init__(self, current_version, panel):
-     self.current_version = current_version
-     self.panel = panel
+    def __init__(self, current_version, panel):
+        self.current_version = current_version
+        self.panel = panel
+
 
 def get_panel_api(s, panel_name, version='current'):
     panel_ids = s.query(Panels).filter_by(name=panel_name).values(Panels.id)
@@ -512,14 +547,16 @@ def get_panel_api(s, panel_name, version='current'):
         current_version = get_current_version(s, panel_id)
     else:
         current_version = version
-    panel = s.query(Panels,Versions,Regions,Exons,Tx,Genes).\
-        join(Versions).\
-        join(Regions).\
-        join(Exons).\
-        join(Tx).\
-        join(Genes).\
-        filter(and_(Panels.id == panel_id,Versions.intro <= current_version,or_(Versions.last >= current_version, Versions.last == None))).order_by(Regions.start)
-    return PanelApiReturn(current_version,panel)
+    panel = s.query(Panels, Versions, Regions, Exons, Tx, Genes). \
+        join(Versions). \
+        join(Regions). \
+        join(Exons). \
+        join(Tx). \
+        join(Genes). \
+        filter(and_(Panels.id == panel_id, Versions.intro <= current_version,
+                    or_(Versions.last >= current_version, Versions.last == None))).order_by(Regions.start)
+    return PanelApiReturn(current_version, panel)
+
 
 def get_vpanel_api(s, panel_name, version='current'):
     panel_ids = s.query(VirtualPanels).filter_by(name=panel_name).values(VirtualPanels.id)
@@ -529,15 +566,17 @@ def get_vpanel_api(s, panel_name, version='current'):
         current_version = get_current_version_vp(s, panel_id)
     else:
         current_version = version
-    panel = s.query(VirtualPanels,VPRelationships,Versions,Regions,Exons,Tx,Genes).\
-        join(VPRelationships).\
-        join(Versions).\
-        join(Regions).\
-        join(Exons).\
-        join(Tx).\
-        join(Genes).\
-        filter(and_(VirtualPanels.id == panel_id,VPRelationships.intro <= current_version,or_(VPRelationships.last >= current_version, VPRelationships.last == None))).order_by(Regions.start)
-    return PanelApiReturn(current_version,panel)
+    panel = s.query(VirtualPanels, VPRelationships, Versions, Regions, Exons, Tx, Genes). \
+        join(VPRelationships). \
+        join(Versions). \
+        join(Regions). \
+        join(Exons). \
+        join(Tx). \
+        join(Genes). \
+        filter(and_(VirtualPanels.id == panel_id, VPRelationships.intro <= current_version,
+                    or_(VPRelationships.last >= current_version, VPRelationships.last == None))).order_by(Regions.start)
+    return PanelApiReturn(current_version, panel)
+
 
 def get_exonic_api(s, panel_name, version='current'):
     panel_ids = s.query(VirtualPanels).filter_by(name=panel_name).values(VirtualPanels.id)
@@ -547,25 +586,81 @@ def get_exonic_api(s, panel_name, version='current'):
         current_version = get_current_version_vp(s, panel_id)
     else:
         current_version = version
-    panel = s.query(VirtualPanels,VPRelationships,Versions,Regions,Exons,Tx,Genes).\
-        join(VPRelationships).\
-        join(Versions).\
-        join(Regions).\
-        join(Exons).\
-        join(Tx).\
-        join(Genes).\
-        filter(and_(VirtualPanels.id == panel_id,VPRelationships.intro <= current_version,or_(VPRelationships.last >= current_version, VPRelationships.last == None))).order_by(Regions.start)
-    return PanelApiReturn(current_version,panel)
+    panel = s.query(VirtualPanels, VPRelationships, Versions, Regions, Exons, Tx, Genes). \
+        join(VPRelationships). \
+        join(Versions). \
+        join(Regions). \
+        join(Exons). \
+        join(Tx). \
+        join(Genes). \
+        filter(and_(VirtualPanels.id == panel_id, VPRelationships.intro <= current_version,
+                    or_(VPRelationships.last >= current_version, VPRelationships.last == None))).order_by(
+        Regions.start).values()
+    return PanelApiReturn(current_version, panel)
 
-def get_panel_by_id(s,panel_id):
-    current_version = get_current_version(s,panel_id)
-    panel = s.query(Panels, Versions, Regions, Exons, Tx, Genes). \
+
+def get_panel_by_id(s, panel_id):
+    current_version = get_current_version(s, panel_id)
+    panel = s.query(Projects, Panels, Versions, Regions, Exons, Tx, Genes). \
+        join(Panels). \
         join(Versions). \
         join(Regions). \
         join(Exons). \
         join(Tx). \
         join(Genes). \
         filter(and_(Panels.id == panel_id, Versions.intro <= current_version,
-                    or_(Versions.last >= current_version, Versions.last == None))).order_by(Regions.start)
+                    or_(Versions.last >= current_version, Versions.last == None))).order_by(Regions.start). \
+        values(Projects.id.label("project_id"), Panels.name, Panels.current_version, Versions.extension_3,
+               Versions.extension_5, Versions.intro,
+               Versions.last, Regions.chrom, Regions.start, Regions.end, Tx.accession, Genes.name.label("genename"),
+               Exons.number)
 
     return panel
+
+def get_vpanel_by_id(s, vpanel_id):
+    current_version = get_current_vpanel_version(s, vpanel_id)
+    panel = s.query(Projects, Panels, Versions, VPRelationships, VirtualPanels, Regions, Exons, Tx, Genes). \
+        join(Panels). \
+        join(Versions). \
+        join(VPRelationships). \
+        join(VirtualPanels). \
+        join(Regions). \
+        join(Exons). \
+        join(Tx). \
+        join(Genes). \
+        filter(and_(VirtualPanels.id == vpanel_id, Versions.intro <= current_version,
+                    or_(Versions.last >= current_version, Versions.last == None))).order_by(Regions.start). \
+        values(Projects.id.label("project_id"), VirtualPanels.name, VirtualPanels.current_version, Versions.extension_3,
+               Versions.extension_5, Versions.intro,
+               Versions.last, Regions.chrom, Regions.start, Regions.end, Tx.accession, Genes.name.label("genename"),
+               Exons.number)
+
+    return panel
+
+def get_panel_details_by_id(s, panel_id):
+    panel = s.query(Projects, Panels). \
+        join(Panels). \
+        filter(Panels.id == panel_id). \
+        values(Panels.name, Panels.current_version)
+
+    return panel
+
+def get_vpanel_details_by_id(s, vpanel_id):
+    panel = s.query(Projects, Panels, Versions, VPRelationships, VirtualPanels). \
+        join(Panels). \
+        join(Versions). \
+        join(VPRelationships). \
+        join(VirtualPanels). \
+        filter(VirtualPanels.id == vpanel_id). \
+        values(VirtualPanels.name, VirtualPanels.current_version, Projects.id.label('project_id'))
+
+    return panel
+
+def check_if_locked_by_user(s, username, panel_id):
+    user_id = get_user_id_by_username(s, username)
+    locked = s.query(Panels).filter(or_(and_(Panels.id == panel_id, Panels.locked == user_id),
+                                        and_(Panels.locked == None, Panels.id == panel_id))).count()
+    if locked == 0:
+        return False
+    else:
+        return True
