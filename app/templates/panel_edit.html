@@ -58,7 +58,7 @@
             <button type="button" class="btn btn-default"><span class="glyphicon glyphicon-download-alt"></span>
                 Download Current .BED
             </button>
-            <button type="button" class="btn btn-default"><span class="glyphicon glyphicon-remove"></span> Exit</button>
+            <a href="{{url_for('unlock_panel')}}?panelid={{ panel_id }}" role="button" class="btn btn-danger"><span class="glyphicon glyphicon-lock"></span> Unlock Panel</a>
     </div>
     <hr>
     <h2>Editing Panel | <strong>{{ panel_name }} (v{{ version }})</strong></h2>

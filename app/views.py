@@ -49,6 +49,13 @@ class User(UserMixin):
 def load_user(user_id):
     return User(user_id)
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('500.html'), 500
 
 class NumberCol(Col):
     def __init__(self, name, valmin=False, attr=None, attr_list=None, **kwargs):
@@ -92,10 +99,29 @@ class LockCol(Col):
         print item
         if item["locked"] is not None:
             username = get_username_by_user_id(s, item["locked"])
-            return '<span class="glyphicon glyphicon-lock"  data-toggle="tooltip" data-placement="bottom" title="Locked by: ' + username + '" aria-hidden="true"></span>'
+            return '<center><span class="glyphicon glyphicon-lock"  data-toggle="tooltip" data-placement="bottom" title="Locked by: ' + username + '" aria-hidden="true"></span></center>'
         else:
             return ''
 
+class LinkColLive(LinkCol):
+
+    def td_contents(self, item, attr_list):
+        if item["conditional"] is True and item["status"] is False:
+            return '<a href="{url}">{text}</a>'.format(
+                url=self.url(item),
+                text=self.td_format(self.text(item, attr_list)))
+        else:
+            return '-'
+
+class LinkColConditional(LinkCol):
+
+    def td_contents(self, item, attr_list):
+        if item["conditional"] is True:
+            return '<a href="{url}">{text}</a>'.format(
+                url=self.url(item),
+                text=self.td_format(self.text(item, attr_list)))
+        else:
+            return '-'
 
 class LabelCol(Col):
     def __init__(self, name, valmin=False, attr=None, attr_list=None, **kwargs):
@@ -117,7 +143,7 @@ class LabelCol(Col):
         """
         if self.from_attr_list(item, attr_list):
             type = "success"
-            status = "OK"
+            status = "Live"
         else:
             type = "danger"
             status = "Changes"
@@ -134,7 +160,7 @@ class ItemTable(Table):
 class ItemTablePermissions(Table):
     # username = Col('Username')
     username = Col('User')
-    # delete = LinkCol('Delete', 'delete_users', url_kwargs=dict(id='id'))
+    delete = LinkCol('Remove', 'remove_permission', url_kwargs=dict(userid='user_id',projectid='project_id'))
 
 
 class ItemTableVirtualPanel(Table):
@@ -152,28 +178,49 @@ class ItemTableProject(Table):
     name = Col('Name')
     view = LinkCol('View Panels', 'view_panels', url_kwargs=dict(id='id'))
     pref_tx = LinkCol('View Preferred Tx', 'view_preftx', url_kwargs=dict(id='id'))
-    permissions = LinkCol('Edit Permissions', 'edit_permissions', url_kwargs=dict(id='id'))
+    permissions = LinkColConditional('Edit Permissions', 'edit_permissions', url_kwargs=dict(id='id'))
     # make = LinkCol('Make Panel', '', url_kwargs=dict())
-    delete = LinkCol('Delete', 'delete_project', url_kwargs=dict(id='id'))
+    delete = LinkColConditional('Delete', 'delete_project', url_kwargs=dict(id='id'))
 
 
 class ItemTablePanels(Table):
     panelname = Col('Name')
     current_version = Col('Stable Version')
-    edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='panelid'))
+    view_panel = LinkCol('View Panel', 'view_panel', url_kwargs=dict(id='panelid'))
+    edit = LinkColConditional('Edit Panel','edit_panel_page',url_kwargs=dict(panelid='panelid'))
+    view = LinkCol('View Virtual Panels', 'view_virtual_panels', url_kwargs=dict(id='panelid'))
     locked = LockCol('Locked')
     status = LabelCol('Status')
-    view = LinkCol('View Virtual Panels', 'view_virtual_panels', url_kwargs=dict(id='panelid'))
-    make_live = LinkCol('Make Live', 'make_live', url_kwargs=dict(id='panelid'))
+    make_live = LinkColLive('Make Live', 'make_live', url_kwargs=dict(id='panelid'))
+    # delete = LinkCol('Delete', 'delete_study', url_kwargs=dict(id='studyid'))
+
+class ItemTableVPanels(Table):
+    vp_name = Col('Name')
+    current_version = Col('Stable Version')
+    view_panel = LinkCol('View Panel', 'view_vpanel', url_kwargs=dict(id='id'))
+    edit = LinkColConditional('Edit Panel','edit_panel_page',url_kwargs=dict(id='id'))
+    locked = LockCol('Locked')
+    status = LabelCol('Status')
+    make_live = LinkColLive('Make Live', 'make_virtualpanel_live', url_kwargs=dict(id='id'))
     # delete = LinkCol('Delete', 'delete_study', url_kwargs=dict(id='studyid'))
 
 
-class ItemTableVirtualPanels(Table):
-    paelname = Col('Panel Name')
-    virtualpanelname = Col('Virtual Panel')
-    edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='panelid'))
-    make_live = LinkCol('Make Live', 'make_live', url_kwargs=dict(id='panelid'))
 
+class ItemTablePanelView(Table):
+    allow_sort = False
+    chrom = Col('Chromosome')
+    start = Col('Start')
+    end = Col('End')
+    number = Col('Exon')
+    accession = Col('Accession')
+    genename = Col('Gene')
+
+    def sort_url(self, col_key, reverse=False):
+        if reverse:
+            direction = 'desc'
+        else:
+            direction = 'asc'
+        return url_for('edit_panel_page', sort=col_key, direction=direction)
 
 class ItemTablePanel(Table):
     allow_sort = False
@@ -285,6 +332,9 @@ def logged_in():
 @app.route('/')
 def index():
     return render_template('home.html', panels=3)
+@app.route('/about')
+def about():
+    return render_template('about.html')
 
 
 @app.route('/autocomplete', methods=['GET'])
@@ -315,6 +365,18 @@ def autocomplete():
 # PANELS
 ########################
 
+@app.route('/download')
+@login_required
+def download_as_bed():
+    bed = "test\ttest\ttest"
+    return Response(
+        bed,
+        mimetype='test/plain',
+        headers={"Content-disposition":
+                 "attachment; filename=test.bed"}
+    )
+
+
 @app.route('/panels', methods=['GET', 'POST'])
 @login_required
 # @lock_check
@@ -337,12 +399,22 @@ def view_panels(id=None):
         row = dict(zip(i.keys(), i))
         status = check_panel_status(s, row["panelid"])
         row["status"] = status
+        permission = check_user_has_permission(s, current_user.id, row["projectid"])
+        locked = check_if_locked_by_user(s, current_user.id,row["panelid"])
+        row["conditional"] = None
+        if permission is True and locked is True:
+            row["conditional"] = True
+        if permission is True and locked is False:
+            row["conditional"] = False
+        if permission is False and locked is False:
+            row["conditional"] = False
+
         print row
         if id:
             project_name = row['projectname']
-        if check_user_has_permission(s, current_user.id, row["projectid"]):
-            result.append(row)
-    print result
+        # if check_user_has_permission(s, current_user.id, row["projectid"]):
+        #     result.append(row)
+        result.append(row)
     table = ItemTablePanels(result, classes=['table', 'table-striped'])
     return render_template('panels.html', panels=table, project_name=project_name)
 
@@ -351,16 +423,85 @@ def view_panels(id=None):
 def view_panel():
     id = request.args.get('id')
     if id:
+        status = check_panel_status(s, id)
+        if not status:
+            message = "This panel has changes which cannot be viewed here as they have not been made live yet, if you have permission you can view these by editing the panel"
+        else:
+            message = None
+        panel_details = get_panel_details_by_id(s,id)
+        for i in panel_details:
+            version = i.current_version
+            panel_name = i.name
         panel = get_panel_by_id(s, id)
+        project_id = get_project_id_by_panel_id(s,id)
+        print project_id
         result=[]
-        for i in panel:
-            row = dict(zip(i.keys(), i))
-            # status = check_panel_status(s, row["panelid"])
-            # row["status"] = status
-            print row
+        rows = list(panel)
+        if len(rows) != 0:
+            bed = ''
+            for i in rows:
+                row = dict(zip(i.keys(), i))
+                # status = check_panel_status(s, row["panelid"])
+                # row["status"] = status
+                result.append(row)
+                panel_name=row["name"]
+                version=row["current_version"]
+            table = ItemTablePanelView(result, classes=['table', 'table-striped'])
+        else:
+            table = ""
+            message = "This Panel has no regions yet & may also have chnages that have not been made live"
+            bed = 'disabled'
+
+        if check_user_has_permission(s,current_user.id,project_id):
+            edit = ''
+        else:
+            edit = 'disabled'
+        return render_template('panel_view.html', panel=table, panel_name=panel_name, edit=edit, bed=bed, version=version, panel_id=id, message=message)
+
     else:
         return redirect(url_for('view_panels'))
 
+@app.route('/vpanel', methods=['GET', 'POST'])
+@login_required
+def view_vpanel():
+    id = request.args.get('id')
+    if id:
+        status = check_virtualpanel_status(s, id)
+        if not status:
+            message = "This panel has changes which cannot be viewed here as they have not been made live yet, if you have permission you can view these by editing the panel"
+        else:
+            message = None
+        panel_details = get_vpanel_details_by_id(s,id)
+        for i in panel_details:
+            version = i.current_version
+            panel_name = i.name
+            project_id = i.project_id
+        panel = get_vpanel_by_id(s, id)
+        result=[]
+        rows = list(panel)
+        if len(rows) != 0:
+            bed = ''
+            for i in rows:
+                row = dict(zip(i.keys(), i))
+                # status = check_panel_status(s, row["panelid"])
+                # row["status"] = status
+                result.append(row)
+                panel_name=row["name"]
+                version=row["current_version"]
+            table = ItemTablePanelView(result, classes=['table', 'table-striped'])
+        else:
+            table = ""
+            message = "This Panel has no regions yet & may also have chnages that have not been made live yet"
+            bed = 'disabled'
+
+        if check_user_has_permission(s,current_user.id,project_id):
+            edit = ''
+        else:
+            edit = 'disabled'
+        return render_template('panel_view.html', panel=table, panel_name=panel_name, edit=edit, bed=bed, version=version, panel_id=id, message=message, scope='Virtual')
+
+    else:
+        return redirect(url_for('view_panels'))
 
 @app.route('/panels/create', methods=['GET', 'POST'])
 @login_required
@@ -409,26 +550,32 @@ def make_live():
     panelid = request.args.get('id')
     current_version = get_current_version(s, panelid)
     new_version = current_version + 1
-    make_panel_live(s, panelid, new_version)
+    make_panel_live(s, panelid, new_version,current_user.id)
 
     return redirect(url_for('view_panels'))
 
+@app.route('/panels/unlock')
+def unlock_panel():
+    panelid = request.args.get('panelid')
+    unlock_panel_query(s,panelid)
+
+    return redirect(url_for('view_panels'))
 
 @app.route('/panels/edit')
 @login_required
 def edit_panel_page(panel_id=None):
-    id = request.args.get('id')
-    print "LOCKING_PANEL"
+    id = request.args.get('panelid')
     lock_panel(s, current_user.id, id)
     if id is None:
         id = panel_id
-    panel_info = s.query(models.Panels, models.Projects).filter_by(id=id).join(models.Projects).values(
+    panel_info = s.query(models.Panels, models.Projects).join(models.Projects).filter(models.Panels.id == id).values(
         models.Panels.current_version,
         models.Panels.name,
         models.Panels.locked
     )
+    print panel_info
     for i in panel_info:
-        print i
+        print i.current_version
         version = i.current_version
         name = i.name
 
@@ -582,8 +729,10 @@ def view_projects(delete=False, project_name=None, project_id=None):
     result = []
     for i in projects:
         row = row2dict(i)
-        if check_user_has_permission(s, current_user.id, row["id"]):
-            result.append(row)
+        row['conditional'] = check_user_has_permission(s, current_user.id, row["id"])
+        # if check_user_has_permission(s, current_user.id, row["id"]):
+        #     result.append(row)
+        result.append(row)
     table = ItemTableProject(result, classes=['table', 'table-striped'])
     return render_template('projects.html', projects=table, delete=delete, project_name=project_name,
                            project_id=project_id)
@@ -624,30 +773,72 @@ def delete_project():
 # VIRTUAL PANELS
 ################
 
+
+
 @app.route('/virtualpanels')
 @login_required
 def view_virtual_panels(id=None):
+    """
+       method to view panels, if project ID given then only return panels from that project
+       matt
+       :param id: project id
+       :return: rendered template panels.html
+       """
     if not id:
-        print('request')
         id = request.args.get('id')
-    print(id)
     if id:
-        print('by id')
-        result = get_virtual_panels_by_panel_id(s, id)
+        panels = get_virtual_panels_by_panel_id(s, id)
     else:
-        result = get_virtual_panels_simple(s)
-    all_results = []
-    print result
-    for i in result:
-        print i
+        panels = get_virtual_panels_simple(s)
+    result = []
+    panel_name = "Virtual"
+    for i in panels:
         row = dict(zip(i.keys(), i))
+        print row
         status = check_virtualpanel_status(s, row["id"])
         row["status"] = status
-        if check_user_has_permission(s, current_user.id, row["projectid"]):
-            all_results.append(row)
+        permission = check_user_has_permission(s, current_user.id, row["projectid"])
+        locked = check_if_locked_by_user(s, current_user.id, row["panelid"])
+        row["conditional"] = None
+        if permission is True and locked is True:
+            row["conditional"] = True
+        if permission is True and locked is False:
+            row["conditional"] = False
+        if permission is False and locked is False:
+            row["conditional"] = False
 
-    table = ItemTableVirtualPanel(all_results, classes=['table', 'table-striped'])
-    return render_template("virtualpanels.html", virtualpanels=table)
+        print row
+        if id:
+            panel_name = row['panelname'] + ' Virtual'
+        # if check_user_has_permission(s, current_user.id, row["projectid"]):
+        #     result.append(row)
+        result.append(row)
+    table = ItemTableVPanels(result, classes=['table', 'table-striped'])
+    return render_template('panels.html', panels=table, project_name=panel_name, message='Virtual Panels are locked if their parent panel is being edited')
+
+
+
+    # if not id:
+    #     print('request')
+    #     id = request.args.get('id')
+    # print(id)
+    # if id:
+    #     print('by id')
+    #     result = get_virtual_panels_by_panel_id(s, id)
+    # else:
+    #     result = get_virtual_panels_simple(s)
+    # all_results = []
+    # print result
+    # for i in result:
+    #     print i
+    #     row = dict(zip(i.keys(), i))
+    #     status = check_virtualpanel_status(s, row["id"])
+    #     row["status"] = status
+    #     if check_user_has_permission(s, current_user.id, row["projectid"]):
+    #         all_results.append(row)
+    #
+    # table = ItemTableVirtualPanel(all_results, classes=['table', 'table-striped'])
+    # return render_template("virtualpanels.html", virtualpanels=table)
 
 @app.route('/virtualpanels/create', methods=['GET', 'POST'])
 @login_required
@@ -755,6 +946,12 @@ def edit_permissions():
     table = ItemTablePermissions(all_results, classes=['table', 'table-striped'])
     return render_template("permissions.html", table=table, form=form, project_name=project, message=message)
 
+@app.route("/remove_permissions")
+def remove_permission():
+    panel_id = request.args.get('panelid')
+    project_id = request.args.get('projectid')
+    if check_user_has_permission(s, current_user.id, project_id):
+        pass
 
 @app.route("/logout")
 @login_required

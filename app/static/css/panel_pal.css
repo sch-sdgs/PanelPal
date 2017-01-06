@@ -7,8 +7,8 @@ body {
 }
 .jumbotron{
   margin-top: 100px;
-  background-color: #69B5EC;
-  color: #ffffff;
+  /*background-color: #69B5EC;*/
+  /*color: #ffffff;*/
 }
 
 .btngene{
@@ -30,7 +30,6 @@ h3
   display: inline-block;
 }
 
-
 .label
 {
   margin-right:5px;
@@ -46,7 +45,15 @@ h3
 .wrapper {
 	margin-top: 80px;
   margin-bottom: 80px;
+  background-color: #FFFFFF;
 }
+
+.white-bk {
+  background-color: #FFFFFF;
+  padding: 10px 10px 1px;
+  border: 1px solid #ebebeb;
+}
+
 
 
 .form-signin {
@@ -58,12 +65,19 @@ h3
 }
 
 .form-create {
-  max-width: 400px;
+  max-width: 500px;
   padding: 10px 35px 35px;
   margin: 0 auto;
   background-color: #f6f6f6;
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
+
+.col-md-4{
+  padding-top: 25px;
+  text-align: right;
+}
+
+
 .material-switch > input[type="checkbox"] {
     display: none;
 }

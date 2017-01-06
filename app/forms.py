@@ -13,8 +13,8 @@ class UserForm(Form):
 
 
 class ProjectForm(Form):
-    name = TextField("Project",  [Required("Enter a Project")])
-    submit = SubmitField("Send")
+    name = TextField("Project Name",  [Required("Enter a Project")])
+    submit = SubmitField("Create Project")
 
 class RemoveGene(Form):
     geneName = TextField("Gene Name")
