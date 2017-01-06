@@ -54,12 +54,15 @@
     <div align="right">
         <br>
         <form action="{{ url_for('edit_panel') }}" id="regions" method="POST">
+        <div class="btn-group" role="group" aria-label="...">
+
             <input id="panel_id" name="panel_id" value="{{ panel_id }}" hidden>
             <button type="button" class="btn btn-default"><span class="glyphicon glyphicon-download-alt"></span>
                 Download Current .BED
             </button>
             <a href="{{url_for('unlock_panel')}}?panelid={{ panel_id }}" role="button" class="btn btn-danger"><span class="glyphicon glyphicon-lock"></span> Unlock Panel</a>
     </div>
+        </div>
     <hr>
     <h2>Editing Panel | <strong>{{ panel_name }} (v{{ version }})</strong></h2>
     <hr>

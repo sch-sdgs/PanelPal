@@ -129,6 +129,21 @@ def check_virtualpanel_status_query(s, id):
     return panels
 
 
+def check_preftx_status_query(s, id):
+    """
+    query to check the status of a virtual panel - returns fields required to decide status of a panel
+
+    :param s: db session
+    :param id: panel id
+    :return: result of query
+    """
+
+    panels = s.query(PrefTx, PrefTxVersions).filter(PrefTx.id == id).join(PrefTxVersions). \
+        values(PrefTx.current_version, \
+               PrefTxVersions.last, \
+               PrefTxVersions.intro)
+
+    return panels
 # todo do we need start filter here
 def get_panel_edit(s, id, version):
     """
@@ -349,6 +364,7 @@ def get_preftx_by_project_id(s, id):
                Tx.tx_start, \
                Tx.tx_end, \
                Tx.strand, \
+               PrefTx.id.label("preftx_id"),
                PrefTxVersions.intro, \
                PrefTxVersions.last, \
                PrefTx.current_version)
@@ -368,7 +384,7 @@ def get_changes_preftx_by_project_id(s, id):
     preftx = s.query(Genes, Tx, PrefTxVersions, PrefTx, Projects). \
         filter(and_(PrefTx.project_id == id, \
                     or_(PrefTxVersions.last == PrefTx.current_version, PrefTxVersions.last == None), \
-                    PrefTxVersions.intro >= PrefTx.current_version)). \
+                    PrefTxVersions.intro <= PrefTx.current_version)). \
         join(Tx). \
         join(PrefTxVersions). \
         join(PrefTx). \
@@ -419,6 +435,35 @@ def get_genes_by_projectid(s, projectid):
                Projects.name.label("projectname"), \
                Projects.id.label("projectid"), \
                Genes.name.label("genename"), \
+               Genes.id.label("geneid"), \
+               Tx.accession, \
+               Tx.tx_start, \
+               Tx.tx_end, \
+               Tx.strand)
+    return genes
+
+def get_genes_by_projectid_new(s, projectid):
+    """
+    gets transcripts by project id
+
+    :param s: db session
+    :param id: project id
+    :return: sql alchemy object
+    """
+    print projectid
+    genes = s.query(Genes, Tx, PrefTxVersions, PrefTx, Projects). \
+        distinct(Genes.name). \
+        group_by(Genes.name). \
+        join(Tx). \
+        join(PrefTxVersions). \
+        join(PrefTx). \
+        join(Projects). \
+        filter(Projects.id==projectid). \
+        values(Tx.id.label("txid"), \
+               Projects.name.label("projectname"), \
+               Projects.id.label("projectid"), \
+               Genes.name.label("genename"), \
+               Genes.id.label("geneid"), \
                Tx.accession, \
                Tx.tx_start, \
                Tx.tx_end, \
@@ -470,6 +515,10 @@ def get_preftx_current_version(s, project_id):
     for i in version:
         return [i.current_version, i.id]
 
+def get_gene_id_from_name(s,gene_name):
+    gene = s.query(Genes).filter(Genes.name == gene_name).values(Genes.id)
+    for i in gene:
+        return i.id
 
 def add_preftxs_to_panel(s, project_id, tx_ids):
     query = get_preftx_current_version(s, project_id)
@@ -477,12 +526,20 @@ def add_preftxs_to_panel(s, project_id, tx_ids):
     preftx_id = query[1]
     print preftx_id
     print "current_version:" + str(current_version)
-    for tx_id in tx_ids:
-        print tx_id
-        preftx = PrefTxVersions(s, pref_tx_id=preftx_id, tx_id=tx_id, intro=current_version + 1, last=None)
-        s.add(preftx)
-        s.flush()
-        print preftx.id
+    for i in tx_ids:
+        tx_id = i["tx_id"]
+        gene = i["gene"]
+        gene_id = get_gene_id_from_name(s,gene)
+        #get current preftx for that gene, if different then do the next bit
+        stored_preftx = get_preftx_by_gene_id(s,project_id,gene_id)
+        #todo this is not working
+        if int(stored_preftx) != int(tx_id):
+            print "hello hello"
+            print preftx_id
+            if preftx_id != 0:
+                preftx = PrefTxVersions(s, pref_tx_id=preftx_id, tx_id=tx_id, intro=current_version + 1, last=None)
+                s.add(preftx)
+                s.flush()
     s.commit()
 
     return True
@@ -522,6 +579,11 @@ def add_user_project_rel(s, user_id, project_id):
         s.commit()
     return True
 
+def remove_user_project_rel(s,rel_id):
+    s.query(UserRelationships).filter_by(id=rel_id).delete()
+    s.commit()
+    return True
+
 
 def get_projects_by_user(s, username):
     user_id = get_user_id_by_username(s, username)
@@ -532,7 +594,7 @@ def get_projects_by_user(s, username):
 
 
 def check_user_has_permission(s, username, project_id):
-    if username == "dnamdp":
+    if username == "":
         return True
     check = s.query(Users, UserRelationships).join(UserRelationships).filter(
         and_(Users.username == username, UserRelationships.project_id == project_id)).count()
@@ -695,3 +757,47 @@ def check_if_locked_by_user(s, username, panel_id):
         return False
     else:
         return True
+
+def get_all_by_project_id(s,project_id):
+    all = s.query(Projects,Panels,Versions,VPRelationships,VirtualPanels).\
+        join(Panels).\
+        join(Versions).\
+        join(VPRelationships).\
+        join(VirtualPanels).\
+        distinct(VirtualPanels.name).\
+        filter(Projects.id == project_id).\
+        values(Projects.name.label('projectname'),
+               Projects.id.label('projectid'),
+               Panels.name.label('panelname'),
+               Panels.id.label('panelid'),
+               VirtualPanels.name.label('vpname'),
+               VirtualPanels.id.label('vpid'))
+
+    return all
+
+
+def get_preftx_by_gene_id(s, project_id, gene_id):
+    preftx = s.query(PrefTx,PrefTxVersions,Tx,Genes).\
+        join(PrefTxVersions).\
+        join(Tx).\
+        join(Genes).\
+        filter(and_(PrefTx.project_id == project_id,Genes.id == gene_id,or_(PrefTxVersions.last == PrefTx.current_version, PrefTxVersions.last == None), \
+                    PrefTxVersions.intro <= PrefTx.current_version)).values(PrefTxVersions.tx_id)
+    for i in preftx:
+        return i.tx_id
+
+def get_upcoming_preftx_by_gene_id(s, project_id, gene_id):
+    preftx = s.query(PrefTx,PrefTxVersions,Tx,Genes).\
+        join(PrefTxVersions).\
+        join(Tx).\
+        join(Genes).\
+        filter(and_(PrefTx.project_id == project_id,Genes.id == gene_id,or_(PrefTxVersions.last == PrefTx.current_version, PrefTxVersions.last == None), \
+                    PrefTxVersions.intro > PrefTx.current_version)).values(PrefTxVersions.tx_id)
+    for i in preftx:
+        return i.tx_id
+
+def get_tx_by_gene_id(s, gene_id):
+    tx = s.query(Genes,Tx).\
+        join(Tx).\
+        filter(Genes.id==gene_id).values(Tx.id,Tx.accession,Genes.id.label("geneid"))
+    return tx

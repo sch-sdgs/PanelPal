@@ -56,6 +56,7 @@ class PrefTx(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
     current_version = db.Column(db.Integer)
+    versions = db.relationship('PrefTxVersions', backref='author', lazy='dynamic')
 
     def __init__(self, project_id, current_version):
         self.project_id = project_id

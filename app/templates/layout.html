@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Panel Pal</title>
+    <title>PanelPal</title>
+    <link rel="shortcut icon" href="/favicon.ico}" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
@@ -17,29 +19,6 @@
     <!-- Latest compiled JavaScript -->
     <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 
-
-    <script type="text/javascript">
-        //        $(document).ready(function () {
-        //            var unsaved = false;
-        //            $(":input").change(function () { //trigers change in all input fields including text type
-        //                unsaved = true;
-        //            });
-        //            $('#mySubmitButton').click(function () {
-        //                unsaved = false;
-        //            });
-        //            $('#myDeleteButton').click(function () {
-        //                unsaved = false;
-        //            });
-        //
-        //            function unloadPage() {
-        //                if (unsaved) {
-        //                    return "You have unsaved changes on this page. Do you want to leave this page and discard your changes or stay on this page?";
-        //                }
-        //            }
-        //
-        //            window.onbeforeunload = unloadPage;
-        //        });
-    </script>
     <script>
 
         $(document).ready(function () {
@@ -47,12 +26,6 @@
             $('[data-toggle="tooltip"]').tooltip();
 
             $("#genelabels").hide();
-            // If JS enabled, disable main input
-            //$("#listgenes").prop('disabled', true);
-            // $("#responsibilities").addClass("hidden");
-
-            // If JS enabled then add fields
-            //$("#resp").append('<input type="button" class="btn btn-primary" value="Add" id="add"> ');
 
             // Add items to input field
             var eachline = '';
@@ -68,15 +41,10 @@
                     }
                 }
 
-                //$('#listgenes').text($("<div>" + eachline + "</div>").text())
-
                 $("<h3><span class='label label-warning test'>" + lines + "</span></h3>").appendTo('#addhere');
-                //$('#listgenes').val($(lines).text());
-                //document.getElementById('listgenes').innerHTML = lines;
+
                 var TheTextBox = document.getElementById("listgenes");
                 TheTextBox.value = TheTextBox.value + lines + ",";
-                //$("<strong>"+lines+" </strong>").appendTo('#addhere');
-
 
                 $('#genes').val('');
             });
@@ -136,7 +104,7 @@
                     <ul class="dropdown-menu">
                         <li><a href="{{ url_for('view_projects') }}">View Projects</a>
                         <li role="separator" class="divider"></li>
-                        <li><a href="{{ url_for('add_projects') }}">Add Projects</a></li>
+                        <li><a href="{{ url_for('add_projects') }}">Create Project</a></li>
                     </ul>
                 </li>
 
@@ -148,9 +116,9 @@
                         <li><a href="{{ url_for('view_panels') }}">View Panels</a>
                         <li role="separator" class="divider"></li>
                         <li><a href="/panels/create">Create Panel</a></li>
-                        <li><a href="#">Create Panel From Panel App</a></li>
-                        <li role="separator" class="divider"></li>
-                        <li><a href="#">Export Panel</a></li>
+                        <!--<li><a href="#">Create Panel From Panel App</a></li>-->
+                        <!--<li role="separator" class="divider"></li>-->
+                        <!--<li><a href="#">Export Panel</a></li>-->
                     </ul>
                 </li>
 
@@ -161,8 +129,8 @@
                         <li><a href="/virtualpanels">View Virtual Panels</a>
                         <li role="separator" class="divider"></li>
                         <li><a href="/virtualpanels/create">Create a Virtual Panel</a></li>
-                        <li role="separator" class="divider"></li>
-                        <li><a href="#">Export Virtual Panel</a></li>
+                        <!--<li role="separator" class="divider"></li>-->
+                        <!--<li><a href="#">Export Virtual Panel</a></li>-->
                     </ul>
                 </li>
 
@@ -176,7 +144,7 @@
                 </li>
 
 
-                <li><a href="api/spec.html">API</a></li>
+                <li><a href="/api/spec.html"><span class="glyphicon glyphicon-cog"></span> API</a></li>
             </ul>
             <form class="navbar-form navbar-right" role="search">
                 {% if logged_in == True %}
