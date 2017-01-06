@@ -7,7 +7,7 @@ import json
 from app import app, s, models
 from app.queries import *
 from flask_table import Table, Col, LinkCol
-from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanel, SelectVPGenes
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanelProcess
 from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
 
@@ -862,6 +862,35 @@ def create_virtual_panel():
     elif request.method == 'GET':
         return render_template('virtualpanels_create.html', form=form)
 
+@app.route('/virtualpanels/createprocess', methods=['GET', 'POST'])
+@login_required
+def create_virtual_panel_process():
+    """
+
+    :return:
+    """
+    form = CreateVirtualPanelProcess()
+
+    if request.method == "POST":
+        #if form.validate() == False:
+           # return render_template('virtualpanels_createprocess.html', form=form, message="You didn't enter a name")
+        tab = request.args.get('tab')
+        if tab is not None:
+            name = request.form["vpanelname"]
+            testvpanel = s.query(models.VirtualPanels).filter_by(name=name).first()
+            print(testvpanel)
+            if testvpanel is not None:
+                return render_template('virtualpanels_create.html', form=form, message='Virtual panel name exists')
+            else:
+                panel_id = request.form["panel"]
+                vp_id = create_virtualpanel_query(s, name)
+                current_version = get_current_version(s, panel_id)
+                genes = get_genes_by_panelid(s, panel_id, current_version)
+                for i in genes:
+                    print(i.name)
+                #return redirect(url_for('create_virtual_panel_process', vp_id=vp_id, panel=panel_id, genes=genes, tab=2))
+    elif request.method == "GET":
+        return render_template('virtualpanels_createprocess.html', form=form)
 
 @app.route('/virtualpanels/select', methods=['GET', 'POST'])
 @login_required
