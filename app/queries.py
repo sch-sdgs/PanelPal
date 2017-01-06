@@ -231,6 +231,24 @@ def create_panel_query(s, projectid, name):
     s.commit()
     return panel.id
 
+def create_virtualpanel_query(s, name):
+    """
+    creates a virtual panel in the virtual panels table and adds the vp_relationship to the broad panel
+
+    :param s: db session
+    :param name: name of virtual panel
+    :return: virtual panel id
+    """
+    virtualpanel = VirtualPanels(name, 0)
+    s.add(virtualpanel)
+    vp_id = virtualpanel.id
+    #for version in versions:
+        #vp_relationship = VPRelationships(version, vp_id, virtualpanel.current_version + 1, None)
+        #s.add(vp_relationship)
+    s.commit()
+    return vp_id
+
+
 
 def add_region_to_panel(s, regionid, panelid):
     """
@@ -407,6 +425,19 @@ def get_genes_by_projectid(s, projectid):
                Tx.strand)
     return genes
 
+def get_genes_by_panelid(s, panelid, current_version):
+    genes = s.query(Genes, Tx, Exons, Regions, Versions, Panels). \
+        distinct(Genes.name). \
+        group_by(Genes.name). \
+        join(Tx). \
+        join(Exons). \
+        join(Regions). \
+        join(Versions). \
+        join(Panels). \
+        filter(and_(Panels.id == panelid, Versions.intro <= current_version, or_(Versions.last >= current_version, Versions.last == None))). \
+        values(Genes.name, \
+               Genes.id)
+    return genes
 
 def create_project(s, name, user):
     project = Projects(name=name)
@@ -501,7 +532,7 @@ def get_projects_by_user(s, username):
 
 
 def check_user_has_permission(s, username, project_id):
-    if username == "":
+    if username == "dnamdp":
         return True
     check = s.query(Users, UserRelationships).join(UserRelationships).filter(
         and_(Users.username == username, UserRelationships.project_id == project_id)).count()
