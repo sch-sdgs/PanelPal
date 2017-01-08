@@ -1,0 +1,178 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="wrapper">
+    <div class="form-vpgenes">
+        {% if tab != 2 %}
+        <form action="{{ url_for('create_virtual_panel_process') }}?tab=2" method="POST">
+        {% else %}
+        <form action="{{ url_for('create_virtual_panel') }}?vp={{ vp_id }}?panel={{ panel }}" method="POST">
+        {% endif %}
+
+            <h2>Create Virtual Panel</h2>
+
+            {% if message %}
+            <div class="alert alert-danger"><strong>Silly Sausage!</strong> {{ message }}</div>
+            {% endif %}
+            <div class="row">
+                <div class="process">
+                    <div class="process-row nav nav-tabs">
+                        {% if tab == 2 %}
+                        <div class="process-step">
+                            <button type="button" class="btn btn-default btn-circle" data-toggle="tab"><i
+                                    class="fa fa-star"></i></button>
+                            <p>
+                                <small>Virtual Panel<br/>Name</small>
+                            </p>
+                        </div>
+                        <div class="process-step">
+                            <button type="button" class="btn btn-info btn-circle" data-toggle="tab"
+                                    href="#select genes"><i class="fa fa-list-alt"></i></button>
+                            <p>
+                                <small>Select<br/>Genes</small>
+                            </p>
+                        </div>
+                        <div class="process-step">
+                            <button type="button" class="btn btn-default btn-circle" data-toggle="tab"
+                                    href="#select regions"><i class="fa fa-list-alt"></i></button>
+                            <p>
+                                <small>Edit<br/>Regions</small>
+                            </p>
+                        </div>
+                        <div class="process-step">
+                            <button type="button" class="btn btn-default btn-circle" data-toggle="tab"
+                                    href="#submit vp"><i class="fa fa-check"></i></button>
+                            <p>
+                                <small>Complete<br/>Virtual Panel</small>
+                            </p>
+                        </div>
+                        {% else %}
+                        <div class="process-step">
+                            <button type="button" class="btn btn-info btn-circle" data-toggle="tab"><i
+                                    class="fa fa-star"></i></button>
+                            <p>
+                                <small>Name</small>
+                            </p>
+                        </div>
+                        <div class="process-step">
+                            <button type="button" class="btn btn-default btn-circle" data-toggle="tab"><i
+                                    class="fa fa-list-alt"></i></button>
+                            <p>
+                                <small>Genes</small>
+                            </p>
+                        </div>
+                        <div class="process-step">
+                            <button type="button" class="btn btn-default btn-circle" data-toggle="tab"><i
+                                    class="fa fa-list-alt"></i></button>
+                            <p>
+                                <small>Regions</small>
+                            </p>
+                        </div>
+                        <div class="process-step">
+                            <button type="button" class="btn btn-default btn-circle" data-toggle="tab"><i
+                                    class="fa fa-check"></i></button>
+                            <p>
+                                <small>Success!</small>
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="tab-content">
+                    {% if tab != 2 %}
+                    <div id="initialise" class="tab-pane fade active in">
+                        <h3>Choose a panel and name</h3>
+                        <div class="form-group">
+                            {{ form.panel.label }}
+                            {{ form.panel(class_="form-control") }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.vpanelname.label }}
+                            {{ form.vpanelname(class_="form-control") }}
+                        </div>
+                        <br>
+                        <ul class="list-unstyled list-inline pull-right">
+                            <li>{{ form.submitname(class_="btn btn-primary") }}</li>
+                        </ul>
+                    </div>
+                    {% else %}
+                    <div id="select genes" class="tab-pane fade active in">
+                        <h3>Select the genes</h3>
+                        {% if tab == 2 %}
+                        <ul class="list-group">
+                            {% for gene in genes %}
+                            <li class="list-group-item">
+                                {{ gene.name }}
+                                <div class="material-switch pull-right">
+                                    <input type="checkbox" name="{{ gene.id }}" id="{{ gene.name }}">
+                                    <label for="{{ gene.name }}" class="label-success"></label>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <ul class="list-unstyled list-inline pull-right">
+                            <li>
+                                <button type="button" class="btn btn-info next-step">Next <i
+                                        class="fa fa-chevron-right"></i></button>
+                            </li>
+                        </ul>
+                        {% endif %}
+                    </div>
+                    <div id="select regions" class="tab-pane fade">
+
+                    </div>
+                    <div id="submit vp" class="tab-pane fade">
+                        <h3>Congratultions! You have completed your virtual panel</h3>
+                        <br/>
+                        <h4>Click done to add this to the database</h4>
+                        <ul class="list-unstyled list-inline pull-right">
+                            <li>
+                                <button type="button" class="btn btn-default prev-step"><i
+                                        class="fa fa-chevron-left"></i> Back
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="btn btn-success"><i class="fa fa-check"></i> Done!
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+<script>
+    $(function () {
+        $('.btn-circle').on('click', function () {
+            $('.btn-circle.btn-info').removeClass('btn-info').addClass('btn-default');
+            $(this).addClass('btn-info').removeClass('btn-default').blur();
+        });
+
+        $('.next-step, .prev-step').on('click', function (e) {
+            var $activeTab = $('.tab-pane.active');
+
+            $('.btn-circle.btn-info').removeClass('btn-info').addClass('btn-default');
+
+            if ($(e.target).hasClass('next-step')) {
+                var nextTab = $activeTab.next('.tab-pane').attr('id');
+                $('[href="#' + nextTab + '"]').addClass('btn-info').removeClass('btn-default');
+                $('[href="#' + nextTab + '"]').tab('show');
+            }
+            else {
+                var prevTab = $activeTab.prev('.tab-pane').attr('id');
+                $('[href="#' + prevTab + '"]').addClass('btn-info').removeClass('btn-default');
+                $('[href="#' + prevTab + '"]').tab('show');
+            }
+        });
+    });
+</script>
+<script>
+
+</script>

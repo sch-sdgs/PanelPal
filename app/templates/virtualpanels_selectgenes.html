@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="wrapper">
-<form action="{{ url_for('select_vp_genes') }}?panelid={{ panel_id }}" method="POST" class="form-create">
+<form action="{{ url_for('select_vp_genes') }}?panelid={{ panel_id }}" method="POST" class="form-vpgenes">
     <h2>Select Genes For {{ vp_name }}</h2>
     <ul class="list-group">
     {% for gene in genes %}
