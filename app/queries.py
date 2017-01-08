@@ -627,9 +627,9 @@ def get_username_by_user_id(s, user_id):
 
 
 class PanelApiReturn(object):
-    def __init__(self, current_version, panel):
+    def __init__(self, current_version, result):
         self.current_version = current_version
-        self.panel = panel
+        self.result = result
 
 
 def get_panel_api(s, panel_name, version='current'):
@@ -690,6 +690,40 @@ def get_exonic_api(s, panel_name, version='current'):
                     or_(VPRelationships.last >= current_version, VPRelationships.last == None))).order_by(
         Regions.start).values()
     return PanelApiReturn(current_version, panel)
+
+def get_project_id_by_name(s,name):
+    project = s.query(Projects).filter(Projects.name == name).values(Projects.id)
+    for i in project:
+        return i.id
+
+def get_current_preftx_version(s,project_id):
+    query = s.query(PrefTx).filter(PrefTx.project_id == project_id).values(PrefTx.current_version)
+    for i in query:
+        return i.current_version
+
+def get_preftx_api(s,project_name,version='current'):
+    print "HELLO HERE"
+    project_id = get_project_id_by_name(s,project_name)
+    print project_id
+    if version == "current":
+        current_version = get_current_preftx_version(s, project_id)
+    else:
+        current_version = version
+
+    print current_version
+    preftx = s.query(Genes, Tx, PrefTxVersions, PrefTx, Projects). \
+        filter(and_(PrefTx.project_id == project_id, \
+                    or_(PrefTxVersions.last >= current_version, PrefTxVersions.last == None), \
+                    PrefTxVersions.intro <= current_version)). \
+        join(Tx). \
+        join(PrefTxVersions). \
+        join(PrefTx). \
+        join(Projects). \
+        values(PrefTx.current_version,
+               Tx.accession)
+
+    return PanelApiReturn(current_version, preftx)
+
 
 
 def get_panel_by_id(s, panel_id):

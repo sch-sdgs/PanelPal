@@ -1133,7 +1133,7 @@ from sqlalchemy.ext.serializer import loads, dumps
 # app = Flask(__name__)
 # app.config['BUNDLE_ERRORS'] = True
 
-api = swagger.docs(Api(app), apiVersion='0.0', description="Test PanelPal API")
+api = swagger.docs(Api(app), apiVersion='0.0', description="=PanelPal API")
 
 region_fields = {
     'start': fields.Integer,
@@ -1192,6 +1192,15 @@ def region_result_to_json(data, extension=0):
 
     return result
 
+def prefttx_result_to_json(data):
+    result = {}
+    preftxs = []
+    result["details"] = {}
+    for i in data:
+        preftxs.append(i.accession)
+    result["preftx"] = preftxs
+    return result
+
 
 @api.representation('application/json')
 def output_json(data, code, headers=None):
@@ -1235,7 +1244,7 @@ class Panels(Resource):
     )
     def get(self, name, version):
         result = get_panel_api(s, name, version)
-        result_json = region_result_to_json(result.panel)
+        result_json = region_result_to_json(result.result)
         result_json["details"]["panel"] = name
         result_json["details"]["version"] = int(result.current_version)
         resp = output_json(result_json, 200)
@@ -1270,13 +1279,40 @@ class VirtualPanels(Resource):
     )
     def get(self, name, version):
         result = get_vpanel_api(s, name, version)
-        result_json = region_result_to_json(result.panel)
+        result_json = region_result_to_json(result.result)
         result_json["details"]["panel"] = name
         result_json["details"]["version"] = int(result.current_version)
         resp = output_json(result_json, 200)
         resp.headers['content-type'] = 'application/json'
         return resp
 
+class PreferredTx(Resource):
+    @swagger.operation(
+        notes='Gets a JSON of all preftx',
+        responseClass='x',
+        nickname='preftx',
+        parameters=[
+        ],
+        responseMessages=[
+            {
+                "code": 201,
+                "message": "Created. The URL of the created blueprint should be in the Location header"
+            },
+            {
+                "code": 405,
+                "message": "Invalid input"
+            }
+        ]
+    )
+    def get(self, name, version):
+        result = get_preftx_api(s, name, version)
+        #result_json = region_result_to_json(result.panel)
+        result_json = prefttx_result_to_json(result.result)
+        result_json["details"]["project"] = name
+        result_json["details"]["version"] = int(result.current_version)
+        resp = output_json(result_json, 200)
+        resp.headers['content-type'] = 'application/json'
+        return resp
 
 # class Exonic(Resource):
 #     @swagger.operation(
@@ -1307,4 +1343,5 @@ class VirtualPanels(Resource):
 
 api.add_resource(Panels, '/api/panel/<string:name>/<string:version>', )
 api.add_resource(VirtualPanels, '/api/virtualpanel/<string:name>/<string:version>', )
+api.add_resource(PreferredTx, '/api/preftx/<string:name>/<string:version>', )
 # api.add_resource(Exonic, '/api/exonic/<string:name>/<string:version>', )
