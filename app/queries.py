@@ -318,11 +318,38 @@ def make_panel_live(s, panelid, new_version, username):
     else:
         return False
 
+def make_preftx_live(s, preftx_id, new_version, username):
+    """
+    makes a panel line
+
+    :return: True
+    :param s: db session
+    :param panelid: panel id
+    :param new_version: the new version number of the panel
+    """
+    project_id = get_project_id_by_preftx_id(s, preftx_id)
+    print "BOOM"
+    print project_id
+    if check_user_has_permission(s, username, project_id):
+        print "MAKING LIVE"
+        s.query(PrefTx).filter_by(id=preftx_id).update({PrefTx.current_version: new_version})
+        s.commit()
+        return True
+    else:
+        return False
+
 
 def get_project_id_by_panel_id(s, panelid):
     project = s.query(Projects, Panels).join(Panels).filter(Panels.id == panelid).values(Projects.id)
     for i in project:
         return i.id
+
+def get_project_id_by_preftx_id(s, preftx_id):
+    project = s.query(PrefTx).filter(PrefTx.id == preftx_id).values(PrefTx.project_id)
+    print "ME"
+    print preftx_id
+    for i in project:
+        return i.project_id
 
 
 def make_vp_panel_live(s, panelid, new_version):
@@ -696,17 +723,25 @@ def get_project_id_by_name(s,name):
     for i in project:
         return i.id
 
-def get_current_preftx_version(s,project_id):
-    query = s.query(PrefTx).filter(PrefTx.project_id == project_id).values(PrefTx.current_version)
+def get_current_preftx_version(s,preftx_id):
+    print "YO"
+    print preftx_id
+    query = s.query(PrefTx).filter(PrefTx.id == preftx_id).values(PrefTx.current_version)
     for i in query:
         return i.current_version
+
+def get_preftx_id_by_project_id(s,project_id):
+    query = s.query(PrefTx).filter(PrefTx.project_id == project_id).values(PrefTx.id)
+    for i in query:
+        return i.id
 
 def get_preftx_api(s,project_name,version='current'):
     print "HELLO HERE"
     project_id = get_project_id_by_name(s,project_name)
+    preftx_id = get_preftx_id_by_project_id(s, project_id)
     print project_id
     if version == "current":
-        current_version = get_current_preftx_version(s, project_id)
+        current_version = get_current_preftx_version(s, preftx_id)
     else:
         current_version = version
 

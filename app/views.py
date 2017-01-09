@@ -7,8 +7,7 @@ import json
 from app import app, s, models
 from app.queries import *
 from flask_table import Table, Col, LinkCol
-from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, \
-    CreateVirtualPanel, SelectVPGenes, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanelProcess
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanelProcess
 from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
 
@@ -923,7 +922,7 @@ def create_virtual_panel_process():
                 genes = get_genes_by_panelid(s, panel_id, current_version)
                 for i in genes:
                     print(i.name)
-                #return redirect(url_for('create_virtual_panel_process', vp_id=vp_id, panel=panel_id, genes=genes, tab=2))
+                return redirect(url_for('create_virtual_panel_process', vp_id=vp_id, panel=panel_id, genes=genes, tab=2))
     elif request.method == "GET":
         return render_template('virtualpanels_createprocess.html', form=form)
 
@@ -1063,13 +1062,15 @@ def view_preftx():
 
         table = ItemTablePrefTx(all_results, classes=['table', 'table-striped'])
         status = check_preftx_status(s,preftx_id)
-    return render_template("preftx.html", preftx=table, project_name=project, preftxid=id, edit=edit, status=status)
+        version = get_current_preftx_version(s,preftx_id)
+    return render_template("preftx.html", preftx=table, project_name=project, preftxid=preftx_id, version=version, edit=edit, status=status)
 
 
 @app.route('/preftx/create', methods=['GET', 'POST'])
 @login_required
 def create_preftx():
-    id = request.args.get('id')
+    preftx_id = request.args.get('id')
+    id = get_project_id_by_preftx_id(s,preftx_id)
     if request.method == 'GET':
         result = get_genes_by_projectid_new(s=s, projectid=id)
         genes = {}
@@ -1114,6 +1115,14 @@ def create_preftx():
         add_preftxs_to_panel(s, project_id, tx_ids)
         return redirect(url_for('view_preftx', id=project_id))
 
+@app.route('/preftx/live')
+def make_tx_live():
+    id = request.args.get('pref_tx')
+    current_version = get_current_preftx_version(s, id)
+    new_version = current_version + 1
+    make_preftx_live(s, id, new_version, current_user.id)
+    project_id = get_project_id_by_preftx_id(s,id)
+    return redirect(url_for('view_preftx',id=project_id))
 
 ####
 # API
