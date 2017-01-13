@@ -1,4 +1,4 @@
-from sqlalchemy import and_, or_, desc
+from sqlalchemy import and_, or_, desc, func, case, cast, String, text
 
 from app.models import *
 
@@ -256,12 +256,8 @@ def create_virtualpanel_query(s, name):
     """
     virtualpanel = VirtualPanels(name, 0)
     s.add(virtualpanel)
-    vp_id = virtualpanel.id
-    #for version in versions:
-        #vp_relationship = VPRelationships(version, vp_id, virtualpanel.current_version + 1, None)
-        #s.add(vp_relationship)
     s.commit()
-    return vp_id
+    return virtualpanel.id
 
 
 
@@ -510,6 +506,59 @@ def get_genes_by_panelid(s, panelid, current_version):
         values(Genes.name, \
                Genes.id)
     return genes
+
+def get_regions_by_geneid(s, geneid, panelid):
+    """
+    gets current regions for a given gene within a given panel
+
+    :param s:
+    :param geneid:
+    :param panelid:
+    :return:
+    """
+    current_version = get_current_version(s, panelid)
+
+    sql = text("""SELECT versions.id AS version_id,
+                    regions.chrom,
+                    CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start + versions.extension_5 END AS region_start,
+                    CASE WHEN (versions.extension_3 IS NULL) THEN regions."end" ELSE regions."end" + versions.extension_3 END AS region_end,
+                    group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) AS name
+                    FROM panels, versions
+                    JOIN regions ON regions.id = versions.region_id
+                    JOIN exons ON regions.id = exons.region_id
+                    JOIN tx ON tx.id = exons.tx_id
+                    JOIN genes ON genes.id = tx.gene_id
+                    WHERE panels.id = :panel_id AND genes.id = :gene_id AND versions.intro <= :version AND (versions.last >= :version OR versions.last IS NULL)
+                    GROUP BY regions.id ORDER BY region_start""")
+    values = {'panel_id':panelid, 'gene_id':geneid, 'version':current_version}
+    regions = s.execute(sql, values)
+
+    #select_tx = Tx.accession.distinct()
+    #print(select_tx)
+    #concat = func.group_concat(select_tx + "_exon" + cast(Exons.number, String))
+    #print(concat)
+    #regions = s.query(Versions, Regions, Exons, Tx, Genes). \
+        #join(Regions). \
+        #join(Exons). \
+        #join(Tx). \
+        #join(Genes). \
+        #group_by(Regions.id). \
+        #filter(and_(Panels.id == panelid, \
+                    #Genes.id == geneid, \
+                    #Versions.intro <= current_version, \
+                    #or_(Versions.last >= current_version, \
+                        #Versions.last == None))). \
+        #values(Versions.id.label("version_id"),Regions.chrom, \
+               #(case(
+                   #[(Versions.extension_5 == None, Regions.start),],
+                   #else_=(Regions.start + Versions.extension_5)
+               #)).label("region_start"), \
+               #(case(
+                   #[(Versions.extension_3 == None, Regions.end), ],
+                   #else_=(Regions.end + Versions.extension_3)
+               #)).label("region_end"), \
+               #func.group_concat(func.group_concat(Tx.accession.distinct()) + "_exon" + cast(Exons.number, String)).label("name"))
+    return regions
 
 def create_project(s, name, user):
     project = Projects(name=name)

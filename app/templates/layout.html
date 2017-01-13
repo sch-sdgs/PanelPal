@@ -20,6 +20,261 @@
     <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 
     <script>
+        $(document).on('click', '.glyphicon', function (j) {
+
+            console.log($('#vpanelname').val());
+            console.log($('#vpanelname').val().length);
+
+            if($('.glyphicon-new-selected').attr('href') == '#initialise')
+            {
+
+                console.log($('#vpanelname').val());
+                console.log($('#vpanelname').val().length);
+
+                if($('#panel').val() == '__None' || $('#vpanelname').val().length == 0)
+                {
+                    j.preventDefault()
+                    console.log('empty field');
+                    return;
+                }
+                else
+                {
+                    console.log('hello');
+                    var vp_name = $('#vpanelname').val()
+                    var dict = {
+                                "vp_name": vp_name
+                                };
+                    var data=JSON.stringify(dict);
+
+                    $.ajax({
+                        type:"POST",
+                        url:"{{url_for('add_vp')}}",
+                        data:data,
+                        dataType:"json",
+                        contentType:"application/json",
+                        success:function(response){
+                            console.log($(response));
+                            var newURL ="{{ url_for('view_virtual_panels') }}?vp_id=" + response;
+                            console.log(newURL)
+                            console.log($('#main'))
+                            $('#main').attr('action', newURL);
+                            $('#main').attr('id', response);
+                        },
+                        error: function(response){
+                            console.log($(response).responseText);
+                            console.log('Error');}
+
+                        });
+                }
+            }
+
+            if ($(j.target).hasClass('glyphicon-new') || $(j.target).hasClass('glyphicon-new-selected') ) {
+                $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
+                $(this).addClass('glyphicon-new-selected').removeClass('glyphicon-new').blur();
+            }
+        });
+    </script>
+
+    <script>
+        $(document).on('click', '.next-step, .prev-step', function (e) {
+            var activeTab = $('.tab-pane.active');
+
+            if(activeTab == $('#initialise'))
+            {
+                if($('#panel').val() == '__None' || $('#vpanelname').val().length == 0)
+                {
+                    console.log('empty field');
+                    return;
+                }
+                else
+                {
+                    console.log('hello');
+                    var vp_name = $('#vpanelname').val()
+                    var dict = {
+                                "vp_name": vp_name
+                                };
+                    var data=JSON.stringify(dict);
+
+                    $.ajax({
+                        type:"POST",
+                        url:"{{url_for('add_vp')}}",
+                        data:data,
+                        dataType:"json",
+                        contentType:"application/json",
+                        success:function(response){
+                            console.log($(response));
+                            $('#main').attr('action', "{{ url_for('view_virtual_panels') }}?vp_id=" + response);
+                            $('#main').attr('id', response);
+                        },
+                        error: function(response){
+                            console.log($(response).responseText);
+                            console.log('Error');}
+
+                        });
+                }
+            }
+
+            $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
+
+            if ($(e.target).hasClass('next-step')) {
+                var nextTab = activeTab.next('.tab-pane').attr('id');
+                $('[href="#' + nextTab + '"]').addClass('glyphicon-new-selected').removeClass('glyphicon-new');
+                $('[href="#' + nextTab + '"]').tab('show');
+            }
+            else {
+                var prevTab = activeTab.prev('.tab-pane').attr('id');
+                $('[href="#' + prevTab + '"]').addClass('glyphicon-new-selected').removeClass('glyphicon-new');
+                $('[href="#' + prevTab + '"]').tab('show');
+            }
+        });
+    </script>
+
+    <script>
+        $(document).on('change', '#panel', function(e){
+            console.log('changed')
+            $('#geneselector').children().remove()
+            $('#loading').append("<div class=\"col-md-5\"></div><div class=\"loader col-md-2\"></div><div class=\"col-md-5\"></div>");
+
+            var panel_id = $('#panel').val()
+            console.log(panel_id)
+            var dict = {
+                        "panel": panel_id
+                        };
+            var data=JSON.stringify(dict);
+
+            $.ajax({
+                type:"POST",
+                url:"{{url_for('select_vp_genes')}}",
+                data:data,
+                dataType:"json",
+                contentType:"application/json",
+                success:function(response){
+                    $('#loading').children().remove()
+                    $('#geneselector').append(response)
+                },
+                error: function(response){
+                    console.log($(response).responseText);
+                    console.log('Error');}
+
+                });
+        });
+    </script>
+
+    <script>
+        $(document).on('click', '.label-success', function () {
+            var geneName = $(event.target).attr('for');
+            var geneId = $("#"+geneName).attr('name');
+            $('#genelist').append("<button id=\"genebutton\" type=\"button\" class=\"btn btn-danger btn-md btngene\" data-name=\""+geneName+"\"data-id="+geneId+"><span class='glyphicon glyphicon-pencil'></span> "+geneName+"</button> ")
+        });
+    </script>
+
+    <script>
+        $(document).on('click', '#genebutton', function (request) {
+            $('#regions').children().remove()
+            $('#regions').append("<div class=\"col-md-5\"></div><div class=\"loader col-md-2\"></div><div class=\"col-md-5\"></div>");
+            var element = $(request.currentTarget);
+            var gene_id = $(element).attr('data-id');
+            var panel_id = $('#panel').val()
+            var dict = {
+                "panel_id": panel_id,
+                "gene_id": gene_id
+            };
+            var data=JSON.stringify(dict);
+
+            $.ajax({
+                type:"POST",
+                url:"{{url_for('select_vp_regions')}}",
+                data:data,
+                dataType:"json",
+                contentType:"application/json",
+                success:function(response){
+                    $('#regions').children().remove()
+                    $('#regions').append(response)
+                },
+                error: function(response){
+                    console.log($(response).responseText);
+                    console.log('Error');}
+
+                });
+            });
+
+
+    </script>
+
+    <script>
+        $(document).on('click', ".label-region", function (request) {
+            console.log('button click');
+            var obj = $(request.currentTarget);
+            console.log($(request.currentTarget));
+            if($(obj).attr('checked') == 'checked')
+            {
+                $(obj).removeAttr('checked');
+                if($(".label-selectall").attr('checked') == 'checked')
+                {
+                    $(".label-selectall").attr('uncheck-all', 'false');
+                    $(".label-selectall").trigger('click')
+                }
+            }
+            else
+            {
+                $(obj).attr('checked', 'checked')
+            }
+
+        });
+    </script>
+
+    <script>
+
+        $(document).on('click', ".label-selectall", function () {
+            console.log($(".label-selectall").attr('checked'));
+
+            if ($(".label-selectall").attr('uncheck-all') == 'false')//if one
+            {
+                $(".label-selectall").removeAttr('checked');
+                $(".label-selectall").removeAttr('uncheck-all')
+            }
+            else if ($(".label-selectall").attr('checked') == 'checked') //if select all has been clicked off
+            {
+                console.log('goodbye');
+                $(".label-selectall").removeAttr('checked'); //remove the checked attribute
+
+                $(".label-region").each(function(i, obj)//loop through all elements with .label-region class
+                {
+                    if ($(obj).attr('checked') == 'checked')//if object is checked turn it off
+                    {
+                        $(obj).trigger('click');
+                        console.log('was checked')
+                    }
+                    else//do nothing
+                    {
+                        console.log('already unchecked')
+                    }
+                });
+            }
+            else //if select all has been clicked on
+            {
+                $(".label-selectall").attr('checked', 'checked');//add checked attribute
+                console.log('hello');
+
+                $(".label-region").each(function(i, obj)//loop through all elements with .label-region class
+                {
+                    if ($(obj).attr('checked') == 'checked')//if object is selected do nothing
+                    {
+                        console.log('already checked')
+                    }
+                    else //click object to on
+                    {
+                        console.log('not checked');
+                        $(obj).trigger('click')
+                    }
+                });
+
+            }
+
+        });
+    </script>
+
+    <script>
 
         $(document).ready(function () {
 
@@ -80,6 +335,7 @@
 
 
 <body>
+
 
 <nav class="navbar navbar-default navbar-fixed-top">
     <div class="container">

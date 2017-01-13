@@ -40,16 +40,16 @@ class CreatePanel(Form):
     submit = SubmitField("Create Panel")
 
 class CreateVirtualPanel(Form):
-    panel = QuerySelectField(query_factory=panels,get_label='name')
+    panel = QuerySelectField(query_factory=panels,get_label='name', allow_blank=True, blank_text=u'-- please choose a panel -- ')
     vpanelname = TextField("Virtual Panel Name", [Required("Enter a Virtual Panel Name")])
-    submit = SubmitField("Create Virtual Panel")
+    submit = SubmitField("Done")
 
 class SelectVPGenes(Form):
     pass
     #genes = BooleanField(choices=[])
 
 class CreateVirtualPanelProcess(Form):
-    panel = QuerySelectField(query_factory=panels, get_label='name')
+    panel = QuerySelectField(query_factory=panels, get_label='name', allow_blank=True, blank_text=u'-- please choose a panel -- ')
     vpanelname = TextField("Virtual Panel Name", [Required("Enter a Virtual Panel Name")])
     submitname = SubmitField("Begin")
 

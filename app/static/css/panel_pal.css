@@ -20,6 +20,13 @@ body {
     display:none;
 }
 
+table{
+    table-layout: fixed;
+}
+
+td{
+    word-wrap: break-word;
+}
 
 h3
 {
@@ -130,6 +137,7 @@ h3
     left: 20px;
 }
 
+
 /*Now the CSS*/
 * {margin: 0; padding: 0;}
 
@@ -237,9 +245,11 @@ font-style: oblique}
 
 .red{color: red}
 
+.label-region{}
+.label-selectall{}
 
 .process-step .btn:focus{outline:none}
-.process{display:table;width:100%;position:relative}
+.process{display:table;width:800px; max-width: 800px;margin: auto}
 .nav-tabs{border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: #18bc9c;}
 .process-row{display:table-row}
 .process-step button[disabled]{opacity:1 !important;filter: alpha(opacity=100) !important}
@@ -274,3 +284,24 @@ font-style: oblique}
     background-color:#18bc9c; border-color: #18bc9c;
   color:#FFFFFF;
 }
+
+.loader {
+  border: 16px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 16px solid #18bc9c;
+  width: 120px;
+  height: 120px;
+  -webkit-animation: spin 2s linear infinite;
+  animation: spin 2s linear infinite;
+}
+
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
