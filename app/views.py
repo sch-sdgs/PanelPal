@@ -359,6 +359,7 @@ def logged_in():
 
 @app.route('/')
 def index():
+    print "what"
     return render_template('home.html', panels=3)
 
 
@@ -1261,7 +1262,7 @@ parser = reqparse.RequestParser()
 #
 #     return resp
 
-class Panels(Resource):
+class APIPanels(Resource):
     @swagger.operation(
         notes='Gets a JSON of all regions in the panel - this is equivalent to the broad panel',
         responseClass='x',
@@ -1289,7 +1290,7 @@ class Panels(Resource):
         return resp
 
 
-class VirtualPanels(Resource):
+class APIVirtualPanels(Resource):
     @swagger.operation(
         notes='Gets a JSON of regions in a virtual panel - this is equivalent to the small panel',
         responseClass='x',
@@ -1323,7 +1324,7 @@ class VirtualPanels(Resource):
         resp.headers['content-type'] = 'application/json'
         return resp
 
-class PreferredTx(Resource):
+class APIPreferredTx(Resource):
     @swagger.operation(
         notes='Gets a JSON of all preftx',
         responseClass='x',
@@ -1378,7 +1379,8 @@ class PreferredTx(Resource):
 #         resp.headers['content-type'] = 'application/json'
 #         return resp
 
-api.add_resource(Panels, '/api/panel/<string:name>/<string:version>', )
-api.add_resource(VirtualPanels, '/api/virtualpanel/<string:name>/<string:version>', )
-api.add_resource(PreferredTx, '/api/preftx/<string:name>/<string:version>', )
+api.add_resource(APIPanels, '/api/panel/<string:name>/<string:version>', )
+api.add_resource(APIVirtualPanels, '/api/virtualpanel/<string:name>/<string:version>', )
+api.add_resource(APIPreferredTx, '/api/preftx/<string:name>/<string:version>', )
 # api.add_resource(Exonic, '/api/exonic/<string:name>/<string:version>', )
+
