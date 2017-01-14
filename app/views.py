@@ -1,10 +1,9 @@
 from flask import render_template, request, flash, url_for, Markup, jsonify, redirect, Response
 from sqlalchemy.orm import scoped_session
-from app import app, s, models, activedirectory
-from collections import OrderedDict
-from functools import wraps
+from app.main import s, app, db
+from app.models import *
+from app.activedirectory import UserAuthentication
 import json
-from app import app, s, models
 from app.queries import *
 from flask_table import Table, Col, LinkCol
 from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanelProcess
@@ -27,7 +26,7 @@ class User(UserMixin):
         if len(list(validuser)) == 0:
             return False
         else:
-            check_activdir = activedirectory.UserAuthentication().authenticate(id, password)
+            check_activdir = UserAuthentication().authenticate(id, password)
 
             if check_activdir != "False":
                 return True
@@ -275,7 +274,7 @@ def isgene(s, gene):
     :param gene: gene name
     :return: true or false
     """
-    test = s.query(models.Genes).filter_by(name=gene).first()
+    test = s.query(Genes).filter_by(name=gene).first()
     if test is None:
         return False
     else:
@@ -375,7 +374,7 @@ def autocomplete():
     :return: jsonified gene list
     """
     value = str(request.args.get('q'))
-    result = s.query(models.Genes).filter(models.Genes.name.like("%" + value + "%")).all()
+    result = s.query(Genes).filter(Genes.name.like("%" + value + "%")).all()
     data = [i.name for i in result]
     print data
     return jsonify(matching_results=data)
@@ -559,7 +558,7 @@ def create_panel():
             result.append(test)
 
         if False not in result:
-            test_panel = s.query(models.Panels).filter_by(name=panelname).first()
+            test_panel = s.query(Panels).filter_by(name=panelname).first()
             if test_panel is not None:
                 return render_template('panel_create.html', form=form, message="Panel Name Exists")
             else:
@@ -606,10 +605,10 @@ def edit_panel_page(panel_id=None):
     lock_panel(s, current_user.id, id)
     if id is None:
         id = panel_id
-    panel_info = s.query(models.Panels, models.Projects).join(models.Projects).filter(models.Panels.id == id).values(
-        models.Panels.current_version,
-        models.Panels.name,
-        models.Panels.locked
+    panel_info = s.query(Panels, Projects).join(Projects).filter(Panels.id == id).values(
+        Panels.current_version,
+        Panels.name,
+        Panels.locked
     )
     print panel_info
     for i in panel_info:
@@ -673,18 +672,18 @@ def edit_panel():
                         print value
 
                         extension_5 = int(value) - int(original_start)
-                        check = s.query(models.Versions).filter_by(region_id=region_id,
+                        check = s.query(Versions).filter_by(region_id=region_id,
                                                                    intro=int(current_version) + 1).count()
                         print v
                         if check > 0:
-                            s.query(models.Versions).filter_by(region_id=region_id,
+                            s.query(Versions).filter_by(region_id=region_id,
                                                                intro=int(current_version) + 1).update(
-                                {models.Versions.extension_5: extension_5})
+                                {Versions.extension_5: extension_5})
                             s.commit()
                         else:
-                            s.query(models.Versions).filter_by(id=id).update({models.Versions.last: current_version})
+                            s.query(Versions).filter_by(id=id).update({Versions.last: current_version})
                             s.commit()
-                            v = models.Versions(intro=int(current_version) + 1, last=None, panel_id=int(panel_id),
+                            v = Versions(intro=int(current_version) + 1, last=None, panel_id=int(panel_id),
                                                 comment=None,
                                                 extension_3=None, extension_5=int(extension_5),
                                                 region_id=int(region_id))
@@ -695,17 +694,17 @@ def edit_panel():
                         print "hello"
                         extension_3 = int(value) - int(original_end)
 
-                        check = s.query(models.Versions).filter_by(region_id=region_id,
+                        check = s.query(Versions).filter_by(region_id=region_id,
                                                                    intro=int(current_version) + 1).count()
                         if check > 0:
-                            s.query(models.Versions).filter_by(region_id=region_id,
+                            s.query(Versions).filter_by(region_id=region_id,
                                                                intro=int(current_version) + 1).update(
-                                {models.Versions.extension_3: extension_3})
+                                {Versions.extension_3: extension_3})
                             s.commit()
                         else:
-                            s.query(models.Versions).filter_by(id=id).update({models.Versions.last: current_version})
+                            s.query(Versions).filter_by(id=id).update({Versions.last: current_version})
                             s.commit()
-                            v = models.Versions(intro=int(current_version) + 1, last=None, panel_id=int(panel_id),
+                            v = Versions(intro=int(current_version) + 1, last=None, panel_id=int(panel_id),
                                                 comment=None,
                                                 extension_3=extension_3, extension_5=None,
                                                 region_id=int(region_id))
@@ -727,7 +726,7 @@ def remove_gene():
         for i in panel_info:
             if i.genename == gene:
                 # todo add if in here - if the gene is not already in a live panel it is okay to delete completely
-                s.query(models.Versions).filter_by(id=i.id).update({models.Versions.last: i.current_version})
+                s.query(Versions).filter_by(id=i.id).update({Versions.last: i.current_version})
                 ids.append(i.id)
     s.commit()
     return edit_panel_page(id)
@@ -763,7 +762,7 @@ def add_gene():
 @app.route('/projects')
 @login_required
 def view_projects(delete=False, project_name=None, project_id=None):
-    projects = models.Projects.query.all()
+    projects = Projects.query.all()
     result = []
     for i in projects:
         row = row2dict(i)
@@ -817,7 +816,7 @@ def delete_project():
     id = request.args.get('id')
     if request.args.get('check'):
         print "I AM DELETEING"
-        u = s.query(models.Projects).filter_by(id=id).first()
+        u = s.query(Projects).filter_by(id=id).first()
         s.delete(u)
         s.commit()
         return view_projects()
@@ -885,7 +884,7 @@ def create_virtual_panel():
 
     if request.method == "POST":
         name = request.form["vpanelname"]
-        testvpanel = s.query(models.VirtualPanels).filter_by(name=name).first()
+        testvpanel = s.query(VirtualPanels).filter_by(name=name).first()
         print(testvpanel)
         if testvpanel is not None:
             return render_template('virtualpanels_create.html', form=form, message='Virtual panel name exists')
@@ -911,7 +910,7 @@ def create_virtual_panel_process():
         tab = request.args.get('tab')
         if tab is not None:
             name = request.form["vpanelname"]
-            testvpanel = s.query(models.VirtualPanels).filter_by(name=name).first()
+            testvpanel = s.query(VirtualPanels).filter_by(name=name).first()
             print(testvpanel)
             if testvpanel is not None:
                 return render_template('virtualpanels_create.html', form=form, message='Virtual panel name exists')
@@ -962,7 +961,7 @@ def make_virtualpanel_live():
 
 @app.route('/virtualpanels/delete', methods=['GET', 'POST'])
 def delete_virtualpanel():
-    u = db.session.query(models.VirtualPanels).filter_by(id=request.args.get('id')).first()
+    u = db.session.query(VirtualPanels).filter_by(id=request.args.get('id')).first()
     db.session.delete(u)
     db.session.commit()
     return view_virtual_panels()
