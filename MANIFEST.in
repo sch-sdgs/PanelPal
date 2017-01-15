@@ -1,2 +1,2 @@
-recursive-include panel_pal/app/templates *
-recursive-include panel_pal/app/static *
+recursive-include app/templates *
+recursive-include app/static *

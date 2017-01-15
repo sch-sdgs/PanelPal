@@ -610,7 +610,20 @@ def remove_user_project_rel(s,rel_id):
     s.query(UserRelationships).filter_by(id=rel_id).delete()
     s.commit()
     return True
-
+def remove_user_project_rel_no_id(s,username,project_id):
+    user_id = get_user_id_by_username(s,username)
+    rels = s.query(Projects, UserRelationships, Users). \
+        distinct(Users.username). \
+        group_by(Users.username). \
+        join(UserRelationships). \
+        join(Users). \
+        filter(and_(UserRelationships.project_id == project_id,Users.id==user_id)).values(
+                                                                  UserRelationships.id.label("rel_id"),
+                                                                  )
+    for i in rels:
+        s.query(UserRelationships).filter_by(id=i.rel_id).delete()
+        s.commit()
+        return True
 
 def get_projects_by_user(s, username):
     user_id = get_user_id_by_username(s, username)
@@ -870,3 +883,38 @@ def get_tx_by_gene_id(s, gene_id):
         join(Tx).\
         filter(Genes.id==gene_id).values(Tx.id,Tx.accession,Genes.id.label("geneid"))
     return tx
+
+def check_if_admin(s,username):
+    user_id = get_user_id_by_username(s,username)
+    query = s.query(Users).filter(Users.id == user_id).values(Users.admin)
+    for i in query:
+        if i.admin == 1:
+            return True
+        else:
+            return False
+
+def create_user(s,username):
+    user = Users(username=username,admin=0)
+    s.add(user)
+    s.commit()
+    return True
+
+def get_users(s):
+    users = s.query(Users).values(Users.id,Users.username,Users.admin)
+    return users
+
+def toggle_admin_query(s,user_id):
+    query = s.query(Users).filter(Users.id == user_id).values(Users.admin)
+    for i in query:
+        if i.admin == 1:
+            new_value = 0
+        else:
+            new_value = 1
+    s.query(Users).filter_by(id=user_id).update({Users.admin: new_value})
+    s.commit()
+    return True
+
+
+def get_all_projects(s):
+    projects = s.query(Projects).values(Projects.id,Projects.name)
+    return projects

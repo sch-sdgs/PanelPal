@@ -10,6 +10,7 @@ from flask.ext.login import LoginManager, UserMixin, \
 
 class UserForm(Form):
     name = TextField("Username",  [Required("Enter a Username")])
+    admin = BooleanField("Admin")
     submit = SubmitField("Send")
 
 

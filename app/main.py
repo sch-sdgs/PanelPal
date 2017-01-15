@@ -6,5 +6,5 @@ app.config.from_object('config')
 db = SQLAlchemy(app)
 s = db.session
 
-from app import views
+from app.views import *
 

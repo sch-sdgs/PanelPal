@@ -6,9 +6,10 @@ from app.activedirectory import UserAuthentication
 import json
 from app.queries import *
 from flask_table import Table, Col, LinkCol
-from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanelProcess
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanelProcess, UserForm
 from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
+from functools import wraps
 
 app.secret_key = 'development key'
 
@@ -42,6 +43,13 @@ class User(UserMixin):
     def get_id(self):
         return self.id
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args,**kwargs):
+        if check_if_admin(s,current_user.id) is False:
+            return redirect('/')
+        return f(*args, **kwargs)
+    return decorated_function
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -252,6 +260,10 @@ class ItemTablePrefTx(Table):
     tx_end = Col('Transcript End')
     strand = Col('Strand')
 
+class ItemTableUsers(Table):
+    username = Col('User')
+    admin = Col('Admin')
+    toggle_admin = LinkCol('Toggle Admin', 'toggle_admin', url_kwargs=dict(id='id'))
 
 def row2dict(row):
     """
@@ -352,7 +364,8 @@ def check_preftx_status(s, id):
 def logged_in():
     if current_user.is_authenticated:
         userid = current_user.id
-        return {'logged_in': True, 'userid': userid}
+        admin=check_if_admin(s,userid)
+        return {'logged_in': True, 'userid': userid,'admin':admin}
     else:
         return {'logged_in': False}
 
@@ -381,16 +394,36 @@ def autocomplete():
     return jsonify(matching_results=data)
 
 
-# test=None
-#
-# def lock_check(f):
-#     @wraps(f)
-#     def decorated_function(*args,**kwargs):
-#         if test is None:
-#             return redirect('/')
-#         return f(*args, **kwargs)
-#     return decorated_function
+##################
+# ADMIN
+####################
 
+@app.route('/admin/user',methods=['GET', 'POST'])
+@login_required
+@admin_required
+def user_admin():
+    form = UserForm()
+    if request.method == 'POST':
+        username = request.form["name"]
+        if check_if_admin(s,current_user.id):
+            create_user(s,username)
+        else:
+            return render_template('users.html', form=form,message="You can't do that")
+    users = get_users(s)
+    result = []
+    for i in users:
+        row = dict(zip(i.keys(), i))
+        result.append(row)
+    table = ItemTableUsers(result, classes=['table', 'table-striped'])
+    return render_template('users.html',form=form,table=table)
+
+@app.route('/admin/user/admin',methods=['GET', 'POST'])
+@login_required
+@admin_required
+def toggle_admin():
+    user_id=request.args.get('id')
+    toggle_admin_query(s,user_id)
+    return redirect(url_for('user_admin'))
 
 ########################
 # PANELS
@@ -1012,8 +1045,81 @@ def edit_permissions():
     table = ItemTablePermissions(all_results, classes=['table', 'table-striped'])
     return render_template("permissions.html", table=table, form=form, project_name=project, message=message)
 
+@app.route("/edit_permissions_admin", methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_permissions_admin():
+    users = get_users(s)
+    result={}
+    for i in users:
+        username = get_username_by_user_id(s, i.id)
+        result[username] = dict()
+        user_projects = get_projects_by_user(s, username)
+        all_projects = get_all_projects(s)
+        for p in all_projects:
+            row = dict(zip(p.keys(), p))
+            result[username][p.id] = {'name': p.name, 'checked': ''}
+        for u in user_projects:
+            result[username][u.id] = {'name': u.name, 'checked': 'checked'}
+
+    if request.method == 'POST':
+        status = {}
+        for i in request.form.getlist('check'):
+            print i
+            username, project_id = i.split("_")
+            print username
+            print status
+            if username not in status:
+                status[username]=list()
+                status[username].append(int(project_id))
+            else:
+                status[username].append(int(project_id))
+
+        print status
+        #find changes
+        for username in result:
+            print username
+            for project_id in result[username]:
+                checked = result[username][project_id]["checked"]
+                name = result[username][project_id]["name"]
+                if username in status:
+                    if checked == "checked":
+                        print status[username]
+                        print project_id
+                        if project_id in status[username]:
+                            #this is OK it's checked and project
+                            pass
+                        else:
+                            #not OK - it's been unchecked
+                            print "username in but UNCHECKED"
+                            remove_user_project_rel_no_id(s, username, project_id)
+                    else:
+                        if project_id in status[username]:
+                            user_id=get_user_id_by_username(s,username)
+                            add_user_project_rel(s,user_id,project_id)
+                            print "NOW CHECKED"
+                else:
+                    if checked == "checked":
+                        print "UNCHECKED"
+                        remove_user_project_rel_no_id(s,username,project_id)
+
+    users = get_users(s)
+    result = {}
+    for i in users:
+        username = get_username_by_user_id(s, i.id)
+        result[username] = dict()
+        user_projects = get_projects_by_user(s, username)
+        all_projects = get_all_projects(s)
+        for p in all_projects:
+            row = dict(zip(p.keys(), p))
+            result[username][p.id] = {'name': p.name, 'checked': ''}
+        for u in user_projects:
+            result[username][u.id] = {'name': u.name, 'checked': 'checked'}
+
+    return render_template("permissions_admin.html", permissions=result)
 
 @app.route("/remove_permissions")
+@login_required
 def remove_permission():
     panel_id = request.args.get('panelid')
     project_id = request.args.get('projectid')
