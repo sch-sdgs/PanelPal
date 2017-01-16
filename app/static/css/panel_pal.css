@@ -282,18 +282,3 @@ font-style: oblique}
     background-color:#18bc9c; border-color: #18bc9c;
   color:#FFFFFF;
 }
-
-input[type=checkbox].permissions_checkbox {
-     cursor: pointer;
-  }
-
- input[type=checkbox].permissions_checkbox:after {
-  content: " ";
-  background-color: #D7B1D7;
-  display: inline-block;
-  visibility: visible;
- }
-
- input[type=checkbox].permissions_checkbox:checked:after {
-   content: "\2714";
- }

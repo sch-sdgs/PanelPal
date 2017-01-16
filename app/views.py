@@ -10,6 +10,7 @@ from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCr
 from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
 from functools import wraps
+from collections import OrderedDict
 
 app.secret_key = 'development key'
 
@@ -1050,7 +1051,7 @@ def edit_permissions():
 @admin_required
 def edit_permissions_admin():
     users = get_users(s)
-    result={}
+    result=OrderedDict()
     for i in users:
         username = get_username_by_user_id(s, i.id)
         result[username] = dict()
@@ -1104,7 +1105,7 @@ def edit_permissions_admin():
                         remove_user_project_rel_no_id(s,username,project_id)
 
     users = get_users(s)
-    result = {}
+    result = OrderedDict()
     for i in users:
         username = get_username_by_user_id(s, i.id)
         result[username] = dict()
