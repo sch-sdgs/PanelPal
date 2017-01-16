@@ -2,13 +2,15 @@ from flask.ext.wtf import Form
 from wtforms.fields import TextField, TextAreaField, SubmitField, HiddenField, PasswordField, RadioField, BooleanField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.validators import Required
-from app import app,db,s,models
+from app.main import app,db,s
+from app import models
 from queries import *
 from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
 
 class UserForm(Form):
     name = TextField("Username",  [Required("Enter a Username")])
+    admin = BooleanField("Admin")
     submit = SubmitField("Send")
 
 

@@ -1,15 +1,15 @@
 from flask import render_template, request, flash, url_for, Markup, jsonify, redirect, Response
 from sqlalchemy.orm import scoped_session
-from app import app, s, models, activedirectory
-from collections import OrderedDict
-from functools import wraps
+from app.main import s, app, db
+from app.models import *
+from app.activedirectory import UserAuthentication
 import json
-from app import app, s, models
 from app.queries import *
 from flask_table import Table, Col, LinkCol
-from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanelProcess
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanelProcess, UserForm
 from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
+from functools import wraps
 
 app.secret_key = 'development key'
 
@@ -27,7 +27,7 @@ class User(UserMixin):
         if len(list(validuser)) == 0:
             return False
         else:
-            check_activdir = activedirectory.UserAuthentication().authenticate(id, password)
+            check_activdir = UserAuthentication().authenticate(id, password)
 
             if check_activdir != "False":
                 return True
@@ -43,6 +43,13 @@ class User(UserMixin):
     def get_id(self):
         return self.id
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args,**kwargs):
+        if check_if_admin(s,current_user.id) is False:
+            return redirect('/')
+        return f(*args, **kwargs)
+    return decorated_function
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -253,6 +260,10 @@ class ItemTablePrefTx(Table):
     tx_end = Col('Transcript End')
     strand = Col('Strand')
 
+class ItemTableUsers(Table):
+    username = Col('User')
+    admin = Col('Admin')
+    toggle_admin = LinkCol('Toggle Admin', 'toggle_admin', url_kwargs=dict(id='id'))
 
 def row2dict(row):
     """
@@ -275,7 +286,7 @@ def isgene(s, gene):
     :param gene: gene name
     :return: true or false
     """
-    test = s.query(models.Genes).filter_by(name=gene).first()
+    test = s.query(Genes).filter_by(name=gene).first()
     if test is None:
         return False
     else:
@@ -353,13 +364,15 @@ def check_preftx_status(s, id):
 def logged_in():
     if current_user.is_authenticated:
         userid = current_user.id
-        return {'logged_in': True, 'userid': userid}
+        admin=check_if_admin(s,userid)
+        return {'logged_in': True, 'userid': userid,'admin':admin}
     else:
         return {'logged_in': False}
 
 
 @app.route('/')
 def index():
+    print "what"
     return render_template('home.html', panels=3)
 
 
@@ -375,22 +388,42 @@ def autocomplete():
     :return: jsonified gene list
     """
     value = str(request.args.get('q'))
-    result = s.query(models.Genes).filter(models.Genes.name.like("%" + value + "%")).all()
+    result = s.query(Genes).filter(Genes.name.like("%" + value + "%")).all()
     data = [i.name for i in result]
     print data
     return jsonify(matching_results=data)
 
 
-# test=None
-#
-# def lock_check(f):
-#     @wraps(f)
-#     def decorated_function(*args,**kwargs):
-#         if test is None:
-#             return redirect('/')
-#         return f(*args, **kwargs)
-#     return decorated_function
+##################
+# ADMIN
+####################
 
+@app.route('/admin/user',methods=['GET', 'POST'])
+@login_required
+@admin_required
+def user_admin():
+    form = UserForm()
+    if request.method == 'POST':
+        username = request.form["name"]
+        if check_if_admin(s,current_user.id):
+            create_user(s,username)
+        else:
+            return render_template('users.html', form=form,message="You can't do that")
+    users = get_users(s)
+    result = []
+    for i in users:
+        row = dict(zip(i.keys(), i))
+        result.append(row)
+    table = ItemTableUsers(result, classes=['table', 'table-striped'])
+    return render_template('users.html',form=form,table=table)
+
+@app.route('/admin/user/admin',methods=['GET', 'POST'])
+@login_required
+@admin_required
+def toggle_admin():
+    user_id=request.args.get('id')
+    toggle_admin_query(s,user_id)
+    return redirect(url_for('user_admin'))
 
 ########################
 # PANELS
@@ -559,7 +592,7 @@ def create_panel():
             result.append(test)
 
         if False not in result:
-            test_panel = s.query(models.Panels).filter_by(name=panelname).first()
+            test_panel = s.query(Panels).filter_by(name=panelname).first()
             if test_panel is not None:
                 return render_template('panel_create.html', form=form, message="Panel Name Exists")
             else:
@@ -606,10 +639,10 @@ def edit_panel_page(panel_id=None):
     lock_panel(s, current_user.id, id)
     if id is None:
         id = panel_id
-    panel_info = s.query(models.Panels, models.Projects).join(models.Projects).filter(models.Panels.id == id).values(
-        models.Panels.current_version,
-        models.Panels.name,
-        models.Panels.locked
+    panel_info = s.query(Panels, Projects).join(Projects).filter(Panels.id == id).values(
+        Panels.current_version,
+        Panels.name,
+        Panels.locked
     )
     print panel_info
     for i in panel_info:
@@ -673,18 +706,18 @@ def edit_panel():
                         print value
 
                         extension_5 = int(value) - int(original_start)
-                        check = s.query(models.Versions).filter_by(region_id=region_id,
+                        check = s.query(Versions).filter_by(region_id=region_id,
                                                                    intro=int(current_version) + 1).count()
                         print v
                         if check > 0:
-                            s.query(models.Versions).filter_by(region_id=region_id,
+                            s.query(Versions).filter_by(region_id=region_id,
                                                                intro=int(current_version) + 1).update(
-                                {models.Versions.extension_5: extension_5})
+                                {Versions.extension_5: extension_5})
                             s.commit()
                         else:
-                            s.query(models.Versions).filter_by(id=id).update({models.Versions.last: current_version})
+                            s.query(Versions).filter_by(id=id).update({Versions.last: current_version})
                             s.commit()
-                            v = models.Versions(intro=int(current_version) + 1, last=None, panel_id=int(panel_id),
+                            v = Versions(intro=int(current_version) + 1, last=None, panel_id=int(panel_id),
                                                 comment=None,
                                                 extension_3=None, extension_5=int(extension_5),
                                                 region_id=int(region_id))
@@ -695,17 +728,17 @@ def edit_panel():
                         print "hello"
                         extension_3 = int(value) - int(original_end)
 
-                        check = s.query(models.Versions).filter_by(region_id=region_id,
+                        check = s.query(Versions).filter_by(region_id=region_id,
                                                                    intro=int(current_version) + 1).count()
                         if check > 0:
-                            s.query(models.Versions).filter_by(region_id=region_id,
+                            s.query(Versions).filter_by(region_id=region_id,
                                                                intro=int(current_version) + 1).update(
-                                {models.Versions.extension_3: extension_3})
+                                {Versions.extension_3: extension_3})
                             s.commit()
                         else:
-                            s.query(models.Versions).filter_by(id=id).update({models.Versions.last: current_version})
+                            s.query(Versions).filter_by(id=id).update({Versions.last: current_version})
                             s.commit()
-                            v = models.Versions(intro=int(current_version) + 1, last=None, panel_id=int(panel_id),
+                            v = Versions(intro=int(current_version) + 1, last=None, panel_id=int(panel_id),
                                                 comment=None,
                                                 extension_3=extension_3, extension_5=None,
                                                 region_id=int(region_id))
@@ -727,7 +760,7 @@ def remove_gene():
         for i in panel_info:
             if i.genename == gene:
                 # todo add if in here - if the gene is not already in a live panel it is okay to delete completely
-                s.query(models.Versions).filter_by(id=i.id).update({models.Versions.last: i.current_version})
+                s.query(Versions).filter_by(id=i.id).update({Versions.last: i.current_version})
                 ids.append(i.id)
     s.commit()
     return edit_panel_page(id)
@@ -763,7 +796,7 @@ def add_gene():
 @app.route('/projects')
 @login_required
 def view_projects(delete=False, project_name=None, project_id=None):
-    projects = models.Projects.query.all()
+    projects = Projects.query.all()
     result = []
     for i in projects:
         row = row2dict(i)
@@ -817,7 +850,7 @@ def delete_project():
     id = request.args.get('id')
     if request.args.get('check'):
         print "I AM DELETEING"
-        u = s.query(models.Projects).filter_by(id=id).first()
+        u = s.query(Projects).filter_by(id=id).first()
         s.delete(u)
         s.commit()
         return view_projects()
@@ -887,10 +920,9 @@ def create_virtual_panel_process():
         #if form.validate() == False:
            # return render_template('virtualpanels_createprocess.html', form=form, message="You didn't enter a name")
         tab = request.args.get('tab')
-        print(tab)
         if tab is not None:
             name = request.form["vpanelname"]
-            testvpanel = s.query(models.VirtualPanels).filter_by(name=name).first()
+            testvpanel = s.query(VirtualPanels).filter_by(name=name).first()
             if testvpanel is not None:
                 return render_template('virtualpanels_createprocess.html', form=form, message='Virtual panel name exists')
             else:
@@ -1012,7 +1044,7 @@ def make_virtualpanel_live():
 
 @app.route('/virtualpanels/delete', methods=['GET', 'POST'])
 def delete_virtualpanel():
-    u = db.session.query(models.VirtualPanels).filter_by(id=request.args.get('id')).first()
+    u = db.session.query(VirtualPanels).filter_by(id=request.args.get('id')).first()
     db.session.delete(u)
     db.session.commit()
     return view_virtual_panels()
@@ -1062,8 +1094,81 @@ def edit_permissions():
     table = ItemTablePermissions(all_results, classes=['table', 'table-striped'])
     return render_template("permissions.html", table=table, form=form, project_name=project, message=message)
 
+@app.route("/edit_permissions_admin", methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_permissions_admin():
+    users = get_users(s)
+    result={}
+    for i in users:
+        username = get_username_by_user_id(s, i.id)
+        result[username] = dict()
+        user_projects = get_projects_by_user(s, username)
+        all_projects = get_all_projects(s)
+        for p in all_projects:
+            row = dict(zip(p.keys(), p))
+            result[username][p.id] = {'name': p.name, 'checked': ''}
+        for u in user_projects:
+            result[username][u.id] = {'name': u.name, 'checked': 'checked'}
+
+    if request.method == 'POST':
+        status = {}
+        for i in request.form.getlist('check'):
+            print i
+            username, project_id = i.split("_")
+            print username
+            print status
+            if username not in status:
+                status[username]=list()
+                status[username].append(int(project_id))
+            else:
+                status[username].append(int(project_id))
+
+        print status
+        #find changes
+        for username in result:
+            print username
+            for project_id in result[username]:
+                checked = result[username][project_id]["checked"]
+                name = result[username][project_id]["name"]
+                if username in status:
+                    if checked == "checked":
+                        print status[username]
+                        print project_id
+                        if project_id in status[username]:
+                            #this is OK it's checked and project
+                            pass
+                        else:
+                            #not OK - it's been unchecked
+                            print "username in but UNCHECKED"
+                            remove_user_project_rel_no_id(s, username, project_id)
+                    else:
+                        if project_id in status[username]:
+                            user_id=get_user_id_by_username(s,username)
+                            add_user_project_rel(s,user_id,project_id)
+                            print "NOW CHECKED"
+                else:
+                    if checked == "checked":
+                        print "UNCHECKED"
+                        remove_user_project_rel_no_id(s,username,project_id)
+
+    users = get_users(s)
+    result = {}
+    for i in users:
+        username = get_username_by_user_id(s, i.id)
+        result[username] = dict()
+        user_projects = get_projects_by_user(s, username)
+        all_projects = get_all_projects(s)
+        for p in all_projects:
+            row = dict(zip(p.keys(), p))
+            result[username][p.id] = {'name': p.name, 'checked': ''}
+        for u in user_projects:
+            result[username][u.id] = {'name': u.name, 'checked': 'checked'}
+
+    return render_template("permissions_admin.html", permissions=result)
 
 @app.route("/remove_permissions")
+@login_required
 def remove_permission():
     panel_id = request.args.get('panelid')
     project_id = request.args.get('projectid')
@@ -1312,7 +1417,7 @@ parser = reqparse.RequestParser()
 #
 #     return resp
 
-class Panels(Resource):
+class APIPanels(Resource):
     @swagger.operation(
         notes='Gets a JSON of all regions in the panel - this is equivalent to the broad panel',
         responseClass='x',
@@ -1340,7 +1445,7 @@ class Panels(Resource):
         return resp
 
 
-class VirtualPanels(Resource):
+class APIVirtualPanels(Resource):
     @swagger.operation(
         notes='Gets a JSON of regions in a virtual panel - this is equivalent to the small panel',
         responseClass='x',
@@ -1374,7 +1479,7 @@ class VirtualPanels(Resource):
         resp.headers['content-type'] = 'application/json'
         return resp
 
-class PreferredTx(Resource):
+class APIPreferredTx(Resource):
     @swagger.operation(
         notes='Gets a JSON of all preftx',
         responseClass='x',
@@ -1429,7 +1534,7 @@ class PreferredTx(Resource):
 #         resp.headers['content-type'] = 'application/json'
 #         return resp
 
-api.add_resource(Panels, '/api/panel/<string:name>/<string:version>', )
-api.add_resource(VirtualPanels, '/api/virtualpanel/<string:name>/<string:version>', )
-api.add_resource(PreferredTx, '/api/preftx/<string:name>/<string:version>', )
+api.add_resource(APIPanels, '/api/panel/<string:name>/<string:version>', )
+api.add_resource(APIVirtualPanels, '/api/virtualpanel/<string:name>/<string:version>', )
+api.add_resource(APIPreferredTx, '/api/preftx/<string:name>/<string:version>', )
 # api.add_resource(Exonic, '/api/exonic/<string:name>/<string:version>', )

@@ -35,7 +35,7 @@ def create_db(conn):
         CREATE TABLE pref_tx_versions
             (id INTEGER PRIMARY KEY, pref_tx_id INTEGER, tx_id INTEGER, intro INTEGER, last INTEGER, FOREIGN KEY(pref_tx_id) REFERENCES pref_tx(id), FOREIGN KEY(tx_id) REFERENCES tx(id));
         CREATE TABLE users
-            (id INTEGER PRIMARY KEY, username varchar(20), UNIQUE(username));
+            (id INTEGER PRIMARY KEY, username varchar(20), admin INTEGER,  UNIQUE(username));
         CREATE TABLE user_relationships
             (id INTEGER PRIMARY KEY, user_id INTEGER, project_id INTEGER, FOREIGN KEY(user_id) REFERENCES users(id), FOREIGN KEY(project_id) REFERENCES projects(id));
         CREATE TABLE ref_logtable

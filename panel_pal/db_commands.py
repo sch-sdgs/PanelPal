@@ -517,7 +517,7 @@ class Users(Database):
     def add_user(self,user):
         pp = self.panelpal_conn.cursor()
         try:
-            pp.execute("INSERT OR IGNORE INTO users(username) VALUES (?)", (user,))
+            pp.execute("INSERT OR IGNORE INTO users(username,admin) VALUES (?,?)", (user,1))
             self.panelpal_conn.commit()
             return pp.lastrowid
         except self.panelpal_conn.Error as e:

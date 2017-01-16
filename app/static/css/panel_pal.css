@@ -79,6 +79,14 @@ h3
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+.form-permissions{
+  max-width: 800px;
+  padding: 10px 35px 35px;
+  margin: 0 auto;
+  background-color: #f6f6f6;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
 .form-vpgenes {
     padding: 10px 35px 35px;
     margin: 0 auto;
@@ -136,7 +144,6 @@ h3
     background: inherit;
     left: 20px;
 }
-
 
 /*Now the CSS*/
 * {margin: 0; padding: 0;}
@@ -305,3 +312,19 @@ font-style: oblique}
   100% { transform: rotate(360deg); }
 }
 
+
+
+input[type=checkbox].permissions_checkbox {
+     cursor: pointer;
+  }
+
+ input[type=checkbox].permissions_checkbox:after {
+  content: " ";
+  background-color: #D7B1D7;
+  display: inline-block;
+  visibility: visible;
+ }
+
+ input[type=checkbox].permissions_checkbox:checked:after {
+   content: "\2714";
+ }

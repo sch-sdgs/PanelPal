@@ -6,4 +6,10 @@ flask_bootstrap
 flask-wtf
 flask-table
 flask-restful-swagger
-flask.ext.sqlalchemy
+Flask-SQLAlchemy
+Flask-Login
+Flask-Restful
+Flask-Table
+Jinja2
+Flask-WTF
+suds
