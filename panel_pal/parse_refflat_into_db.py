@@ -21,6 +21,14 @@ def create_tables(c):
     c.execute('''CREATE TABLE regions
         (id INTEGER PRIMARY KEY AUTOINCREMENT, chrom CHAR(4), start INTEGER, end INTEGER, name VARCHAR(50), CONSTRAINT unq UNIQUE (chrom,start,end))''')
 
+    c.execute('''CREATE UNIQUE INDEX genes_index
+            on genes (name);''')
+    c.execute('''CREATE UNIQUE INDEX tx_index
+        on tx (accession);''')
+    c.execute('''CREATE INDEX exons_index
+        on exons (region_id);''')
+    c.execute('''CREATE INDEX regions_index
+        on regions (start);''')
 
 def parse_reflat(c,refflat):
     reader = Reader(filename=refflat)

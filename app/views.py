@@ -391,7 +391,6 @@ def autocomplete():
     value = str(request.args.get('q'))
     result = s.query(Genes).filter(Genes.name.like("%" + value + "%")).all()
     data = [i.name for i in result]
-    print data
     return jsonify(matching_results=data)
 
 
@@ -1107,7 +1106,6 @@ def edit_permissions_admin():
         user_projects = get_projects_by_user(s, username)
         all_projects = get_all_projects(s)
         for p in all_projects:
-            row = dict(zip(p.keys(), p))
             result[username][p.id] = {'name': p.name, 'checked': ''}
         for u in user_projects:
             result[username][u.id] = {'name': u.name, 'checked': 'checked'}
