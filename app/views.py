@@ -6,7 +6,7 @@ from app.activedirectory import UserAuthentication
 import json
 from app.queries import *
 from flask_table import Table, Col, LinkCol
-from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanel, SelectVPGenes, CreateVirtualPanelProcess, UserForm
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanelProcess, UserForm
 from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
 from functools import wraps
@@ -955,15 +955,18 @@ def select_vp_genes():
     """
     panel_id = request.json["panel"]
     current_version = get_current_version(s, panel_id)
+    print(current_version)
     genes = get_genes_by_panelid(s, panel_id, current_version)
+    print("genes")
     html = ""
     for gene in genes:
+        print(gene.name)
         line = "<li class=\"list-group-item\">" + \
                gene.name + \
                "<div class=\"material-switch pull-right\"><input type=\"checkbox\" name=\"" + str(gene.id) + "\" id=\"" + \
-               gene.name + "\"><label for=\"" + gene.name + "\" class=\"label-success\"></label></div></li>"
+               gene.name + "\"><label for=\"" + gene.name + "\" class=\"label-success label-gene\"></label></div></li>"
         html += line
-
+    print(html)
     return jsonify(html)
 
 @app.route('/virtualpanels/getregions', methods=['POST'])
@@ -974,14 +977,15 @@ def select_vp_regions():
     """
     print(request.json)
     gene_id = request.json['gene_id']
+    gene_name = request.json['gene_name']
     panel_id = request.json['panel_id']
     regions = get_regions_by_geneid(s, gene_id, panel_id)
-    html = """<ul class=\"list-unstyled list-inline pull-right\">
+    html = "<h3 name=\"" + gene_id + "\">" + gene_name + """</h3><ul class=\"list-unstyled list-inline pull-right\">
                     <li>
-                        <button type=\"button\" class=\"btn btn-success\">Add Regions</button>
+                        <button type=\"button\" class=\"btn btn-success\" id=\"add-regions\" name=\"""" + gene_name + """\">Add Regions</button>
                     </li>
                     <li>
-                        <button type=\"button\" class=\"btn btn-danger\">Remove Gene</button>
+                        <button type=\"button\" class=\"btn btn-danger\" id=\"remove-gene\" name=\"""" + gene_name + """\">Remove Gene</button>
                     </li>
                 </ul>
 
@@ -1019,6 +1023,15 @@ def select_vp_regions():
     html += "</table>"
 
     return jsonify(html)
+
+@app.route('/virtualpanels/add_regions', methods=['POST'])
+@login_required
+def add_vp_regions():
+    version_ids = request.json['ids']
+    vpanel_id = request.json['vp_id']
+    for i in version_ids:
+        rel_id = add_version_to_vp(s, vpanel_id, i)
+    return jsonify("complete")
 
 @app.route('/virtualpanels/view', methods=['GET', 'POST'])
 def view_virtual_panel():

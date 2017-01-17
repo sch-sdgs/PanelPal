@@ -1,7 +1,7 @@
 from db_commands import Panels
 import panel_pal_db_setup
 
-panel_pal_db_setup.main()
+#panel_pal_db_setup.main()
 
 p = Panels()
 p.import_pref_transcripts('NGD', '/results/Analysis/MiSeq/MasterTranscripts/NGD_preferred_transcripts.txt')

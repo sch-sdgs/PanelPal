@@ -1,4 +1,4 @@
-from sqlalchemy import and_, or_, desc, func, case, cast, String, text
+from sqlalchemy import and_, or_, desc, func, case, cast, String, text, exc
 
 from app.models import *
 
@@ -254,10 +254,13 @@ def create_virtualpanel_query(s, name):
     :param name: name of virtual panel
     :return: virtual panel id
     """
-    virtualpanel = VirtualPanels(name, 0)
-    s.add(virtualpanel)
-    s.commit()
-    return virtualpanel.id
+    try:
+        virtualpanel = VirtualPanels(name, 0)
+        s.add(virtualpanel)
+        s.commit()
+        return virtualpanel.id
+    except exc.IntegrityError:
+        return -1
 
 
 
@@ -276,6 +279,7 @@ def add_region_to_panel(s, regionid, panelid):
     version = Versions(intro=int(current) + 1, last=None, panel_id=panelid, region_id=regionid, comment=None,
                        extension_3=None, extension_5=None)
     s.add(version)
+    s.commit()
     return version.id
 
 
@@ -286,6 +290,7 @@ def add_genes_to_panel(s, panelid, gene):
     :param panelid: the panel id
     :param gene: the gene
     """
+
     query = s.query(Genes, Tx, Exons, Regions). \
         filter(Genes.name == gene). \
         join(Tx). \
@@ -296,6 +301,18 @@ def add_genes_to_panel(s, panelid, gene):
         add_region_to_panel(s, i.id, panelid)
     s.commit()
 
+def add_version_to_vp(s, vp_id, version_id):
+    """
+
+    :param s:
+    :param vp_id:
+    :param version_id:
+    :return:
+    """
+    vp_relationship = VPRelationships(intro=0, last=None, version_id=version_id, vpanel_id=vp_id)
+    s.add(vp_relationship)
+    s.commit()
+    return vp_relationship.id
 
 def make_panel_live(s, panelid, new_version, username):
     """

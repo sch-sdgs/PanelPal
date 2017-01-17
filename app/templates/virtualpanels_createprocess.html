@@ -3,13 +3,14 @@
 {% block content %}
 <div class="wrapper">
     <div class="form-vpgenes">
-        <form name="main" action="{{ url_for('view_virtual_panels') }}" method="POST">
+        <form id="main" name="main" action="{{ url_for('view_virtual_panels') }}" method="POST">
 
             <h2>Create Virtual Panel</h2>
-
+            <div id="message">
             {% if message %}
             <div class="alert alert-danger"><strong>Silly Sausage!</strong> {{ message }}</div>
             {% endif %}
+            </div>
             <div class="row">
                 <div class="line hidden-xs"></div>
                 <div class="process">
@@ -23,21 +24,21 @@
                             </div>
                             <div class="process-step col-sm-3">
                                 <span class="glyphicon glyphicon-new glyphicon-list-alt" data-toggle="tab"
-                                      href="#select_genes"></span>
+                                      href="#initialise"></span>
                                 <p>
                                     <small>Genes</small>
                                 </p>
                             </div>
                             <div class="process-step col-sm-3">
                                 <span class="glyphicon glyphicon-new glyphicon-th-large" data-toggle="tab"
-                                      href="#select_regions"></span>
+                                      href="#initialise"></span>
                                 <p>
                                     <small>Regions</small>
                                 </p>
                             </div>
                             <div class="process-step col-sm-3">
                                 <span class="glyphicon glyphicon-new glyphicon-ok" data-toggle="tab"
-                                      href="#submit_vp"></span>
+                                      href="#initialise"></span>
                                 <p>
                                     <small>Success</small>
                                 </p>

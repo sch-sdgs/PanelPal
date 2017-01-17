@@ -98,7 +98,7 @@ class VPRelationships(db.Model):
         self.into = intro
         self.last = last
         self.version_id = version_id
-        self.panel_id = vpanel_id
+        self.vpanel_id = vpanel_id
 
     def __repr__(self):
         return '<name %r>' % (self.name)
