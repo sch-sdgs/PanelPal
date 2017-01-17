@@ -28,7 +28,7 @@
 
                     <label>{{ permissions[username][project_id]["name"] }} </label>
 
-                    <input value="{{username}}_{{project_id}}" id="checkbox" type="checkbox" {{
+                    <input value="{{username}}_{{project_id}}" name="check" id="checkbox" type="checkbox" {{
                            permissions[username][project_id]['checked'] }}>
 
                     {% endfor %}
