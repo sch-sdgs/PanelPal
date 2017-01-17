@@ -25,8 +25,10 @@
                 <div class="form-group">
                     {% for project_id in permissions[username] %}
 
+
                     <label>{{ permissions[username][project_id]["name"] }} </label>
-                    <input class="permissions_checkbox" value="{{username}}_{{project_id}}" name="check" type="checkbox" {{
+
+                    <input value="{{username}}_{{project_id}}" id="checkbox" type="checkbox" {{
                            permissions[username][project_id]['checked'] }}>
 
                     {% endfor %}

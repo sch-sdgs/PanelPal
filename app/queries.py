@@ -966,7 +966,7 @@ def create_user(s,username):
     return True
 
 def get_users(s):
-    users = s.query(Users).values(Users.id,Users.username,Users.admin)
+    users = s.query(Users).order_by(Users.username).values(Users.id,Users.username,Users.admin)
     return users
 
 def toggle_admin_query(s,user_id):
