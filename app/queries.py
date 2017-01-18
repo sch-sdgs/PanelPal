@@ -549,32 +549,6 @@ def get_regions_by_geneid(s, geneid, panelid):
                     GROUP BY regions.id ORDER BY region_start""")
     values = {'panel_id':panelid, 'gene_id':geneid, 'version':current_version}
     regions = s.execute(sql, values)
-
-    #select_tx = Tx.accession.distinct()
-    #print(select_tx)
-    #concat = func.group_concat(select_tx + "_exon" + cast(Exons.number, String))
-    #print(concat)
-    #regions = s.query(Versions, Regions, Exons, Tx, Genes). \
-        #join(Regions). \
-        #join(Exons). \
-        #join(Tx). \
-        #join(Genes). \
-        #group_by(Regions.id). \
-        #filter(and_(Panels.id == panelid, \
-                    #Genes.id == geneid, \
-                    #Versions.intro <= current_version, \
-                    #or_(Versions.last >= current_version, \
-                        #Versions.last == None))). \
-        #values(Versions.id.label("version_id"),Regions.chrom, \
-               #(case(
-                   #[(Versions.extension_5 == None, Regions.start),],
-                   #else_=(Regions.start + Versions.extension_5)
-               #)).label("region_start"), \
-               #(case(
-                   #[(Versions.extension_3 == None, Regions.end), ],
-                   #else_=(Regions.end + Versions.extension_3)
-               #)).label("region_end"), \
-               #func.group_concat(func.group_concat(Tx.accession.distinct()) + "_exon" + cast(Exons.number, String)).label("name"))
     return regions
 
 def create_project(s, name, user):

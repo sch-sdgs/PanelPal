@@ -34,6 +34,9 @@ def projects():
 def panels():
     return s.query(models.Panels)
 
+def panels_unlocked():
+    return s.query(models.Panels, models.Projects).join(models.Projects).filter(and_(models.UserRelationships.user.has(models.Users.username == current_user.id)), models.Panels.locked.isnot(None)).all()
+
 class CreatePanel(Form):
     project = QuerySelectField(query_factory=projects,get_label='name')
     panelname = TextField("Panel Name")
@@ -42,7 +45,7 @@ class CreatePanel(Form):
     submit = SubmitField("Create Panel")
 
 class CreateVirtualPanel(Form):
-    panel = QuerySelectField(query_factory=panels,get_label='name', allow_blank=True, blank_text=u'-- please choose a panel -- ')
+    panel = QuerySelectField(query_factory=panels_unlocked,get_label='name', allow_blank=True, blank_text=u'-- please choose a panel -- ')
     vpanelname = TextField("Virtual Panel Name", [Required("Enter a Virtual Panel Name")])
     submit = SubmitField("Done")
 
