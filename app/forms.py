@@ -35,7 +35,7 @@ def panels():
     return s.query(models.Panels)
 
 def panels_unlocked():
-    return s.query(models.Panels, models.Projects).join(models.Projects).filter(and_(models.UserRelationships.user.has(models.Users.username == current_user.id)), models.Panels.locked.isnot(None)).all()
+    return s.query(models.Panels).filter(and_(models.Panels.project.has(models.Projects.user.any(models.UserRelationships.user.has(models.Users.username == current_user.id))), models.Panels.locked == None)).all()
 
 class CreatePanel(Form):
     project = QuerySelectField(query_factory=projects,get_label='name')
@@ -45,18 +45,14 @@ class CreatePanel(Form):
     submit = SubmitField("Create Panel")
 
 class CreateVirtualPanel(Form):
-    panel = QuerySelectField(query_factory=panels_unlocked,get_label='name', allow_blank=True, blank_text=u'-- please choose a panel -- ')
+    panel = QuerySelectField(query_factory=panels,get_label='name', allow_blank=True, blank_text=u'-- please choose a panel -- ')
     vpanelname = TextField("Virtual Panel Name", [Required("Enter a Virtual Panel Name")])
     submit = SubmitField("Done")
 
-class SelectVPGenes(Form):
-    pass
-    #genes = BooleanField(choices=[])
-
 class CreateVirtualPanelProcess(Form):
-    panel = QuerySelectField(query_factory=panels, get_label='name', allow_blank=True, blank_text=u'-- please choose a panel -- ')
+    panel = QuerySelectField(query_factory=panels_unlocked, get_label='name', allow_blank=True, blank_text=u'-- please choose a panel -- ')
     vpanelname = TextField("Virtual Panel Name", [Required("Enter a Virtual Panel Name")])
-    submitname = SubmitField("Begin")
+    submitname = SubmitField("Complete Panel")
 
 class PrefTxCreate(Form):
     gene = RadioField(u'Genes',choices=[],coerce=int)

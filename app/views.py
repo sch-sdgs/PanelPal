@@ -1000,8 +1000,19 @@ def add_vp():
     """
     vp_name = request.json['vp_name']
     vp_id = create_virtualpanel_query(s, vp_name)
-    print(vp_id)
     return jsonify(vp_id)
+
+@app.route('/virtualpanels/remove',  methods=['POST'])
+@login_required
+def remove_vp():
+    """
+
+    :return:
+    """
+    vp_name = request.json['vp_name']
+    remove_virtualpanel_query(s, vp_name)
+    return jsonify('complete')
+
 
 @app.route('/virtualpanels/select', methods=['POST'])
 @login_required
