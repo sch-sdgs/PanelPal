@@ -417,6 +417,17 @@ def user_admin():
     table = ItemTableUsers(result, classes=['table', 'table-striped'])
     return render_template('users.html',form=form,table=table)
 
+@app.route('/panels/add_pref_tx', methods=['POST'])
+@login_required
+def add_pref_tx():
+    """
+
+    :return:
+    """
+    gene_id = request.args.get('gene_id')
+    tx = get_tx_by_gene_id(s, gene_id)
+    return jsonify(tx)
+
 @app.route('/admin/user/admin',methods=['GET', 'POST'])
 @login_required
 @admin_required
