@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<div class="wrapper">
+<form action="{{ url_for('edit_permissions_admin') }}" method="POST" class="form-permissions">
+    <h2>Edit User Permissions</h2><br>
+    Tick boxes and click "Submit Changes" to give users permission to certain projects.<br><br>
+    <table class="table table-striped">
+        <thead>
+        <th>
+            User
+        </th>
+        <th>
+            Projects
+        </th>
+
+        </thead>
+        {% for username in permissions %}
+        <tr>
+            <td>
+                {{ username }}
+            </td>
+            <td>
+                <div class="form-group">
+                    {% for project_id in permissions[username] %}
+
+
+                    <label>{{ permissions[username][project_id]["name"] }} </label>
+
+                    <input value="{{username}}_{{project_id}}" name="check" id="checkbox" type="checkbox" {{
+                           permissions[username][project_id]['checked'] }}>
+
+                    {% endfor %}
+                </div>
+            </td>
+
+
+        </tr>
+
+        {% endfor %}
+
+    </table>
+        <div class="form-group">
+        <input class="btn btn-primary" type="submit" value="Submit Changes">
+    </div>
+
+
+</form>
+</div>
+{% endblock %}

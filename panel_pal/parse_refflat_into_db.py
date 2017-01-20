@@ -21,35 +21,42 @@ def create_tables(c):
     c.execute('''CREATE TABLE regions
         (id INTEGER PRIMARY KEY AUTOINCREMENT, chrom CHAR(4), start INTEGER, end INTEGER, name VARCHAR(50), CONSTRAINT unq UNIQUE (chrom,start,end))''')
 
+    c.execute('''CREATE UNIQUE INDEX genes_index
+            on genes (name);''')
+    c.execute('''CREATE UNIQUE INDEX tx_index
+        on tx (accession);''')
+    c.execute('''CREATE INDEX exons_index
+        on exons (region_id);''')
+    c.execute('''CREATE INDEX regions_index
+        on regions (start);''')
 
 def parse_reflat(c,refflat):
     reader = Reader(filename=refflat)
     for record in reader:
-        gene = record.gene
-        c.execute("INSERT OR IGNORE INTO genes(name) VALUES (?)",(gene,))
-        c.execute("SELECT id FROM genes WHERE name=?",(gene,))
-        gene_id = c.fetchone()[0]
-        tx = record.transcript
-        strand = record.strand
-        txStart = record.txStart
-        txEnd = record.txEnd
-        cdsStart = record.cdsStart
-        cdsEnd = record.cdsEnd
-        c.execute("INSERT OR IGNORE INTO tx(gene_id, strand, accession, tx_start, tx_end, cds_start, cds_end) VALUES (?,?,?,?,?,?,?)", (gene_id, strand, tx, txStart, txEnd, cdsStart, cdsEnd))
-        c.execute("SELECT id FROM tx WHERE accession=?", (tx,))
-        tx_id = c.fetchone()[0]
-        for exon in record.exons:
-            start = exon._start
-            end = exon._end
-            chrom = exon._chr
-            number = exon._number
-            c.execute("INSERT OR IGNORE INTO regions(chrom,start,end) VALUES (?,?,?)",
-                      (chrom, start, end))
-            c.execute("SELECT id FROM regions WHERE chrom=? AND start=? AND end=?", (chrom,start,end,))
-            region_id = c.fetchone()[0]
+        if record.transcript.startswith('NM_'):
+            gene = record.gene
+            c.execute("INSERT OR IGNORE INTO genes(name) VALUES (?)",(gene,))
+            c.execute("SELECT id FROM genes WHERE name=?",(gene,))
+            gene_id = c.fetchone()[0]
+            tx = record.transcript
+            strand = record.strand
+            txStart = record.txStart
+            txEnd = record.txEnd
+            cdsStart = record.cdsStart
+            cdsEnd = record.cdsEnd
+            c.execute("INSERT OR IGNORE INTO tx(gene_id, strand, accession, tx_start, tx_end, cds_start, cds_end) VALUES (?,?,?,?,?,?,?)", (gene_id, strand, tx, txStart, txEnd, cdsStart, cdsEnd))
             c.execute("SELECT id FROM tx WHERE accession=?", (tx,))
             tx_id = c.fetchone()[0]
-            c.execute("INSERT OR IGNORE INTO exons(tx_id,region_id,number) VALUES (?,?,?)", (tx_id, region_id, number,))
+            for exon in record.exons:
+                start = exon._start
+                end = exon._end
+                chrom = exon._chr
+                number = exon._number
+                c.execute("INSERT OR IGNORE INTO regions(chrom,start,end) VALUES (?,?,?)",
+                          (chrom, start, end))
+                c.execute("SELECT id FROM regions WHERE chrom=? AND start=? AND end=?", (chrom,start,end,))
+                region_id = c.fetchone()[0]
+                c.execute("INSERT OR IGNORE INTO exons(tx_id,region_id,number) VALUES (?,?,?)", (tx_id, region_id, number,))
 
     c.close()
 

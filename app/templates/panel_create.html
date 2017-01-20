@@ -1,7 +1,13 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<h2>Create Panel</h2>
+
+<div class="wrapper">
+
+
+
+<form action="{{ url_for('create_panel') }}" method="POST" class="form-create">
+    <h2>Create Panel</h2>
 
 {% if message %}
 <div class="alert alert-danger"><strong>Oh Snap!</strong> {{ message }}</div>
@@ -11,13 +17,6 @@
 <div class="alert alert-danger"><strong>Oh Snap!</strong> {{ message }}</div>
 {% endfor %}
 
-<div class="container">
-
-  <div class="row">
-
-    <div class="col-lg-5">
-
-<form action="{{ url_for('create_panel') }}" method="POST" class="form">
     <div class="form-group">
         {{ form.project.label }}
         {{ form.project(class_="form-control") }}
@@ -36,7 +35,6 @@
             <button class="btn btn-primary" type="button" id="add">Add</button>
         </span>
     </div>
-
     <div class="panel panel-default restrict" id="genelabels">
         <div class="panel-heading"><h5>Genes Selected</h5></div>
         <div class="panel-body" id="addhere"></div>
@@ -47,9 +45,7 @@
     </div>
 </form>
 
-    </div>
 
-  </div>
 
 </div>
 {% endblock %}

@@ -1,19 +1,36 @@
-from app import db
-
+from app.main import db
+from sqlalchemy.orm import relationship
 
 class Users(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=False)
+    admin = db.Column(db.Integer)
+
+    def __init__(self, username, admin):
+        self.username = username
+        self.admin = admin
 
     def __repr__(self):
         return '<Users %r>' % (self.username)
 
+class UserRelationships(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    user = db.relationship("Users")
+    def __init__(self,user_id,project_id):
+        self.user_id = user_id
+        self.project_id = project_id
+
+    def __repr__(self):
+        return '<id %r>' % (self.id)
 
 class Projects(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True)
     panels = db.relationship('Panels', backref='author', lazy='dynamic')
     pref_tx = db.relationship('PrefTx', backref='author', lazy='dynamic')
+    user = relationship("UserRelationships")
 
     def __init__(self,name):
         self.name = name
@@ -28,11 +45,13 @@ class Panels(db.Model):
     current_version = db.Column(db.Integer)
     versions = db.relationship('Versions', backref='author', lazy='dynamic')
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    locked = db.Column(db.Integer,db.ForeignKey('users.id'))
 
-    def __init__(self, name, project_id, current_version):
+    def __init__(self, name, project_id, current_version, locked):
         self.name = name
         self.project_id = project_id
         self.current_version = current_version
+        self.locked = locked
 
     def __repr__(self):
         return '<name %r>' % (self.name)
@@ -40,16 +59,33 @@ class Panels(db.Model):
 
 class PrefTx(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    tx_id = db.Column(db.Integer, db.ForeignKey('tx.id'))
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    current_version = db.Column(db.Integer)
+    versions = db.relationship('PrefTxVersions', backref='author', lazy='dynamic')
 
-    def __init__(self, project_id, tx_id):
+    def __init__(self, project_id, current_version):
         self.project_id = project_id
-        self.tx_id - tx_id
+        self.current_version = current_version
 
     def __repr__(self):
         return '<id %r>' % (self.id)
 
+class PrefTxVersions(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tx_id = db.Column(db.Integer, db.ForeignKey('tx.id'))
+    pref_tx_id = db.Column(db.Integer, db.ForeignKey('pref_tx.id'))
+    intro = db.Column(db.Integer)
+    last = db.Column(db.Integer)
+
+    def __init__(self, project_id, tx_id, pref_tx_id, intro, last):
+        self.project_id = project_id
+        self.tx_id = tx_id
+        self.pref_tx_id = pref_tx_id
+        self.intro = intro
+        self.last = last
+
+    def __repr__(self):
+        return '<id %r>' % (self.id)
 
 class VPRelationships(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -58,11 +94,11 @@ class VPRelationships(db.Model):
     version_id = db.Column(db.Integer, db.ForeignKey('versions.id'))
     vpanel_id = db.Column(db.Integer, db.ForeignKey('virtual_panels.id'))
 
-    def __init__(self, name, current_version, version_id, vpanel_id):
-        self.name = name
-        self.current_version = current_version
+    def __init__(self, version_id, vpanel_id, intro, last):
+        self.into = intro
+        self.last = last
         self.version_id = version_id
-        self.panel_id = vpanel_id
+        self.vpanel_id = vpanel_id
 
     def __repr__(self):
         return '<name %r>' % (self.name)
@@ -178,3 +214,4 @@ class Regions(db.Model):
 
     def __repr__(self):
         return '<id %r>' % (self.id)
+

@@ -1,5 +1,21 @@
 {% extends "layout.html" %}
- 
+
+{% block popup %}
+<div id="areyousure" class="modal ui-front">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                <span class="glyphicon glyphicon-alert" aria-hidden="true"></span>
+                <h4>Are Your Sure You Want to Delete {{ project_name }}</h4>
+                <a href="{{ url_for('view_projects') }}/delete?id={{ project_id }}&check=True" class="btn btn-danger" role="button">Yes</a>
+                <button class="btn btn-success btn-md" data-toggle="modal" data-target="#areyousure">No Way, Jose</button>
+                <p></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
 {% block content %}
   <h2>Projects</h2>
 

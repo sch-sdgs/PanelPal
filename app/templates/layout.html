@@ -1,55 +1,421 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Panel Pal</title>
+    <title>PanelPal</title>
+    <link rel="shortcut icon" href="/favicon.ico}" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
-    <script src="/static/js/bootstrap.min.js"></script>
+    <!--<script src="/static/js/bootstrap.min.js"></script>-->
     <link rel="stylesheet" href="//code.jquery.com/ui/1.12.0/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
     <script src="https://code.jquery.com/ui/1.12.0/jquery-ui.js"></script>
-    <script type="text/javascript">
-//        $(document).ready(function () {
-//            var unsaved = false;
-//            $(":input").change(function () { //trigers change in all input fields including text type
-//                unsaved = true;
-//            });
-//            $('#mySubmitButton').click(function () {
-//                unsaved = false;
-//            });
-//            $('#myDeleteButton').click(function () {
-//                unsaved = false;
-//            });
-//
-//            function unloadPage() {
-//                if (unsaved) {
-//                    return "You have unsaved changes on this page. Do you want to leave this page and discard your changes or stay on this page?";
-//                }
-//            }
-//
-//            window.onbeforeunload = unloadPage;
-//        });
+
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <!--<link rel="stylesheet" href="/static/css/bootstrap-theme.min.css">-->
+    <link rel="stylesheet" href="/static/css/panel_pal.css">
+
+    <!-- Latest compiled JavaScript -->
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
+
+    <script>
+        $(document).on('click', '.glyphicon', function (j) {
+
+            $('#message').children().remove();
+
+            if($('.glyphicon-new-selected').attr('href') == '#initialise' && $("#vpanelname").attr("disabled") != "disabled")
+            {
+
+                var vp_name = $('#vpanelname').val();
+                var dict = {
+                            "vp_name": vp_name
+                            };
+                var data=JSON.stringify(dict);
+
+                $.ajax({
+                    type:"POST",
+                    url:"{{url_for('add_vp')}}",
+                    data:data,
+                    dataType:"json",
+                    contentType:"application/json",
+                    success:function(response){
+                        if(response == -1 && $('#vpanelname').val().length ==0)
+                        {
+                            var new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't added a panel name</div>";
+                            $('#message').append(new_html)
+                        }
+                        else if (response == -1)
+                        {
+                            var new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
+                            $('#message').append(new_html)
+                        }
+                        else
+                        {
+                            var newURL = "{{ url_for('view_virtual_panels') }}?vp_id=" + response;
+                            $('#main').attr('action', newURL);
+                            $('#main').attr('name', response);
+                            $('.glyphicon-list-alt').attr('href', '#select_genes');
+                            $('.glyphicon-th-large').attr('href', '#select_regions');
+                            $('.glyphicon-ok').attr('href', '#submit_vp');
+                            $("#vpanelname").attr("disabled", "disabled");
+                            $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
+                            $(j.target).removeClass('glyphicon-new').addClass('glyphicon-new-selected').blur();
+                            $(j.target).tab('show');
+                        }
+                    },
+                    error: function(response){
+                        console.log($(response).responseText);
+                        console.log('Error');}
+
+                    });
+            }
+            else if ($(j.target).hasClass('glyphicon-new') || $(j.target).hasClass('glyphicon-new-selected') ) {
+                $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
+                $(this).addClass('glyphicon-new-selected').removeClass('glyphicon-new').blur();
+            }
+        });
     </script>
+
+    <script>
+        $(document).on('click', '.next-step, .prev-step', function (e) {
+            var activeTab = $('.tab-pane.active');
+            $('#message').children().remove();
+            if($(activeTab).attr('id') == "initialise" && $("#vpanelname").attr("disabled") != "disabled")
+            {
+                if($('#panel').val() == '__None' || $('#vpanelname').val().length == 0)
+                {
+                    var new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't added a panel name</div>";
+                    $('#message').append(new_html);
+                    return;
+                }
+                else
+                {
+                    var vp_name = $('#vpanelname').val();
+                    var dict = {
+                                "vp_name": vp_name
+                                };
+                    var data=JSON.stringify(dict);
+
+                    $.ajax({
+                        type:"POST",
+                        url:"{{url_for('add_vp')}}",
+                        data:data,
+                        dataType:"json",
+                        contentType:"application/json",
+                        success:function(response){
+                        if(response == -1 && $('#vpanelname').val().length ==0)
+                        {
+                            var new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't added a panel name</div>";
+                            $('#message').append(new_html)
+                        }
+                        else if (response == -1)
+                        {
+                            var new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
+                            $('#message').append(new_html)
+                        }
+                        else {
+                            var newURL = "{{ url_for('view_virtual_panels') }}?vp_id=" + response;
+                            $('#main').attr('action', newURL);
+                            $('#main').attr('id', response);
+                            $("#vpanelname").attr("disabled", "disabled");
+                            $('.glyphicon-list-alt').attr('href', '#select_genes');
+                            $('.glyphicon-th-large').attr('href', '#select_regions');
+                            $('.glyphicon-ok').attr('href', '#submit_vp');
+                            $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
+
+                            if ($(e.target).hasClass('next-step')) {
+                                var nextTab = activeTab.next('.tab-pane').attr('id');
+                                $('[href="#' + nextTab + '"]').addClass('glyphicon-new-selected').removeClass('glyphicon-new');
+                                $('[href="#' + nextTab + '"]').tab('show');
+                            }
+                            else {
+                                var prevTab = activeTab.prev('.tab-pane').attr('id');
+                                $('[href="#' + prevTab + '"]').addClass('glyphicon-new-selected').removeClass('glyphicon-new');
+                                $('[href="#' + prevTab + '"]').tab('show');
+                            }
+                        }
+                        },
+                        error: function(response){
+                            console.log($(response).responseText);
+                            console.log('Error');
+                            var new_html = "<div class=\"alert alert-danger\"><strong>Oopsie Daisy!</strong> Something went wrong there...</div>";
+                            $('#message').append(new_html)
+                        }
+
+                        });
+                }
+            }
+            else {
+                $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
+
+                if ($(e.target).hasClass('next-step')) {
+                    var nextTab = activeTab.next('.tab-pane').attr('id');
+                    $('[href="#' + nextTab + '"]').addClass('glyphicon-new-selected').removeClass('glyphicon-new');
+                    $('[href="#' + nextTab + '"]').tab('show');
+                }
+                else {
+                    var prevTab = activeTab.prev('.tab-pane').attr('id');
+                    $('[href="#' + prevTab + '"]').addClass('glyphicon-new-selected').removeClass('glyphicon-new');
+                    $('[href="#' + prevTab + '"]').tab('show');
+                }
+            }
+        });
+    </script>
+
+    <script>
+        $(document).on('change', '#panel', function(e){
+            $('#geneselector').children().remove();
+            $('#loading').append("<div class=\"col-md-5\"></div><div class=\"loader col-md-2\"></div><div class=\"col-md-5\"></div>");
+
+            var panel_id = $('#panel').val();
+            var dict = {
+                        "panel": panel_id
+                        };
+            var data=JSON.stringify(dict);
+
+            $.ajax({
+                type:"POST",
+                url:"{{url_for('select_vp_genes')}}",
+                data:data,
+                dataType:"json",
+                contentType:"application/json",
+                success:function(response){
+                    $('#loading').children().remove();
+                    $('#geneselector').append(response)
+                },
+                error: function(response){
+                    console.log($(response).responseText);
+                    console.log('Error');}
+
+                });
+        });
+    </script>
+
+    <script>
+        $(document).on('click', '.label-gene', function () {
+            var target = $(event.target);
+            console.log($(target));
+            var gene_switch;
+            if($(target).is("button"))
+            {
+                console.log('button');
+                var geneName = $(target).attr('name');
+                console.log(geneName);
+                $('.label-gene').each(function (i, obj) {
+                    if($(obj).attr('for') == geneName)
+                    {
+                        gene_switch = $(obj);
+                        return false;
+                    }
+                });
+                //var gene_switch = $('[for="' + geneName +'"]')
+            }
+            else {
+                var geneName = $(event.target).attr('for');
+                gene_switch = $(event.target)
+            }
+            console.log(geneName);
+            console.log($(gene_switch));
+            if($(gene_switch).attr('checked') == 'checked')//uncheck and remove gene button
+            {
+                console.log('checked');
+                $(gene_switch).removeAttr('checked');
+                $('[name="genebutton"]').each(function (i, obj) {
+                    if ($(obj).attr('data-name') == geneName)
+                    {
+                        $(obj).remove();
+                        if($('#remove-gene').attr('name') == geneName)
+                        {
+                            $('#regions').children().remove();
+                        }
+                        return false;
+                    }
+                })
+            }
+            else
+            {
+                $(event.target).attr('checked', 'checked');
+                var geneId = $("#" + geneName).attr('name');
+                $('#genelist').append("<button name=\"genebutton\" type=\"button\" class=\"btn btn-danger btn-md btngene\" data-name=\"" + geneName + "\" data-id=\"" + geneId + "\"><span class='glyphicon glyphicon-pencil'></span> " + geneName + "</button> ")
+            }
+        });
+    </script>
+
+    <script>
+        $(document).on('click', '[name="genebutton"]', function (request) {
+            $('#regions').children().remove();
+            $('#regions').append("<div class=\"col-md-5\"></div><div class=\"loader col-md-2\"></div><div class=\"col-md-5\"></div>");
+            var element = $(request.currentTarget);
+            var gene_id = $(element).attr('data-id');
+            var gene_name = $(element).attr('data-name');
+            var panel_id = $('#panel').val();
+            var dict = {
+                "panel_id": panel_id,
+                "gene_id": gene_id,
+                "gene_name": gene_name
+            };
+            var data=JSON.stringify(dict);
+
+            $.ajax({
+                type:"POST",
+                url:"{{url_for('select_vp_regions')}}",
+                data:data,
+                dataType:"json",
+                contentType:"application/json",
+                success:function(response){
+                    $('#regions').children().remove();
+                    $('#regions').append(response)
+                },
+                error: function(response){
+                    console.log($(response).responseText);
+                    console.log('Error');}
+
+                });
+            });
+
+
+    </script>
+
+    <script>
+        $(document).on('click', ".label-region", function (request) {
+            var obj = $(request.currentTarget);
+            if($(obj).attr('checked') == 'checked')
+            {
+                $(obj).removeAttr('checked');
+                if($(".label-selectall").attr('checked') == 'checked')
+                {
+                    $(".label-selectall").attr('uncheck-all', 'false');
+                    $(".label-selectall").trigger('click')
+                }
+            }
+            else
+            {
+                $(obj).attr('checked', 'checked')
+            }
+
+        });
+    </script>
+
+    <script>
+
+        $(document).on('click', ".label-selectall", function () {
+
+            if ($(".label-selectall").attr('uncheck-all') == 'false')//if one
+            {
+                $(".label-selectall").removeAttr('checked');
+                $(".label-selectall").removeAttr('uncheck-all')
+            }
+            else if ($(".label-selectall").attr('checked') == 'checked') //if select all has been clicked off
+            {
+                $(".label-selectall").removeAttr('checked'); //remove the checked attribute
+
+                $(".label-region").each(function(i, obj)//loop through all elements with .label-region class
+                {
+                    if ($(obj).attr('checked') == 'checked')//if object is checked turn it off
+                    {
+                        $(obj).trigger('click');
+                    }
+                    else//do nothing
+                    {
+
+                    }
+                });
+            }
+            else //if select all has been clicked on
+            {
+                $(".label-selectall").attr('checked', 'checked');//add checked attribute
+                console.log('hello');
+
+                $(".label-region").each(function(i, obj)//loop through all elements with .label-region class
+                {
+                    if ($(obj).attr('checked') == 'checked')//if object is selected do nothing
+                    {
+
+                    }
+                    else //click object to on
+                    {
+                        $(obj).trigger('click')
+                    }
+                });
+
+            }
+
+        });
+    </script>
+
+    <script>
+        $(document).on('click', "#remove-gene", function () {
+            var geneName = $('#remove-gene').attr('name');
+            $('.label-gene').each(function (i, obj) {
+                    if ($(obj).attr('for') == geneName)
+                    {
+                        $(obj).trigger('click');
+                        return false;
+                    }
+                });
+            $('#regions').children().remove();
+        });
+    </script>
+
+    <script>
+        $(document).on('click', "#add-regions", function () {
+            var geneName = $('#add-regions').attr('name');
+            var ids = [];
+            var vpanel_id = $('[name="main"]').attr('id');
+            $('.label-region').each(function (i, obj) {
+                if($(obj).attr('checked') == 'checked')
+                {
+                    ids.push($(obj).attr('for'));
+                }
+            });
+
+            console.log(ids);
+
+            var dict = {
+                "vp_id": vpanel_id,
+                "ids": ids
+            };
+            var data=JSON.stringify(dict);
+            console.log(data)
+            $.ajax({
+                type:"POST",
+                url:"{{url_for('add_vp_regions')}}",
+                data:data,
+                dataType:"json",
+                contentType:"application/json",
+                success:function(){
+                    $('[name="genebutton"]').each(function (i, obj) {
+                        if($(obj).attr('data-name') == geneName)
+                        {
+                            $(obj).children('.glyphicon-pencil').removeClass('glyphicon-pencil').addClass('glyphicon-ok').blur();
+                            $(obj).removeClass('btn-danger').addClass('btn-success').blur();
+                        }
+                    })
+                    $('#regions').children().remove();
+                },
+                error: function(response){
+                    console.log($(response));
+                    console.log('Error');}
+
+                });
+        });
+    </script>
+
     <script>
 
         $(document).ready(function () {
 
-
+            $('[data-toggle="tooltip"]').tooltip();
 
             $("#genelabels").hide();
-            // If JS enabled, disable main input
-            //$("#listgenes").prop('disabled', true);
-            // $("#responsibilities").addClass("hidden");
-
-            // If JS enabled then add fields
-            //$("#resp").append('<input type="button" class="btn btn-primary" value="Add" id="add"> ');
 
             // Add items to input field
             var eachline = '';
             $("#add").click(function () {
 
-                          $("#genelabels").show();
+                $("#genelabels").show();
                 var lines = $('#genes').val().split('\n');
                 var lines2 = $('#listgenes').val().split('\n');
 
@@ -59,15 +425,10 @@
                     }
                 }
 
-                //$('#listgenes').text($("<div>" + eachline + "</div>").text())
+                $("<h3><span class='label label-warning test'>" + lines + "</span></h3>").appendTo('#addhere');
 
-                $("<h3><span class='label label-warning test'>"+lines+"</span></h3>").appendTo('#addhere');
-                //$('#listgenes').val($(lines).text());
-                //document.getElementById('listgenes').innerHTML = lines;
                 var TheTextBox = document.getElementById("listgenes");
-                TheTextBox.value = TheTextBox.value + lines+",";
-                //$("<strong>"+lines+" </strong>").appendTo('#addhere');
-
+                TheTextBox.value = TheTextBox.value + lines + ",";
 
                 $('#genes').val('');
             });
@@ -90,13 +451,20 @@
             });
         })
     </script>
+    {% if delete == True %}
+    <script type="text/javascript">
+        $(document).ready(function () {
+
+            $('#areyousure').modal('show');
+
+        });
+    </script>
+    {% endif %}
 </head>
 
-<link rel="stylesheet" href="/static/css/bootstrap.min.css">
-<link rel="stylesheet" href="/static/css/bootstrap-theme.min.css">
-<link rel="stylesheet" href="/static/css/panel_pal.css">
 
 <body>
+
 
 <nav class="navbar navbar-default navbar-fixed-top">
     <div class="container">
@@ -107,9 +475,9 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="{{ url_for('index') }}"><span class="glyphicon glyphicon-list-alt"></span>
-                Panel Pal</a>
+            </button><!---->
+            <a class="navbar-brand" href="{{ url_for('index') }}"><span class="glyphicon glyphicon-th-list"></span>
+                PanelPal</a>
         </div>
         <div id="navbar" class="collapse navbar-collapse">
             <ul class="nav navbar-nav">
@@ -119,9 +487,9 @@
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">Projects <span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="{{ url_for('view_projects') }}">View Projects</a>
+                        <li><a href="{{ url_for('view_projects') }}">View Projects</a></li>
                         <li role="separator" class="divider"></li>
-                        <li><a href="{{ url_for('add_projects') }}">Add Projects</a></li>
+                        <li><a href="{{ url_for('add_projects') }}">Create Project</a></li>
                     </ul>
                 </li>
 
@@ -130,12 +498,12 @@
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">Panels <span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="{{ url_for('view_panels') }}">View Panels</a>
+                        <li><a href="{{ url_for('view_panels') }}">View Panels</a></li>
                         <li role="separator" class="divider"></li>
                         <li><a href="/panels/create">Create Panel</a></li>
-                        <li><a href="#">Create Panel From Panel App</a></li>
-                        <li role="separator" class="divider"></li>
-                        <li><a href="#">Export Panel</a></li>
+                        <!--<li><a href="#">Create Panel From Panel App</a></li>-->
+                        <!--<li role="separator" class="divider"></li>-->
+                        <!--<li><a href="#">Export Panel</a></li>-->
                     </ul>
                 </li>
 
@@ -143,24 +511,69 @@
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">Virtual Panels <span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="/virtualpanels">View Virtual Panels</a>
+                        <li><a href="/virtualpanels">View Virtual Panels</a></li>
                         <li role="separator" class="divider"></li>
-                        <li><a href="/virtualpanels/create">Create a Virtual Panel</a></li>
-                        <li role="separator" class="divider"></li>
-                        <li><a href="#">Export Virtual Panel</a></li>
+                        <li><a href="/virtualpanels/wizard">Create a Virtual Panel</a></li>
+                        <!--<li role="separator" class="divider"></li>-->
+                        <!--<li><a href="#">Export Virtual Panel</a></li>-->
                     </ul>
                 </li>
-
+                {% if admin == True %}
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                       aria-expanded="false">Preferred TX <span class="caret"></span></a>
+                       aria-expanded="false">Admin <span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="">View Transcripts</a>
+                        <li><a href="/admin/user">User Admin</a></li>
                         <li role="separator" class="divider"></li>
+                        <li><a href="/edit_permissions_admin">Permissions</a></li>
+                        <!--<li role="separator" class="divider"></li>-->
+                        <!--<li><a href="/virtualpanels/create">Create a Virtual Panel</a></li>-->
+                        <!--<li role="separator" class="divider"></li>-->
+                        <!--<li><a href="#">Export Virtual Panel</a></li>-->
                     </ul>
                 </li>
-                <li><a href="http://10.182.131.21:5001/api/spec.html">API</a></li>
+                {% endif %}
+                <!--<li class="dropdown">-->
+                    <!--<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"-->
+                       <!--aria-expanded="false">Preferred TX <span class="caret"></span></a>-->
+                    <!--<ul class="dropdown-menu">-->
+                        <!--<li><a href="">View Transcripts</a>-->
+                        <!--<li role="separator" class="divider"></li>-->
+                    <!--</ul>-->
+                <!--</li>-->
+
+                <!--<li class="dropdown">-->
+                    <!--<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"-->
+                       <!--aria-expanded="false">Polylists<span class="caret"></span></a>-->
+                    <!--<ul class="dropdown-menu">-->
+                        <!--<li><a href="">View Transcripts</a>-->
+                        <!--<li role="separator" class="divider"></li>-->
+                    <!--</ul>-->
+                <!--</li>-->
+
+
+                <li><a href="/api/spec.html"><span class="glyphicon glyphicon-cog"></span> API</a></li>
             </ul>
+
+            <form class="navbar-form navbar-right" role="search">
+                {% if logged_in == True %}
+                    {% if admin == True %}
+                        <a href="{{ url_for('logout')}}" class="btn btn-success" role="button">Logout <strong>{{ userid
+                            }} </strong> </a>
+                    {% else %}
+                    <a href="{{ url_for('logout')}}" class="btn btn-success" role="button">Logout <strong>{{ userid
+                                }}</strong></a>
+                    {% endif %}
+                {% else %}
+                <a href="{{ url_for('login')}}" class="btn btn-primary" role="button">Login</a>
+                {% endif %}
+            </form>
+            <!--<form class="navbar-form navbar-right" role="search">-->
+  <!--<div class="form-group">-->
+    <!--<input type="text" class="form-control" placeholder="Search">-->
+  <!--</div>-->
+  <!--<button type="submit" class="btn btn-default">Submit</button>-->
+<!--</form>-->
         </div><!--/.nav-collapse -->
     </div>
 </nav>

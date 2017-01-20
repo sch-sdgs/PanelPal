@@ -23,7 +23,7 @@ def create_db(conn):
         CREATE TABLE projects
             (id INTEGER PRIMARY KEY, name VARCHAR(50), UNIQUE(name));
         CREATE TABLE panels
-            (id INTEGER PRIMARY KEY, project_id INTEGER, name VARCHAR(50), current_version INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id), UNIQUE(name));
+            (id INTEGER PRIMARY KEY, project_id INTEGER, name VARCHAR(50), locked INTEGER, current_version INTEGER, FOREIGN KEY(locked) REFERENCES users(id), FOREIGN KEY(project_id) REFERENCES projects(id), UNIQUE(name));
         CREATE TABLE versions
             (id INTEGER PRIMARY KEY, intro INTEGER, last INTEGER, panel_id INTEGER, region_id INTEGER, comment VARCHAR(100), extension_3 INTEGER, extension_5 INTEGER, FOREIGN KEY(panel_id) REFERENCES panels(id), FOREIGN KEY(region_id) REFERENCES regions(id));
         CREATE TABLE VP_relationships
@@ -35,7 +35,7 @@ def create_db(conn):
         CREATE TABLE pref_tx_versions
             (id INTEGER PRIMARY KEY, pref_tx_id INTEGER, tx_id INTEGER, intro INTEGER, last INTEGER, FOREIGN KEY(pref_tx_id) REFERENCES pref_tx(id), FOREIGN KEY(tx_id) REFERENCES tx(id));
         CREATE TABLE users
-            (id INTEGER PRIMARY KEY, username varchar(20), UNIQUE(username));
+            (id INTEGER PRIMARY KEY, username varchar(20), admin INTEGER,  UNIQUE(username));
         CREATE TABLE user_relationships
             (id INTEGER PRIMARY KEY, user_id INTEGER, project_id INTEGER, FOREIGN KEY(user_id) REFERENCES users(id), FOREIGN KEY(project_id) REFERENCES projects(id));
         CREATE TABLE ref_logtable
