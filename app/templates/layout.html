@@ -442,6 +442,10 @@
 
         $(document).ready(function () {
 
+            setTimeout(function() {
+                $('#message').fadeOut('slow');
+            }, 2000); // <-- time in milliseconds
+
             $('[data-toggle="tooltip"]').tooltip();
 
             $("#genelabels").hide();
@@ -516,8 +520,6 @@
         </div>
         <div id="navbar" class="collapse navbar-collapse">
             <ul class="nav navbar-nav">
-                <li><a href="{{ url_for('index') }}">Home</a></li>
-
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">Projects <span class="caret"></span></a>
@@ -560,7 +562,11 @@
                     <ul class="dropdown-menu">
                         <li><a href="/admin/user">User Admin</a></li>
                         <li role="separator" class="divider"></li>
-                        <li><a href="/edit_permissions_admin">Permissions</a></li>
+                        <li><a href="/admin/permissions">Permissions</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="/admin/logs">Logs</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="/admin/locked">Locked</a></li>
                         <!--<li role="separator" class="divider"></li>-->
                         <!--<li><a href="/virtualpanels/create">Create a Virtual Panel</a></li>-->
                         <!--<li role="separator" class="divider"></li>-->

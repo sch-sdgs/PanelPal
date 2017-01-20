@@ -1,6 +1,32 @@
 from sqlalchemy import and_, or_, desc, func, case, cast, String, text, exc
-
+from flask.ext.login import current_user
 from app.models import *
+from functools import wraps
+import logging
+from logging.handlers import TimedRotatingFileHandler
+from app.main import app
+import inspect
+import itertools
+
+handler = TimedRotatingFileHandler('PanelPal.log', when="d",interval=1,backupCount=30)
+handler.setLevel(logging.INFO)
+
+def message(f):
+    @wraps(f)
+    def decorated_function(*args,**kwargs):
+        method = f.__name__
+
+        formatter = logging.Formatter('%(levelname)s|' + current_user.id + '|%(asctime)s|%(message)s')
+        handler.setFormatter(formatter)
+        app.logger.addHandler(handler)
+
+        args_name = inspect.getargspec(f)[0]
+        args_dict = dict(itertools.izip(args_name, args))
+
+        del args_dict['s']
+        app.logger.info(method + "|" + str(args_dict))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 def get_virtual_panels_simple(s):
@@ -231,7 +257,7 @@ def get_current_vp_version(s, panelid):
     for i in version:
         return i.current_version
 
-
+@message
 def create_panel_query(s, projectid, name):
     """
     creates an entry in the panels table ready for regions(versions) to be added
@@ -246,6 +272,7 @@ def create_panel_query(s, projectid, name):
     s.commit()
     return panel.id
 
+@message
 def create_virtualpanel_query(s, name):
     """
     creates a virtual panel in the virtual panels table and adds the vp_relationship to the broad panel
@@ -262,6 +289,7 @@ def create_virtualpanel_query(s, name):
     except exc.IntegrityError:
         return -1
 
+@message
 def remove_virtualpanel_query(s, name):
     """
 
@@ -273,6 +301,7 @@ def remove_virtualpanel_query(s, name):
     s.commit()
     return True
 
+@message
 def add_region_to_panel(s, regionid, panelid):
     """
     called by other query method - this method DOES NOT COMMIT CHANGES TO THE DATABASE
@@ -288,10 +317,10 @@ def add_region_to_panel(s, regionid, panelid):
     version = Versions(intro=int(current) + 1, last=None, panel_id=panelid, region_id=regionid, comment=None,
                        extension_3=None, extension_5=None)
     s.add(version)
-    s.commit()
+    # s.commit()
     return version.id
 
-
+@message
 def add_genes_to_panel(s, panelid, gene):
     """
     given a gene and a panelid this query gets all the regions for the gene and calls add_region_to_panel to add them
@@ -310,6 +339,7 @@ def add_genes_to_panel(s, panelid, gene):
         add_region_to_panel(s, i.id, panelid)
     s.commit()
 
+@message
 def add_version_to_vp(s, vp_id, version_id):
     """
 
@@ -323,6 +353,7 @@ def add_version_to_vp(s, vp_id, version_id):
     s.commit()
     return vp_relationship.id
 
+@message
 def make_panel_live(s, panelid, new_version, username):
     """
     makes a panel line
@@ -340,6 +371,7 @@ def make_panel_live(s, panelid, new_version, username):
     else:
         return False
 
+@message
 def make_preftx_live(s, preftx_id, new_version, username):
     """
     makes a panel line
@@ -373,7 +405,7 @@ def get_project_id_by_preftx_id(s, preftx_id):
     for i in project:
         return i.project_id
 
-
+@message
 def make_vp_panel_live(s, panelid, new_version):
     """
     makes a panel line
@@ -397,7 +429,8 @@ def get_preftx_by_project_id(s, id):
     :param id: project id
     :return: sql alchemy object
     """
-
+    print "QUERY"
+    print id
     preftx = s.query(Genes, Tx, PrefTxVersions, PrefTx, Projects). \
         filter(and_(PrefTx.project_id == id, \
                     or_(PrefTxVersions.last >= PrefTx.current_version, PrefTxVersions.last == None), \
@@ -560,7 +593,9 @@ def get_regions_by_geneid(s, geneid, panelid):
     regions = s.execute(sql, values)
     return regions
 
+@message
 def create_project(s, name, user):
+    print name
     project = Projects(name=name)
     s.add(project)
     s.flush()
@@ -572,7 +607,7 @@ def create_project(s, name, user):
     s.commit()
     return project.id
 
-
+@message
 def create_preftx_entry(s, project_id):
     """
     DOSEN'T COMMIT DATA TO DB - to be used within another method that does.
@@ -595,7 +630,7 @@ def get_gene_id_from_name(s,gene_name):
     gene = s.query(Genes).filter(Genes.name == gene_name).values(Genes.id)
     for i in gene:
         return i.id
-
+@message
 def add_preftxs_to_panel(s, project_id, tx_ids):
     query = get_preftx_current_version(s, project_id)
     current_version = query[0]
@@ -644,7 +679,7 @@ def get_user_rel_by_project_id(s, project_id):
                                                                   UserRelationships.user_id.label("user_id"))
     return rels
 
-
+@message
 def add_user_project_rel(s, user_id, project_id):
     check = s.query(UserRelationships).filter(
         and_(UserRelationships.user_id == user_id, UserRelationships.project_id == project_id)).count()
@@ -655,10 +690,13 @@ def add_user_project_rel(s, user_id, project_id):
         s.commit()
     return True
 
+@message
 def remove_user_project_rel(s,rel_id):
     s.query(UserRelationships).filter_by(id=rel_id).delete()
     s.commit()
     return True
+
+@message
 def remove_user_project_rel_no_id(s,username,project_id):
     user_id = get_user_id_by_username(s,username)
     rels = s.query(Projects, UserRelationships, Users). \
@@ -693,7 +731,7 @@ def check_user_has_permission(s, username, project_id):
     else:
         return True
 
-
+@message
 def lock_panel(s, username, panel_id):
     user_id = get_user_id_by_username(s, username)
     lock = s.query(Panels).filter_by(id=panel_id).update(
@@ -701,7 +739,7 @@ def lock_panel(s, username, panel_id):
     s.commit()
     return True
 
-
+@message
 def unlock_panel_query(s, panel_id):
     unlock = s.query(Panels).filter_by(id=panel_id).update(
         {Panels.locked: None})
@@ -934,6 +972,7 @@ def get_tx_by_gene_id(s, gene_id):
     return tx
 
 def check_if_admin(s,username):
+
     user_id = get_user_id_by_username(s,username)
     query = s.query(Users).filter(Users.id == user_id).values(Users.admin)
     for i in query:
@@ -942,6 +981,7 @@ def check_if_admin(s,username):
         else:
             return False
 
+@message
 def create_user(s,username):
     user = Users(username=username,admin=0)
     s.add(user)
@@ -952,6 +992,7 @@ def get_users(s):
     users = s.query(Users).order_by(Users.username).values(Users.id,Users.username,Users.admin)
     return users
 
+@message
 def toggle_admin_query(s,user_id):
     query = s.query(Users).filter(Users.id == user_id).values(Users.admin)
     for i in query:
@@ -967,3 +1008,7 @@ def toggle_admin_query(s,user_id):
 def get_all_projects(s):
     projects = s.query(Projects).values(Projects.id,Projects.name)
     return projects
+
+def get_all_locked(s):
+    locked = s.query(Panels,Users).join(Users).filter(Panels.locked != None).values(Panels.name,Users.username,Panels.id.label("id"))
+    return locked

@@ -2,90 +2,95 @@
 
 {% block content %}
 
-    <div class="form-vpgenes">
-        <form id="main" name="main" action="{{ url_for('view_virtual_panels') }}" method="POST">
+<div class="form-vpgenes">
+    <form id="main" name="main" action="{{ url_for('view_virtual_panels') }}" method="POST">
 
-            <center><h2>Virtual Panel Wizard</h2></center>
-            <div class="row">
+        <center><h2>Virtual Panel Wizard</h2></center>
+        <div class="row">
 
-                <div class="line hidden-xs"></div>
-                <div class="process">
-                    <div class="process-row nav nav-tabs">
-                        <div class="col-sm-12 text-center">
-                            <div class="process-step col-sm-3">
-                                <span id="glyphicon-pencil" class="glyphicon glyphicon-new-selected glyphicon-pencil" data-toggle="tab"
+            <div class="line hidden-xs"></div>
+            <div class="process">
+                <div class="process-row nav nav-tabs">
+                    <div class="col-sm-12 text-center">
+                        <div class="process-step col-sm-3">
+                                <span id="glyphicon-pencil" class="glyphicon glyphicon-new-selected glyphicon-pencil"
+                                      data-toggle="tab"
                                       href="#initialise"></span>
-                                <p><small>Virtual Panel Name</small></p>
-                            </div>
-                            <div class="process-step col-sm-3">
-                                <span id="glyphicon-list-alt" class="glyphicon glyphicon-new glyphicon-list-alt" data-toggle="tab"
+                            <p>
+                                <small>Virtual Panel Name</small>
+                            </p>
+                        </div>
+                        <div class="process-step col-sm-3">
+                                <span id="glyphicon-list-alt" class="glyphicon glyphicon-new glyphicon-list-alt"
+                                      data-toggle="tab"
                                       href="#initialise"></span>
-                                <p>
-                                    <small>Genes</small>
-                                </p>
-                            </div>
-                            <div class="process-step col-sm-3">
-                                <span id="glyphicon-th-large" class="glyphicon glyphicon-new glyphicon-th-large" data-toggle="tab"
+                            <p>
+                                <small>Genes</small>
+                            </p>
+                        </div>
+                        <div class="process-step col-sm-3">
+                                <span id="glyphicon-th-large" class="glyphicon glyphicon-new glyphicon-th-large"
+                                      data-toggle="tab"
                                       href="#initialise"></span>
-                                <p>
-                                    <small>Regions</small>
-                                </p>
-                            </div>
-                            <div class="process-step col-sm-3">
+                            <p>
+                                <small>Regions</small>
+                            </p>
+                        </div>
+                        <div class="process-step col-sm-3">
                                 <span id="glyphicon-ok" class="glyphicon glyphicon-new glyphicon-ok" data-toggle="tab"
                                       href="#initialise"></span>
-                                <p>
-                                    <small>Success</small>
-                                </p>
-                            </div>
+                            <p>
+                                <small>Success</small>
+                            </p>
                         </div>
                     </div>
+                </div>
 
-                    <div class="tab-content">
-                        <div id="initialise" class="tab-pane fade active in">
+                <div class="tab-content">
+                    <div id="initialise" class="tab-pane fade active in">
+                        <div class="col-md-2"></div>
+                        <div class="col-md-8">
+                            <br>
+                            <div id="message">
+                                {% if message %}
+
+                                <div class="alert alert-danger"><strong>Silly Sausage!</strong> {{ message }}</div>
+
+                                {% endif %}
+                            </div>
+                            <div class="form-group">
+                                {{ form.panel.label }}
+                                {{ form.panel(class_="form-control") }}
+                            </div>
+                            <div><p>N.B. Panels that are locked will not appear in the list.</p></div>
+                            <div class="form-group">
+                                {{ form.vpanelname.label }}
+                                {{ form.vpanelname(class_="form-control") }}
+                            </div>
+                            <br>
+                            <ul class="list-unstyled list-inline pull-right">
+                                <li>
+                                    <button type="button" class="btn btn-primary next-step">Next <i
+                                            class="fa fa-chevron-right"></i></button>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-2"></div>
+                    </div>
+                    <div id="select_genes" class="tab-pane fade">
+                        <div class="row top-buffer bttm-buffer">
                             <div class="col-md-2"></div>
                             <div class="col-md-8">
-                                <br>
-                                  <div id="message">
-                  {% if message %}
-
-            <div class="alert alert-danger"><strong>Silly Sausage!</strong> {{ message }}</div>
-
-            {% endif %}
-                </div>
-                                <div class="form-group">
-                                    {{ form.panel.label }}
-                                    {{ form.panel(class_="form-control") }}
-                                </div>
-                                <div><p>N.B. Panels that are locked will not appear in the list.</p></div>
-                                <div class="form-group">
-                                    {{ form.vpanelname.label }}
-                                    {{ form.vpanelname(class_="form-control") }}
-                                </div>
-                                <br>
-                                <ul class="list-unstyled list-inline pull-right">
-                                    <li>
-                                        <button type="button" class="btn btn-primary next-step">Next <i
-                                                class="fa fa-chevron-right"></i></button>
-                                    </li>
-                                </ul>
+                                <center><h3>Select the genes</h3></center>
                             </div>
                             <div class="col-md-2"></div>
                         </div>
-                        <div id="select_genes" class="tab-pane fade">
-                            <div class="row top-buffer bttm-buffer">
-                             <div class="col-md-2"></div>
-                                 <div class="col-md-8">
-                            <center><h3>Select the genes</h3></center>
-                                     </div>
-                                 <div class="col-md-2"></div>
-                                </div>
 
-                            <div id="loading"></div>
+                        <div id="loading"></div>
 
-                            <div class="row top-buffer bttm-buffer">
+                        <div class="row top-buffer bttm-buffer">
                             <div class="col-md-2"></div>
-                                 <div class="col-md-8">
+                            <div class="col-md-8">
                                 <ul class="list-group" id="geneselector">
 
                                 </ul>
@@ -101,49 +106,35 @@
                                         </button>
                                     </li>
                                 </ul>
-                                      </div>
-                                 <div class="col-md-2"></div>
-                                </div>
-                        </div>
-                        <div id="select_regions" class="tab-pane fade">
-
-                            <div class="row top-buffer bttm-buffer">
-                             <div class="col-md-2"></div>
-                                 <div class="col-md-8">
-                            <center><h3>Choose the regions</h3></center>
-                                     <center><p>Click a gene name to edit the regions included in the virtual panel</p></center>
-                                     </div>
-                                 <div class="col-md-2"></div>
-                                </div>
-
-                            <div>
-
-                                <div class="form-group centerdiv">
-                                    <h3 id="genelist" value="{{ panel }}">
-
-                                    </h3>
-
-                                </div>
-                                <br/>
                             </div>
-                            <div id="regions" class="form-group"></div>
+                            <div class="col-md-2"></div>
+                        </div>
+                    </div>
+                    <div id="select_regions" class="tab-pane fade">
+
+                        <div class="row top-buffer bttm-buffer">
+                            <div class="col-md-2"></div>
+                            <div class="col-md-8">
+                                <center><h3>Choose the regions</h3></center>
+                                <center><p>Click a gene name to edit the regions included in the virtual panel</p>
+                                </center>
+                            </div>
+                            <div class="col-md-2"></div>
+                        </div>
+
+                        <div>
+
+                            <div class="form-group centerdiv">
+                                <h3 id="genelist" value="{{ panel }}">
+
+                                </h3>
+
+                            </div>
                             <br/>
-                            <div>
-                                <ul class="list-unstyled list-inline pull-right">
-                                    <li>
-                                        <button type="button" class="btn btn-default prev-step"><i
-                                                class="fa fa-chevron-left"></i> Back
-                                        </button>
-                                    </li>
-                                    <li>
-                                        <button type="button" class="btn btn-primary next-step">Next <i
-                                                class="fa fa-chevron-right"></i></button>
-                                    </li>
-                                </ul>
-                            </div>
                         </div>
-                        <div id="submit_vp" class="tab-pane fade">
-                            <div class="alert alert-danger"><strong>Oopsie Daisy!</strong> You haven't added any regions to this panel yet...</div>
+                        <div id="regions" class="form-group"></div>
+                        <br/>
+                        <div>
                             <ul class="list-unstyled list-inline pull-right">
                                 <li>
                                     <button type="button" class="btn btn-default prev-step"><i
@@ -151,18 +142,41 @@
                                     </button>
                                 </li>
                                 <li>
-                                    <button id="cancel" type="button" class="btn btn-danger"><i
-                                            class="fa fa-remove"></i> Cancel
-                                    </button>
+                                    <button type="button" class="btn btn-primary next-step">Next <i
+                                            class="fa fa-chevron-right"></i></button>
                                 </li>
                             </ul>
                         </div>
                     </div>
+                    <div id="submit_vp" class="tab-pane fade">
+                        <div class="row top-buffer bttm-buffer">
+                            <div class="col-md-2"></div>
+                            <div class="col-md-8">
+                                <div class="alert alert-danger"><strong>Oopsie Daisy!</strong> You haven't added any
+                                    regions to
+                                    this panel yet...
+                                </div>
+                                <ul class="list-unstyled list-inline pull-right">
+                                    <li>
+                                        <button type="button" class="btn btn-default prev-step"><i
+                                                class="fa fa-chevron-left"></i> Back
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button id="cancel" type="button" class="btn btn-danger"><i
+                                                class="fa fa-remove"></i> Cancel
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-2"></div>
+                    </div>
                 </div>
             </div>
 
-        </form>
-    </div>
+    </form>
+</div>
 
 {% endblock %}
 

@@ -11,30 +11,13 @@ from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
 from functools import wraps
 from collections import OrderedDict
-import logging
-from logging.handlers import RotatingFileHandler
 
-
-#app.logger.addHandler(handler)
 
 app.secret_key = 'development key'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
-
-# class Messgae():
-#     def __init__(self,user):
-#         self.user = user
-#         formatter = logging.Formatter(
-#             '%(levelname)s|' + user + '|%(asctime)s|%(message)s')
-#         handler = RotatingFileHandler('foo.log', maxBytes=10000, backupCount=1)
-#         handler.setLevel(logging.INFO)
-#         handler.setFormatter(formatter)
-#         app.logger.addHandler(handler)
-#
-#     def send_message(self, action,scope,id):
-#         app.logger.info(action+"|"+scope+"|"+id)
 
 
 class User(UserMixin):
@@ -71,11 +54,6 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# formatter = logging.Formatter('%(levelname)s|' + current_user.id + '|%(asctime)s|%(message)s')
-handler = RotatingFileHandler('foo.log', maxBytes=10000, backupCount=1)
-handler.setLevel(logging.INFO)
-# handler.setFormatter(formatter)
-# app.logger.addHandler(handler)
 
 def message(f):
     @wraps(f)
@@ -182,6 +160,15 @@ class LinkColConditional(LinkCol):
         else:
             return '-'
 
+class LinkColPrefTx(LinkCol):
+    def td_contents(self, item, attr_list):
+        if item["preftx"] is True:
+            return '<a href="{url}">{text}</a>'.format(
+                url=self.url(item),
+                text=self.td_format(self.text(item, attr_list)))
+        else:
+            return '-'
+
 
 class LabelCol(Col):
     def __init__(self, name, valmin=False, attr=None, attr_list=None, **kwargs):
@@ -238,7 +225,7 @@ class ItemTableVirtualPanel(Table):
 class ItemTableProject(Table):
     name = Col('Name')
     view = LinkCol('View Panels', 'view_panels', url_kwargs=dict(id='id'))
-    pref_tx = LinkCol('View Preferred Tx', 'view_preftx', url_kwargs=dict(id='id'))
+    pref_tx = LinkColPrefTx('View Preferred Tx', 'view_preftx', url_kwargs=dict(id='id'))
     permissions = LinkColConditional('Edit Permissions', 'edit_permissions', url_kwargs=dict(id='id'))
     # make = LinkCol('Make Panel', '', url_kwargs=dict())
     delete = LinkColConditional('Delete', 'delete_project', url_kwargs=dict(id='id'))
@@ -314,6 +301,13 @@ class ItemTableUsers(Table):
     username = Col('User')
     admin = Col('Admin')
     toggle_admin = LinkCol('Toggle Admin', 'toggle_admin', url_kwargs=dict(id='id'))
+
+class ItemTableLocked(Table):
+
+    name = Col('Panel')
+    username = Col('Locked By')
+    toggle_lock = LinkCol('Toggle Lock', 'toggle_locked', url_kwargs=dict(id='id'))
+
 
 def row2dict(row):
     """
@@ -395,19 +389,14 @@ def check_preftx_status(s, id):
     :param id: panel id
     :return: true - panel is live or false - panel has changes
     """
-    print "ID" + str(id)
     preftx = check_preftx_status_query(s, id)
     status = True
     for i in preftx:
-        print i
         if i.intro > i.current_version:
             status = False
-            break
         if i.last is not None:
             if i.last == i.current_version:
                 status = False
-                break
-    print status
     return status
 # log = logging.getLogger('werkzeug')
 # log.setLevel(logging.ERROR)
@@ -424,7 +413,6 @@ def logged_in():
 
 
 @app.route('/')
-@message
 def index():
     return render_template('home.html', panels=3)
 
@@ -453,13 +441,15 @@ def autocomplete():
 @app.route('/admin/user',methods=['GET', 'POST'])
 @login_required
 @admin_required
-@message
 def user_admin():
     form = UserForm()
+    message=None
     if request.method == 'POST':
         username = request.form["name"]
         if check_if_admin(s,current_user.id):
             create_user(s,username)
+            message = "Added user: " + username
+            message = "Added user: " + username
         else:
             return render_template('users.html', form=form,message="You can't do that")
     users = get_users(s)
@@ -468,7 +458,7 @@ def user_admin():
         row = dict(zip(i.keys(), i))
         result.append(row)
     table = ItemTableUsers(result, classes=['table', 'table-striped'])
-    return render_template('users.html',form=form,table=table)
+    return render_template('users.html',form=form,table=table,message=message)
 
 @app.route('/admin/user/admin',methods=['GET', 'POST'])
 @login_required
@@ -477,6 +467,49 @@ def toggle_admin():
     user_id=request.args.get('id')
     toggle_admin_query(s,user_id)
     return redirect(url_for('user_admin'))
+
+@app.route('/admin/locked/toggle',methods=['GET', 'POST'])
+@login_required
+@admin_required
+def toggle_locked():
+    panel_id=request.args.get('id')
+    unlock_panel_query(s,panel_id)
+    return view_locked(message="Panel Unlocked")
+
+@app.route('/admin/logs',methods=['GET', 'POST'])
+@login_required
+@admin_required
+def view_logs():
+    if request.args.get('file'):
+        log = request.args.get('file')
+    else:
+        log = 'PanelPal.log'
+
+    import glob
+    files = []
+    listing = glob.glob('*log*')
+    for filename in listing:
+        files.append(filename)
+
+
+    result=[]
+    with open(log) as f:
+        for line in f:
+            result.append(line.rstrip())
+
+    return render_template('logs.html',log=result,files=files)
+
+@app.route('/admin/locked',methods=['GET', 'POST'])
+@login_required
+@admin_required
+def view_locked(message=None):
+    locked = get_all_locked(s)
+    result = []
+    for i in locked:
+        row = dict(zip(i.keys(), i))
+        result.append(row)
+    table = ItemTableLocked(result, classes=['table', 'table-striped'])
+    return render_template('locked.html',table=table,message=message)
 
 ########################
 # PANELS
@@ -525,8 +558,6 @@ def view_panels(id=None):
             row["conditional"] = False
         if permission is False and locked is False:
             row["conditional"] = False
-
-        print row
         if id:
             project_name = row['projectname']
         # if check_user_has_permission(s, current_user.id, row["projectid"]):
@@ -538,7 +569,6 @@ def view_panels(id=None):
 
 @app.route('/panel', methods=['GET', 'POST'])
 @login_required
-@message
 def view_panel():
     id = request.args.get('id')
     if id:
@@ -553,7 +583,6 @@ def view_panel():
             panel_name = i.name
         panel = get_panel_by_id(s, id)
         project_id = get_project_id_by_panel_id(s, id)
-        print project_id
         result = []
         rows = list(panel)
         if len(rows) != 0:
@@ -664,7 +693,6 @@ def create_panel():
 
 @app.route('/panels/live', methods=['GET', 'POST'])
 @login_required
-@message
 def make_live():
     """
     given a panel id this method makes a panel live
@@ -679,6 +707,7 @@ def make_live():
 
 
 @app.route('/panels/unlock')
+@login_required
 def unlock_panel():
     panelid = request.args.get('panelid')
     unlock_panel_query(s, panelid)
@@ -688,7 +717,6 @@ def unlock_panel():
 
 @app.route('/panels/edit')
 @login_required
-@message
 def edit_panel_page(panel_id=None):
     id = request.args.get('panelid')
     lock_panel(s, current_user.id, id)
@@ -699,18 +727,15 @@ def edit_panel_page(panel_id=None):
         Panels.name,
         Panels.locked
     )
-    print panel_info
+
     for i in panel_info:
-        print i.current_version
         version = i.current_version
         name = i.name
 
     panel = get_panel_edit(s, id=id, version=version)
 
     form = RemoveGene(panelId=id)
-    print "PANEL ID" + str(id)
     add_form = AddGene(panelIdAdd=id)
-    print add_form.panelIdAdd
 
     result = []
     genes = []
@@ -741,7 +766,6 @@ def edit_panel():
     if request.method == 'POST':
         panel_id = request.form["panel_id"]
         for v in request.form:
-            print v
             if v.startswith("region"):
                 value = int(request.form[v])
                 region, region_id, intro, last, current_version, id, start, ext_5, end, ext_3, scope = v.split("_")
@@ -757,13 +781,11 @@ def edit_panel():
 
                     if value != int(original_start):
 
-                        print original_start
-                        print value
 
                         extension_5 = int(value) - int(original_start)
                         check = s.query(Versions).filter_by(region_id=region_id,
                                                                    intro=int(current_version) + 1).count()
-                        print v
+
                         if check > 0:
                             s.query(Versions).filter_by(region_id=region_id,
                                                                intro=int(current_version) + 1).update(
@@ -830,7 +852,6 @@ def delete_region():
 
 @app.route('/panels/delete/add', methods=['POST'])
 @login_required
-@message
 def add_gene():
     """
     adds a gene to a panel
@@ -857,6 +878,11 @@ def view_projects(delete=False, project_name=None, project_id=None):
     for i in projects:
         row = row2dict(i)
         row['conditional'] = check_user_has_permission(s, current_user.id, row["id"])
+        preftx = get_preftx_by_project_id(s=s, id=row["id"])
+        if len(list(preftx)) == 0:
+            row['preftx']=False
+        else:
+            row['preftx']=True
         # if check_user_has_permission(s, current_user.id, row["id"]):
         #     result.append(row)
         result.append(row)
@@ -872,20 +898,17 @@ def project_tree():
     all = get_all_by_project_id(s, id)
     projects = dict()
     for i in all:
-        print i
         if i.projectname not in projects:
             projects[i.projectname] = dict()
         if i.panelname not in projects[i.projectname]:
             projects[i.projectname][i.panelname] = list()
         projects[i.projectname][i.panelname].append(i.vpname)
 
-    print projects
     return render_template('project_view.html', projects=projects)
 
 
 @app.route('/projects/add', methods=['GET', 'POST'])
 @login_required
-@message
 def add_projects():
     form = ProjectForm()
     if request.method == 'POST':
@@ -906,7 +929,6 @@ def delete_project():
     # todo display a modal here with "do you really want to delete?" message
     id = request.args.get('id')
     if request.args.get('check'):
-        print "I AM DELETEING"
         u = s.query(Projects).filter_by(id=id).first()
         s.delete(u)
         s.commit()
@@ -940,7 +962,7 @@ def view_virtual_panels(id=None):
     panel_name = "Virtual"
     for i in panels:
         row = dict(zip(i.keys(), i))
-        print row
+
         status = check_virtualpanel_status(s, row["id"])
         row["status"] = status
         permission = check_user_has_permission(s, current_user.id, row["projectid"])
@@ -953,7 +975,7 @@ def view_virtual_panels(id=None):
         if permission is False and locked is False:
             row["conditional"] = False
 
-        print row
+
         if id:
             panel_name = row['panelname'] + ' Virtual'
         # if check_user_has_permission(s, current_user.id, row["projectid"]):
@@ -1023,12 +1045,12 @@ def select_vp_genes():
     """
     panel_id = request.json["panel"]
     current_version = get_current_version(s, panel_id)
-    print(current_version)
+
     genes = get_genes_by_panelid(s, panel_id, current_version)
-    print("genes")
+
     html = ""
     for gene in genes:
-        print(gene.name)
+
         line = "<li class=\"list-group-item\">" + \
                gene.name + \
                "<div class=\"material-switch pull-right\"><input type=\"checkbox\" name=\"" + str(gene.id) + "\" id=\"" + \
@@ -1176,13 +1198,13 @@ def edit_permissions():
     table = ItemTablePermissions(all_results, classes=['table', 'table-striped'])
     return render_template("permissions.html", table=table, form=form, project_name=project, message=message)
 
-@app.route("/edit_permissions_admin", methods=['GET', 'POST'])
+@app.route("/admin/permissions", methods=['GET', 'POST'])
 @login_required
 @admin_required
-@message
 def edit_permissions_admin():
     users = get_users(s)
     result=OrderedDict()
+    message=None
     for i in users:
         username = get_username_by_user_id(s, i.id)
         result[username] = dict()
@@ -1205,6 +1227,7 @@ def edit_permissions_admin():
                 status[username].append(int(project_id))
             else:
                 status[username].append(int(project_id))
+        message = "Your changes have been made"
 
         print status
         #find changes
@@ -1247,7 +1270,7 @@ def edit_permissions_admin():
         for u in user_projects:
             result[username][u.id] = {'name': u.name, 'checked': 'checked'}
 
-    return render_template("permissions_admin.html", permissions=result)
+    return render_template("permissions_admin.html", permissions=result, message=message)
 
 @app.route("/remove_permissions")
 @login_required

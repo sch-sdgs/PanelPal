@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>Action Logs</h2>
+<h3>Available Logs</h3>
+<div class="row bttm-buffer">
+    <div class="col-md-12">
+        {% for i in files %}
+
+        <a href="{{ url_for('view_logs',file=i ) }}">{{ i }}</a><br>
+
+        {% endfor %}
+    </div>
+</div>
+<div class="row top-buffer bttm-buffer">
+    <div class="col-md-12">
+        <div class="pre-scrollable logs">
+
+
+            {% for i in log %}
+
+            {{ i }}<br>
+
+            {% endfor %}
+
+        </div>
+    </div>
+
+
+    {% endblock %}
