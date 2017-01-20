@@ -21,55 +21,122 @@
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
 
     <script>
+        function region_added(){
+            var html = "<div class=\"alert alert-success\"><strong>Congratulations!</strong> You have completed your virtual panel</div>" +
+                            "<h4>Click done to continue or back to add more regions</h4>" +
+                            "<ul class=\"list-unstyled list-inline pull-right\">" +
+                                "<li>" +
+                                    "<button type=\"button\" class=\"btn btn-default prev-step\"><i " +
+                                            "class=\"fa fa-chevron-left\"></i> Back" +
+                                    "</button>" +
+                                "</li>" +
+                                "<li>" +
+                                    "<button type=\"button\" class=\"btn btn-success\"><i " +
+                                            "class=\"fa fa-check\"></i> Done" +
+                                    "</button>" +
+                                "</li>" +
+                            "</ul>";
+            $('#submit_vp').children().remove();
+            $('#submit_vp').append(html);
+        }
+    </script>
+
+    <script>
+        $(document).on('click', '#cancel', function(){
+            var vp_name = $('#vpanelname').val();
+            var dict = {
+                        "vp_name": vp_name
+                        };
+            var data=JSON.stringify(dict);
+
+            $.ajax({
+                type: "POST",
+                url: "{{url_for('remove_vp')}}",
+                data: data,
+                dataType: "json",
+                contentType: "application/json",
+                success: function (response) {
+                    window.location.replace("{{url_for('create_virtual_panel_process')}}");
+                },
+                error: function (response) {
+                    console.log($(response).responseText);
+                    console.log('Error');
+                    return false;
+                }
+            })
+
+        });
+    </script>
+
+    <script>
+        function add_vp(changeTab, e){
+            var vp_name = $('#vpanelname').val();
+            var dict = {
+                        "vp_name": vp_name
+                        };
+            var data=JSON.stringify(dict);
+            var complete = false;
+            $.when($.ajax({
+                type:"POST",
+                url:"{{url_for('add_vp')}}",
+                data:data,
+                dataType:"json",
+                contentType:"application/json",
+                success:function(response){
+                    if(response == -1 && $('#vpanelname').val().length ==0)
+                    {
+                        var new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't added a panel name</div>";
+                        $('#message').append(new_html)
+
+                    }
+                    else if (response == -1)
+                    {
+                        var new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
+                        $('#message').append(new_html)
+                    }
+                    else
+                    {
+                        var newURL = "{{ url_for('view_virtual_panels') }}?vp_id=" + response;
+                        $('#main').attr('action', newURL);
+                        $('#main').attr('name', response);
+                        $('.glyphicon-list-alt').attr('href', '#select_genes');
+                        $('.glyphicon-th-large').attr('href', '#select_regions');
+                        $('.glyphicon-ok').attr('href', '#submit_vp');
+                        $("#vpanelname").attr("disabled", "disabled");
+                        $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
+
+                        complete = true;
+
+                        if(changeTab == 'next' || changeTab == 'back')
+                        {
+                            change_tab(changeTab)
+                        }
+                        else
+                        {
+                            $("#" + e ).removeClass('glyphicon-new').addClass('glyphicon-new-selected').blur();
+                            $("#" + e ).tab('show');
+                        }
+                    }
+                },
+                error: function(response){
+                    console.log($(response).responseText);
+                    console.log('Error');
+                    return false;
+                }
+            })).done(function(){
+                console.log('complete = ' + complete);
+                return complete;
+            });
+
+        }
+
         $(document).on('click', '.glyphicon', function (j) {
 
             $('#message').children().remove();
 
             if($('.glyphicon-new-selected').attr('href') == '#initialise' && $("#vpanelname").attr("disabled") != "disabled")
             {
-
-                var vp_name = $('#vpanelname').val();
-                var dict = {
-                            "vp_name": vp_name
-                            };
-                var data=JSON.stringify(dict);
-
-                $.ajax({
-                    type:"POST",
-                    url:"{{url_for('add_vp')}}",
-                    data:data,
-                    dataType:"json",
-                    contentType:"application/json",
-                    success:function(response){
-                        if(response == -1 && $('#vpanelname').val().length ==0)
-                        {
-                            var new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't added a panel name</div>";
-                            $('#message').append(new_html)
-                        }
-                        else if (response == -1)
-                        {
-                            var new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
-                            $('#message').append(new_html)
-                        }
-                        else
-                        {
-                            var newURL = "{{ url_for('view_virtual_panels') }}?vp_id=" + response;
-                            $('#main').attr('action', newURL);
-                            $('#main').attr('name', response);
-                            $('.glyphicon-list-alt').attr('href', '#select_genes');
-                            $('.glyphicon-th-large').attr('href', '#select_regions');
-                            $('.glyphicon-ok').attr('href', '#submit_vp');
-                            $("#vpanelname").attr("disabled", "disabled");
-                            $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
-                            $(j.target).removeClass('glyphicon-new').addClass('glyphicon-new-selected').blur();
-                            $(j.target).tab('show');
-                        }
-                    },
-                    error: function(response){
-                        console.log($(response).responseText);
-                        console.log('Error');}
-
-                    });
+                add_vp(false, $(j.target).attr('id'));
             }
             else if ($(j.target).hasClass('glyphicon-new') || $(j.target).hasClass('glyphicon-new-selected') ) {
                 $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
@@ -79,87 +146,58 @@
     </script>
 
     <script>
+        function change_tab(tabChange)
+        {
+            var activeTab = $('.tab-pane.active');
+            if (tabChange == 'next') {
+                var nextTab = activeTab.next('.tab-pane').attr('id');
+                $('[href="#' + nextTab + '"]').addClass('glyphicon-new-selected').removeClass('glyphicon-new');
+                $('[href="#' + nextTab + '"]').tab('show');
+            }
+            else {
+                var prevTab = activeTab.prev('.tab-pane').attr('id');
+                $('[href="#' + prevTab + '"]').addClass('glyphicon-new-selected').removeClass('glyphicon-new');
+                $('[href="#' + prevTab + '"]').tab('show');
+            }
+        }
+
         $(document).on('click', '.next-step, .prev-step', function (e) {
             var activeTab = $('.tab-pane.active');
             $('#message').children().remove();
+            console.log($(activeTab).attr('id'));
+            var tab = 'back';
+            console.log($(e.target));
+            var target;
+            if($(e.target).is("button"))
+            {
+                target = $(e.target)
+            }
+            else
+            {
+                target = $(e.target).parent()
+            }
+            console.log($(target));
+            if($(target).hasClass('next-step'))
+            {
+                tab = 'next'
+            }
+            console.log(tab);
             if($(activeTab).attr('id') == "initialise" && $("#vpanelname").attr("disabled") != "disabled")
             {
                 if($('#panel').val() == '__None' || $('#vpanelname').val().length == 0)
                 {
                     var new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't added a panel name</div>";
                     $('#message').append(new_html);
-                    return;
                 }
                 else
                 {
-                    var vp_name = $('#vpanelname').val();
-                    var dict = {
-                                "vp_name": vp_name
-                                };
-                    var data=JSON.stringify(dict);
-
-                    $.ajax({
-                        type:"POST",
-                        url:"{{url_for('add_vp')}}",
-                        data:data,
-                        dataType:"json",
-                        contentType:"application/json",
-                        success:function(response){
-                        if(response == -1 && $('#vpanelname').val().length ==0)
-                        {
-                            var new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't added a panel name</div>";
-                            $('#message').append(new_html)
-                        }
-                        else if (response == -1)
-                        {
-                            var new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
-                            $('#message').append(new_html)
-                        }
-                        else {
-                            var newURL = "{{ url_for('view_virtual_panels') }}?vp_id=" + response;
-                            $('#main').attr('action', newURL);
-                            $('#main').attr('id', response);
-                            $("#vpanelname").attr("disabled", "disabled");
-                            $('.glyphicon-list-alt').attr('href', '#select_genes');
-                            $('.glyphicon-th-large').attr('href', '#select_regions');
-                            $('.glyphicon-ok').attr('href', '#submit_vp');
-                            $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
-
-                            if ($(e.target).hasClass('next-step')) {
-                                var nextTab = activeTab.next('.tab-pane').attr('id');
-                                $('[href="#' + nextTab + '"]').addClass('glyphicon-new-selected').removeClass('glyphicon-new');
-                                $('[href="#' + nextTab + '"]').tab('show');
-                            }
-                            else {
-                                var prevTab = activeTab.prev('.tab-pane').attr('id');
-                                $('[href="#' + prevTab + '"]').addClass('glyphicon-new-selected').removeClass('glyphicon-new');
-                                $('[href="#' + prevTab + '"]').tab('show');
-                            }
-                        }
-                        },
-                        error: function(response){
-                            console.log($(response).responseText);
-                            console.log('Error');
-                            var new_html = "<div class=\"alert alert-danger\"><strong>Oopsie Daisy!</strong> Something went wrong there...</div>";
-                            $('#message').append(new_html)
-                        }
-
-                        });
+                    add_vp(tab, $(e))
                 }
             }
             else {
                 $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
 
-                if ($(e.target).hasClass('next-step')) {
-                    var nextTab = activeTab.next('.tab-pane').attr('id');
-                    $('[href="#' + nextTab + '"]').addClass('glyphicon-new-selected').removeClass('glyphicon-new');
-                    $('[href="#' + nextTab + '"]').tab('show');
-                }
-                else {
-                    var prevTab = activeTab.prev('.tab-pane').attr('id');
-                    $('[href="#' + prevTab + '"]').addClass('glyphicon-new-selected').removeClass('glyphicon-new');
-                    $('[href="#' + prevTab + '"]').tab('show');
-                }
+                change_tab(tab)
             }
         });
     </script>
@@ -317,10 +355,6 @@
                     {
                         $(obj).trigger('click');
                     }
-                    else//do nothing
-                    {
-
-                    }
                 });
             }
             else //if select all has been clicked on
@@ -330,11 +364,7 @@
 
                 $(".label-region").each(function(i, obj)//loop through all elements with .label-region class
                 {
-                    if ($(obj).attr('checked') == 'checked')//if object is selected do nothing
-                    {
-
-                    }
-                    else //click object to on
+                    if ($(obj).attr('checked') != 'checked')//if object is selected do nothing
                     {
                         $(obj).trigger('click')
                     }
@@ -363,7 +393,8 @@
         $(document).on('click', "#add-regions", function () {
             var geneName = $('#add-regions').attr('name');
             var ids = [];
-            var vpanel_id = $('[name="main"]').attr('id');
+            var vpanel_id = $('#main').attr('name');
+            console.log(vpanel_id);
             $('.label-region').each(function (i, obj) {
                 if($(obj).attr('checked') == 'checked')
                 {
@@ -378,7 +409,7 @@
                 "ids": ids
             };
             var data=JSON.stringify(dict);
-            console.log(data)
+            console.log(data);
             $.ajax({
                 type:"POST",
                 url:"{{url_for('add_vp_regions')}}",
@@ -392,8 +423,12 @@
                             $(obj).children('.glyphicon-pencil').removeClass('glyphicon-pencil').addClass('glyphicon-ok').blur();
                             $(obj).removeClass('btn-danger').addClass('btn-success').blur();
                         }
-                    })
+                    });
                     $('#regions').children().remove();
+                    if($('#cancel').length)
+                    {
+                        region_added();
+                    }
                 },
                 error: function(response){
                     console.log($(response));
