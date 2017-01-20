@@ -6,7 +6,7 @@ from app.activedirectory import UserAuthentication
 import json
 from app.queries import *
 from flask_table import Table, Col, LinkCol
-from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanelProcess, UserForm
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanelProcess, UserForm, ViewPanel
 from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
 from functools import wraps
@@ -498,6 +498,10 @@ def view_panels(id=None):
 @login_required
 def view_panel():
     id = request.args.get('id')
+    try:
+        version = request.form["versions"]
+    except KeyError:
+        version = None
     if id:
         status = check_panel_status(s, id)
         if not status:
@@ -506,9 +510,10 @@ def view_panel():
             message = None
         panel_details = get_panel_details_by_id(s, id)
         for i in panel_details:
-            version = i.current_version
+            if not version:
+                version = i.current_version
             panel_name = i.name
-        panel = get_panel_by_id(s, id)
+        panel = get_panel_by_id(s, id, version)
         project_id = get_project_id_by_panel_id(s, id)
         print project_id
         result = []
@@ -525,18 +530,23 @@ def view_panel():
             table = ItemTablePanelView(result, classes=['table', 'table-striped'])
         else:
             table = ""
-            message = "This Panel has no regions yet & may also have chnages that have not been made live"
+            message = "This Panel has no regions yet & may also have changes that have not been made live"
             bed = 'disabled'
 
         if check_user_has_permission(s, current_user.id, project_id):
             edit = ''
         else:
             edit = 'disabled'
+
+        form = ViewPanel()
+        form.versions.default = version
+        form.versions.query = get_all_versions(s, id)
         return render_template('panel_view.html', panel=table, panel_name=panel_name, edit=edit, bed=bed,
-                               version=version, panel_id=id, message=message)
+                               version=version, panel_id=id, message=message, form=form)
 
     else:
         return redirect(url_for('view_panels'))
+
 
 
 @app.route('/vpanel', methods=['GET', 'POST'])
@@ -569,7 +579,7 @@ def view_vpanel():
             table = ItemTablePanelView(result, classes=['table', 'table-striped'])
         else:
             table = ""
-            message = "This Panel has no regions yet & may also have chnages that have not been made live yet"
+            message = "This Panel has no regions yet & may also have changes that have not been made live yet"
             bed = 'disabled'
 
         if check_user_has_permission(s, current_user.id, project_id):

@@ -194,6 +194,24 @@ def get_current_version(s, panelid):
     for i in version:
         return i.current_version
 
+def get_all_versions(s, panel_id):
+    """
+
+    :param s:
+    :param panel_id:
+    :return:
+    """
+    #versions = s.query(Versions).distinct(Versions.intro).group_by(Versions.intro).filter(Versions.panel_id==panel_id).all()
+    #return versions
+
+    version = s.query(Panels).filter_by(id= panel_id).values(Panels.current_version)
+
+    version_int = int(version)
+    print version
+    num_versions = list(1,version_int)
+    return num_versions
+
+
 def get_current_vpanel_version(s, vpanelid):
     """
     gets current version of a panel given the panel id
@@ -823,9 +841,12 @@ def get_preftx_api(s,project_name,version='current'):
 
 
 
-def get_panel_by_id(s, panel_id):
-    current_version = get_current_version(s, panel_id)
-    panel = s.query(Projects, Panels, Versions, Regions, Exons, Tx, Genes). \
+def get_panel_by_id(s, panel_id, version=None):
+    if not version:
+        current_version = get_current_version(s, panel_id)
+    else:
+        current_version = version
+        panel = s.query(Projects, Panels, Versions, Regions, Exons, Tx, Genes). \
         join(Panels). \
         join(Versions). \
         join(Regions). \
@@ -840,6 +861,9 @@ def get_panel_by_id(s, panel_id):
                Exons.number)
 
     return panel
+
+
+
 
 def get_vpanel_by_id(s, vpanel_id):
     current_version = get_current_vpanel_version(s, vpanel_id)

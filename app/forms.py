@@ -1,5 +1,5 @@
 from flask.ext.wtf import Form
-from wtforms.fields import TextField, TextAreaField, SubmitField, HiddenField, PasswordField, RadioField, BooleanField
+from wtforms.fields import TextField, TextAreaField, SubmitField, HiddenField, PasswordField, RadioField, BooleanField, SelectField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.validators import Required
 from app.main import app,db,s
@@ -12,6 +12,7 @@ class UserForm(Form):
     name = TextField("Username",  [Required("Enter a Username")])
     admin = BooleanField("Admin")
     submit = SubmitField("Send")
+
 
 
 class ProjectForm(Form):
@@ -36,6 +37,10 @@ def panels():
 
 def panels_unlocked():
     return s.query(models.Panels).filter(and_(models.Panels.project.has(models.Projects.user.any(models.UserRelationships.user.has(models.Users.username == current_user.id))), models.Panels.locked == None)).all()
+
+class ViewPanel(Form):
+    versions = QuerySelectField(get_label='intro')
+    submit = SubmitField("Go")
 
 class CreatePanel(Form):
     project = QuerySelectField(query_factory=projects,get_label='name')
