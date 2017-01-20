@@ -88,11 +88,15 @@ h3
 }
 
 .form-vpgenes {
-    padding: 10px 35px 35px;
+    padding: 100px 35px 35px;
     margin: 0 auto;
-    background-color: #f6f6f6;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    /*border: 1px solid rgba(0, 0, 0, 0.1);*/
 }
+
+.top-buffer { margin-top:20px; }
+.bttm-buffer { margin-top:20px; }
+.centerdiv{margin: 0 auto; text-align: center;}
 
 .col-md-4{
   padding-top: 20px;
@@ -267,7 +271,7 @@ font-style: oblique}
 .btn-info{background-color:#18bc9c; border-color: #18bc9c;}
 
 .line {
-  max-width:75%;
+  width:640px;
   min-height:2px;
   background-color: #ddd;
   margin-top:50px;

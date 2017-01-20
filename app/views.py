@@ -1,4 +1,4 @@
-from flask import render_template, request, flash, url_for, Markup, jsonify, redirect, Response
+from flask import render_template, request, flash, url_for, Markup, jsonify, redirect, Response, current_app
 from sqlalchemy.orm import scoped_session
 from app.main import s, app, db
 from app.models import *
@@ -11,12 +11,31 @@ from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
 from functools import wraps
 from collections import OrderedDict
+import logging
+from logging.handlers import RotatingFileHandler
+
+
+#app.logger.addHandler(handler)
 
 app.secret_key = 'development key'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
+
+# class Messgae():
+#     def __init__(self,user):
+#         self.user = user
+#         formatter = logging.Formatter(
+#             '%(levelname)s|' + user + '|%(asctime)s|%(message)s')
+#         handler = RotatingFileHandler('foo.log', maxBytes=10000, backupCount=1)
+#         handler.setLevel(logging.INFO)
+#         handler.setFormatter(formatter)
+#         app.logger.addHandler(handler)
+#
+#     def send_message(self, action,scope,id):
+#         app.logger.info(action+"|"+scope+"|"+id)
+
 
 class User(UserMixin):
     def __init__(self, id, password=None):
@@ -52,6 +71,37 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# formatter = logging.Formatter('%(levelname)s|' + current_user.id + '|%(asctime)s|%(message)s')
+handler = RotatingFileHandler('foo.log', maxBytes=10000, backupCount=1)
+handler.setLevel(logging.INFO)
+# handler.setFormatter(formatter)
+# app.logger.addHandler(handler)
+
+def message(f):
+    @wraps(f)
+    def decorated_function(*args,**kwargs):
+        method = f.__name__
+        result=[]
+        if current_user.is_authenticated:
+            formatter = logging.Formatter('%(levelname)s|' + current_user.id + '|%(asctime)s|%(message)s')
+            handler.setFormatter(formatter)
+            app.logger.addHandler(handler)
+        else:
+            formatter = logging.Formatter('%(levelname)s|' +'anon' + '|%(asctime)s|%(message)s')
+            handler.setFormatter(formatter)
+            app.logger.addHandler(handler)
+        for i in request.args:
+            arg = request.args.get(i)
+            result.append(i)
+            result.append(arg)
+        for i in request.form:
+            arg = request.form[i]
+            result.append(i)
+            result.append(arg)
+        app.logger.info(method+"|"+"|".join(result))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @login_manager.user_loader
 def load_user(user_id):
     return User(user_id)
@@ -65,7 +115,6 @@ def page_not_found(e):
 @app.errorhandler(500)
 def internal_server_error(e):
     return render_template('500.html'), 500
-
 
 class NumberCol(Col):
     def __init__(self, name, valmin=False, attr=None, attr_list=None, **kwargs):
@@ -360,20 +409,23 @@ def check_preftx_status(s, id):
                 break
     print status
     return status
-
+# log = logging.getLogger('werkzeug')
+# log.setLevel(logging.ERROR)
 @app.context_processor
 def logged_in():
     if current_user.is_authenticated:
         userid = current_user.id
         admin=check_if_admin(s,userid)
+
+        #app.logger.basicConfig(format='%(levelname)s|'+ current_user.id+'|%(asctime)s|%(message)s')
         return {'logged_in': True, 'userid': userid,'admin':admin}
     else:
         return {'logged_in': False}
 
 
 @app.route('/')
+@message
 def index():
-    print "what"
     return render_template('home.html', panels=3)
 
 
@@ -401,6 +453,7 @@ def autocomplete():
 @app.route('/admin/user',methods=['GET', 'POST'])
 @login_required
 @admin_required
+@message
 def user_admin():
     form = UserForm()
     if request.method == 'POST':
@@ -485,6 +538,7 @@ def view_panels(id=None):
 
 @app.route('/panel', methods=['GET', 'POST'])
 @login_required
+@message
 def view_panel():
     id = request.args.get('id')
     if id:
@@ -610,6 +664,7 @@ def create_panel():
 
 @app.route('/panels/live', methods=['GET', 'POST'])
 @login_required
+@message
 def make_live():
     """
     given a panel id this method makes a panel live
@@ -620,7 +675,6 @@ def make_live():
     current_version = get_current_version(s, panelid)
     new_version = current_version + 1
     make_panel_live(s, panelid, new_version, current_user.id)
-
     return redirect(url_for('view_panels'))
 
 
@@ -634,6 +688,7 @@ def unlock_panel():
 
 @app.route('/panels/edit')
 @login_required
+@message
 def edit_panel_page(panel_id=None):
     id = request.args.get('panelid')
     lock_panel(s, current_user.id, id)
@@ -775,6 +830,7 @@ def delete_region():
 
 @app.route('/panels/delete/add', methods=['POST'])
 @login_required
+@message
 def add_gene():
     """
     adds a gene to a panel
@@ -829,6 +885,7 @@ def project_tree():
 
 @app.route('/projects/add', methods=['GET', 'POST'])
 @login_required
+@message
 def add_projects():
     form = ProjectForm()
     if request.method == 'POST':
@@ -1077,6 +1134,7 @@ def login():
         result = user.is_authenticated(s, id=form.data["username"], password=form.data["password"])
         if result:
             login_user(user)
+
             if form.data["next"] != "":
                 return redirect(form.data["next"])
             else:
@@ -1110,6 +1168,7 @@ def edit_permissions():
 @app.route("/edit_permissions_admin", methods=['GET', 'POST'])
 @login_required
 @admin_required
+@message
 def edit_permissions_admin():
     users = get_users(s)
     result=OrderedDict()
@@ -1194,6 +1253,7 @@ def remove_permission():
 @login_required
 def logout():
     # todo unlock all users locked
+    app.logger.info("logout")
     logout_user()
     form = Login()
     return render_template("login.html", form=form, message="You have logged out of PanelPal")
