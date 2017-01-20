@@ -54,6 +54,11 @@ def get_panels(s):
 
     return panels
 
+def get_panel_by_vp_id(s, vp_id):
+    panel = s.query(VirtualPanels, VPRelationships, Versions).join(VPRelationships).join(Versions).distinct(Versions.panel_id).group_by(Versions.panel_id).filter(VirtualPanels.id==vp_id).values(Versions.panel_id)
+    for i in panel:
+        return i.panel_id
+
 
 def get_virtual_panels_by_panel_id(s, id):
     vpanels = s.query(VirtualPanels, VPRelationships, Versions, Panels, Projects). \
@@ -318,7 +323,7 @@ def add_version_to_vp(s, vp_id, version_id):
     :param version_id:
     :return:
     """
-    vp_relationship = VPRelationships(intro=0, last=None, version_id=version_id, vpanel_id=vp_id)
+    vp_relationship = VPRelationships(intro=1, last=None, version_id=version_id, vpanel_id=vp_id)
     s.add(vp_relationship)
     s.commit()
     return vp_relationship.id

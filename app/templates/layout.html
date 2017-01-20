@@ -22,28 +22,19 @@
 
     <script>
         function region_added(){
-            var html = "<div class=\"alert alert-success\"><strong>Congratulations!</strong> You have completed your virtual panel</div>" +
-                            "<h4>Click done to continue or back to add more regions</h4>" +
-                            "<ul class=\"list-unstyled list-inline pull-right\">" +
-                                "<li>" +
-                                    "<button type=\"button\" class=\"btn btn-default prev-step\"><i " +
-                                            "class=\"fa fa-chevron-left\"></i> Back" +
-                                    "</button>" +
-                                "</li>" +
-                                "<li>" +
-                                    "<button type=\"button\" class=\"btn btn-success\"><i " +
-                                            "class=\"fa fa-check\"></i> Done" +
-                                    "</button>" +
-                                "</li>" +
-                            "</ul>";
-            $('#submit_vp').children().remove();
-            $('#submit_vp').append(html);
+            $('#complete_message').removeClass('alert-danger').addClass('alert-success');
+            $('#complete_message').html('<strong>Congratulations!</strong> You have completed your virtual panel');
+            $('#cancel').removeClass('btn-danger').addClass('btn-success');
+            $('#cancel').text('Done!');
+            $('#cancel').attr('type', 'submit');
+            $('#cancel_logo').removeClass('fa-remove').addClass('fa-check');
+            $('#make_live').removeAttr('hidden')
         }
     </script>
 
     <script>
-        $(document).on('click', '#cancel', function(){
-            var vp_name = $('#vpanelname').val();
+        function remove_vp(vp_name)
+        {
             var dict = {
                         "vp_name": vp_name
                         };
@@ -64,15 +55,24 @@
                     return false;
                 }
             })
+        }
 
+        $(document).on('click', '#cancel', function(){
+            var vp_name = $('#vpanelname').val();
+            if($('#cancel').hasClass('btn-danger'))
+            {
+                remove_vp(vp_name)
+            }
         });
     </script>
 
     <script>
         function add_vp(changeTab, e){
             var vp_name = $('#vpanelname').val();
+            var panel_id = $('#panel').val();
             var dict = {
-                        "vp_name": vp_name
+                        "vp_name": vp_name,
+                        "panel_id": panel_id
                         };
             var data=JSON.stringify(dict);
             var complete = false;
@@ -96,13 +96,14 @@
                     }
                     else
                     {
-                        var newURL = "{{ url_for('view_virtual_panels') }}?vp_id=" + response;
-                        $('#main').attr('action', newURL);
+                        var newUrl = "{{url_for('create_virtual_panel_process') }}?id=" + response;
                         $('#main').attr('name', response);
+                        $('#main').attr('action', newUrl)
                         $('.glyphicon-list-alt').attr('href', '#select_genes');
                         $('.glyphicon-th-large').attr('href', '#select_regions');
                         $('.glyphicon-ok').attr('href', '#submit_vp');
                         $("#vpanelname").attr("disabled", "disabled");
+                        $("#panel").attr("disabled", "disabled");
                         $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
 
                         complete = true;
@@ -124,7 +125,6 @@
                     return false;
                 }
             })).done(function(){
-                console.log('complete = ' + complete);
                 return complete;
             });
 
@@ -164,9 +164,7 @@
         $(document).on('click', '.next-step, .prev-step', function (e) {
             var activeTab = $('.tab-pane.active');
             $('#message').children().remove();
-            console.log($(activeTab).attr('id'));
             var tab = 'back';
-            console.log($(e.target));
             var target;
             if($(e.target).is("button"))
             {
@@ -176,12 +174,10 @@
             {
                 target = $(e.target).parent()
             }
-            console.log($(target));
             if($(target).hasClass('next-step'))
             {
                 tab = 'next'
             }
-            console.log(tab);
             if($(activeTab).attr('id') == "initialise" && $("#vpanelname").attr("disabled") != "disabled")
             {
                 if($('#panel').val() == '__None' || $('#vpanelname').val().length == 0)
@@ -234,13 +230,10 @@
     <script>
         $(document).on('click', '.label-gene', function () {
             var target = $(event.target);
-            console.log($(target));
             var gene_switch;
             if($(target).is("button"))
             {
-                console.log('button');
                 var geneName = $(target).attr('name');
-                console.log(geneName);
                 $('.label-gene').each(function (i, obj) {
                     if($(obj).attr('for') == geneName)
                     {
@@ -254,29 +247,26 @@
                 var geneName = $(event.target).attr('for');
                 gene_switch = $(event.target)
             }
-            console.log(geneName);
-            console.log($(gene_switch));
-            if($(gene_switch).attr('checked') == 'checked')//uncheck and remove gene button
-            {
-                console.log('checked');
-                $(gene_switch).removeAttr('checked');
-                $('[name="genebutton"]').each(function (i, obj) {
-                    if ($(obj).attr('data-name') == geneName)
-                    {
-                        $(obj).remove();
-                        if($('#remove-gene').attr('name') == geneName)
-                        {
-                            $('#regions').children().remove();
+
+            if($(gene_switch).attr('disabled') != 'disabled') {
+                if ($(gene_switch).attr('checked') == 'checked')//uncheck and remove gene button
+                {
+                    $(gene_switch).removeAttr('checked');
+                    $('[name="genebutton"]').each(function (i, obj) {
+                        if ($(obj).attr('data-name') == geneName) {
+                            $(obj).remove();
+                            if ($('#remove-gene').attr('name') == geneName) {
+                                $('#regions').children().remove();
+                            }
+                            return false;
                         }
-                        return false;
-                    }
-                })
-            }
-            else
-            {
-                $(event.target).attr('checked', 'checked');
-                var geneId = $("#" + geneName).attr('name');
-                $('#genelist').append("<button name=\"genebutton\" type=\"button\" class=\"btn btn-danger btn-md btngene\" data-name=\"" + geneName + "\" data-id=\"" + geneId + "\"><span class='glyphicon glyphicon-pencil'></span> " + geneName + "</button> ")
+                    })
+                }
+                else {
+                    $(event.target).attr('checked', 'checked');
+                    var geneId = $("#" + geneName).attr('name');
+                    $('#genelist').append("<button name=\"genebutton\" type=\"button\" class=\"btn btn-danger btn-md btngene\" data-name=\"" + geneName + "\" data-id=\"" + geneId + "\"><span class='glyphicon glyphicon-pencil'></span> " + geneName + "</button> ")
+                }
             }
         });
     </script>
@@ -284,39 +274,56 @@
     <script>
         $(document).on('click', '[name="genebutton"]', function (request) {
             $('#regions').children().remove();
-            $('#regions').append("<div class=\"col-md-5\"></div><div class=\"loader col-md-2\"></div><div class=\"col-md-5\"></div>");
-            var element = $(request.currentTarget);
-            var gene_id = $(element).attr('data-id');
-            var gene_name = $(element).attr('data-name');
-            var panel_id = $('#panel').val();
-            var dict = {
-                "panel_id": panel_id,
-                "gene_id": gene_id,
-                "gene_name": gene_name
-            };
-            var data=JSON.stringify(dict);
+            if($(request.currentTarget).hasClass('btn-danger')) {
+                var element = $(request.currentTarget);
+                var gene_id = $(element).attr('data-id');
+                var gene_name = $(element).attr('data-name');
+                var panel_id = $('#panel').val();
+                var dict = {
+                    "panel_id": panel_id,
+                    "gene_id": gene_id,
+                    "gene_name": gene_name
+                };
+                var data = JSON.stringify(dict);
 
-            $.ajax({
-                type:"POST",
-                url:"{{url_for('select_vp_regions')}}",
-                data:data,
-                dataType:"json",
-                contentType:"application/json",
-                success:function(response){
-                    $('#regions').children().remove();
-                    $('#regions').append(response)
-                },
-                error: function(response){
-                    console.log($(response).responseText);
-                    console.log('Error');}
+                $.ajax({
+                    type: "POST",
+                    url: "{{url_for('select_vp_regions')}}",
+                    data: data,
+                    dataType: "json",
+                    contentType: "application/json",
+                    success: function (response) {
+                        $('#regions').children().remove();
+                        $('#regions').append(response)
+                    },
+                    error: function (response) {
+                        console.log($(response).responseText);
+                        console.log('Error');
+                    }
 
                 });
+            }
+            else
+            {
+                $('#regions').append("<h3>You have already added this gene to the database</h3><h4>To change the regions go to the edit page for this virtual panel</h4>")
+            }
             });
 
 
     </script>
 
     <script>
+        function count_ids(){
+            var ids = [];
+            $('.label-region').each(function (i, obj) {
+                if($(obj).attr('checked') == 'checked')
+                {
+                    ids.push($(obj).attr('for'));
+                }
+            });
+            return ids
+        }
+
         $(document).on('click', ".label-region", function (request) {
             var obj = $(request.currentTarget);
             if($(obj).attr('checked') == 'checked')
@@ -333,6 +340,15 @@
                 $(obj).attr('checked', 'checked')
             }
 
+            var count = count_ids().length;
+            if(count > 0)
+            {
+                $('#add-regions').removeAttr('disabled');
+            }
+            else if($('#add-regions').attr('disabled') != 'disabled')
+            {
+                $('#add-regions').attr('disabled', 'disabled');
+            }
         });
     </script>
 
@@ -360,7 +376,6 @@
             else //if select all has been clicked on
             {
                 $(".label-selectall").attr('checked', 'checked');//add checked attribute
-                console.log('hello');
 
                 $(".label-region").each(function(i, obj)//loop through all elements with .label-region class
                 {
@@ -392,24 +407,20 @@
     <script>
         $(document).on('click', "#add-regions", function () {
             var geneName = $('#add-regions').attr('name');
-            var ids = [];
+            var ids = count_ids();
             var vpanel_id = $('#main').attr('name');
-            console.log(vpanel_id);
-            $('.label-region').each(function (i, obj) {
-                if($(obj).attr('checked') == 'checked')
-                {
-                    ids.push($(obj).attr('for'));
-                }
-            });
 
-            console.log(ids);
+            if(ids.length == 0)
+            {
+                console.log('none selected');
+                return;
+            }
 
             var dict = {
                 "vp_id": vpanel_id,
                 "ids": ids
             };
             var data=JSON.stringify(dict);
-            console.log(data);
             $.ajax({
                 type:"POST",
                 url:"{{url_for('add_vp_regions')}}",
@@ -425,7 +436,12 @@
                         }
                     });
                     $('#regions').children().remove();
-                    if($('#cancel').length)
+
+                    $('#'+geneName).attr('disabled', 'disabled');
+                    $('[for='+geneName+']').attr('disabled', 'disabled');
+                    $('[for='+geneName+']').removeClass('label-success').addClass('label-added');
+
+                    if($('#cancel').hasClass('btn-danger'))
                     {
                         region_added();
                     }

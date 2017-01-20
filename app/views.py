@@ -154,8 +154,6 @@ class LockCol(Col):
             **kwargs)
 
     def td_contents(self, item, attr_list):
-        print "HELLO"
-        print item
         if item["locked"] is not None:
             username = get_username_by_user_id(s, item["locked"])
             return '<center><span class="glyphicon glyphicon-lock"  data-toggle="tooltip" data-placement="bottom" title="Locked by: ' + username + '" aria-hidden="true"></span></center>'
@@ -224,15 +222,15 @@ class ItemTablePermissions(Table):
                      url_kwargs=dict(userid='user_id', projectid='project_id', rel_id='rel_id'))
 
 
-class ItemTableVirtualPanel(Table):
-    vp_name = Col('Name')
-    current_version = Col('Version')
-    status = LabelCol('Status')
-    edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='id'))
-    # todo make edit_vp_panel_page
-    # id = Col('Id')
-    make_live = LinkCol('Make Live', 'make_virtualpanel_live', url_kwargs=dict(id='id'))
-    delete = LinkCol('Delete', 'delete_virtualpanel', url_kwargs=dict(id='id'))
+# class ItemTableVirtualPanel(Table):
+#     vp_name = Col('Name')
+#     current_version = Col('Version')
+#     status = LabelCol('Status')
+#     edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='id'))
+#     # todo make edit_vp_panel_page
+#     # id = Col('Id')
+#     make_live = LinkCol('Make Live', 'make_virtualpanel_live', url_kwargs=dict(id='id'))
+#     delete = LinkCol('Delete', 'delete_virtualpanel', url_kwargs=dict(id='id'))
 
 
 class ItemTableProject(Table):
@@ -259,7 +257,7 @@ class ItemTablePanels(Table):
 class ItemTableVPanels(Table):
     vp_name = Col('Name')
     current_version = Col('Stable Version')
-    view_panel = LinkCol('View Panel', 'view_vpanel', url_kwargs=dict(id='id'))
+    view_panel = LinkCol('View Panel', 'view_virtual_panel', url_kwargs=dict(id='id'))
     edit = LinkColConditional('Edit Panel', 'edit_panel_page', url_kwargs=dict(id='id'))
     locked = LockCol('Locked')
     status = LabelCol('Status')
@@ -921,7 +919,7 @@ def delete_project():
 
 
 
-@app.route('/virtualpanels')
+@app.route('/virtualpanels', methods=['GET','POST'])
 @login_required
 def view_virtual_panels(id=None):
     """
@@ -974,20 +972,13 @@ def create_virtual_panel_process():
     form = CreateVirtualPanelProcess()
 
     if request.method == "POST":
-        #if form.validate() == False:
-           # return render_template('virtualpanels_createprocess.html', form=form, message="You didn't enter a name")
-        tab = request.args.get('tab')
-        if tab is not None:
-            name = request.form["vpanelname"]
-            testvpanel = s.query(VirtualPanels).filter_by(name=name).first()
-            if testvpanel is not None:
-                return render_template('virtualpanels_createprocess.html', form=form, message='Virtual panel name exists')
-            else:
-                panel_id = request.form["panel"]
-                vp_id = create_virtualpanel_query(s, name)
-                current_version = get_current_version(s, panel_id)
-                genes = get_genes_by_panelid(s, panel_id, current_version)
-                return render_template('virtualpanels_createprocess.html', form=form, vp_id=vp_id, panel=panel_id, genes=genes, tab=2)
+        make_live = request.form['make_live']
+        vp_id = request.args.get('id')
+        if make_live == "True":
+            make_vp_panel_live(s, vp_id, 1)
+        panel_id = get_panel_by_vp_id(s, vp_id)
+        unlock_panel_query(s, panel_id)
+        return redirect(url_for('view_virtual_panels'))
     elif request.method == "GET":
         return render_template('virtualpanels_createprocess.html', form=form, tab=1)
 
@@ -999,7 +990,10 @@ def add_vp():
     :return:
     """
     vp_name = request.json['vp_name']
+    panel_id = request.json['panel_id']
     vp_id = create_virtualpanel_query(s, vp_name)
+    if vp_id != -1:
+        lock_panel(s, current_user.id, panel_id)
     return jsonify(vp_id)
 
 @app.route('/virtualpanels/remove',  methods=['POST'])
@@ -1050,7 +1044,7 @@ def select_vp_regions():
     regions = get_regions_by_geneid(s, gene_id, panel_id)
     html = "<h3 name=\"" + gene_id + "\">" + gene_name + """</h3><ul class=\"list-unstyled list-inline pull-right\">
                     <li>
-                        <button type=\"button\" class=\"btn btn-success\" id=\"add-regions\" name=\"""" + gene_name + """\">Add Regions</button>
+                        <button type=\"button\" class=\"btn btn-success\" id=\"add-regions\" name=\"""" + gene_name + """\" disabled=\"disabled\">Add Regions</button>
                     </li>
                     <li>
                         <button type=\"button\" class=\"btn btn-danger\" id=\"remove-gene\" name=\"""" + gene_name + """\">Remove Gene</button>

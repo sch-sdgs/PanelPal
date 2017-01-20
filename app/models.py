@@ -96,7 +96,7 @@ class VPRelationships(db.Model):
     vpanel_id = db.Column(db.Integer, db.ForeignKey('virtual_panels.id'))
 
     def __init__(self, version_id, vpanel_id, intro, last):
-        self.into = intro
+        self.intro = intro
         self.last = last
         self.version_id = version_id
         self.vpanel_id = vpanel_id

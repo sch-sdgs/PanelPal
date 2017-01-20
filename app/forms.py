@@ -44,14 +44,10 @@ class CreatePanel(Form):
     genes = TextField("Genes")
     submit = SubmitField("Create Panel")
 
-class CreateVirtualPanel(Form):
-    panel = QuerySelectField(query_factory=panels,get_label='name', allow_blank=True, blank_text=u'-- please choose a panel -- ')
-    vpanelname = TextField("Virtual Panel Name", [Required("Enter a Virtual Panel Name")])
-    submit = SubmitField("Done")
-
 class CreateVirtualPanelProcess(Form):
     panel = QuerySelectField(query_factory=panels_unlocked, get_label='name', allow_blank=True, blank_text=u'-- please choose a panel -- ')
     vpanelname = TextField("Virtual Panel Name", [Required("Enter a Virtual Panel Name")])
+    make_live = RadioField(label='Do you want to make this panel live?', choices=[(True,"Yes"), (False,"No")], default=False)
     submitname = SubmitField("Complete Panel")
 
 class PrefTxCreate(Form):
