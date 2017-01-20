@@ -1,4 +1,4 @@
-from sqlalchemy import or_, desc
+from sqlalchemy import or_, desc, and_
 
 from app.models import *
 
@@ -80,6 +80,19 @@ def get_panels_by_project_id(s, id):
 
     return panels
 
+def get_panel_by_vpid(s, id):
+    panels = s.query(Panels,Versions, VPRelationships, VirtualPanels). \
+        join(Versions). \
+        join(VPRelationships). \
+        join(VirtualPanels). \
+        filter(VirtualPanels.id==id). \
+        distinct(Panels.name). \
+        group_by(Panels.name). \
+        values(Panels.id, \
+               Panels.project_id, \
+               Panels.name, \
+               Panels.current_version)
+    return panels
 
 def check_panel_status_query(s, id):
     """
@@ -254,3 +267,86 @@ def make_vp_panel_live(s, panelid, new_version):
     s.commit()
 
     return True
+
+def get_preftx_by_project_id(s, id):
+    """
+    gets pref transcripts by project id
+    :param s: db session
+    :param id: project id
+    :return: sql alchemy object
+    """
+    preftx = s.query(Genes, Tx, PrefTx, Projects). \
+        join(Tx). \
+        join(PrefTx). \
+        join(Projects). \
+        filter_by(id=id). \
+        values(Projects.id, \
+               Projects.name.label("projectname"), \
+               Genes.name.label("genename"), \
+               Tx.accession, \
+               Tx.tx_start, \
+               Tx.tx_end, \
+               Tx.strand)
+
+    return preftx
+
+
+def get_project_name(s, projectid):
+    """
+    gets project name by project id
+    :param s: db session
+    :param id: project id
+    :return: sql alchemy object
+    """
+    name= s.query(Projects).filter_by(id=projectid)
+    for i in name:
+        return i.name
+
+def get_genes_by_projectid(s, projectid):
+    """
+    gets transcripts by project id
+    :param s: db session
+    :param id: project id
+    :return: sql alchemy object
+    """
+    genes =s.query(Genes, Tx, Exons, Regions, Versions, Panels, Projects). \
+        distinct(Tx.accession). \
+        group_by(Tx.accession). \
+        join(Tx). \
+        join(Exons). \
+        join(Regions). \
+        join(Versions). \
+        join(Panels). \
+        join(Projects). \
+        filter_by(id=projectid). \
+        values(Tx.id.label("txid"), \
+               Projects.name.label("projectname"), \
+               Projects.id.label("projectid"), \
+               Genes.name.label("genename"), \
+               Genes.id.label("gene_id"), \
+               Tx.accession, \
+               Tx.tx_start, \
+               Tx.tx_end, \
+               Tx.strand)
+    return genes
+
+def get_genes_by_panelid(s, panelid, current_version):
+    genes = s.query(Genes, Tx, Exons, Regions, Versions, Panels). \
+        distinct(Genes.name). \
+        group_by(Genes.name). \
+        join(Tx). \
+        join(Exons). \
+        join(Regions). \
+        join(Versions). \
+        join(Panels). \
+        filter(and_(Panels.id == panelid, Versions.intro <= current_version, or_(Versions.last >= current_version, Versions.last == None))). \
+        values(Genes.name, \
+               Genes.id)
+    return genes
+
+def get_project_by_panelid(s, panelid):
+    projectid = s.query(Panels). \
+        filter_by(id = panelid). \
+        values(Panels.project_id)
+    for i in projectid:
+        return i.project_id

@@ -76,10 +76,11 @@ class ItemTableVirtualPanel(Table):
     vp_name = Col('Name')
     current_version = Col('Version')
     status = LabelCol('Status')
-    edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='id'))
+    edit = LinkCol('Edit', 'edit_vp_panel_page', url_kwargs=dict(id='id'))
     #todo make edit_vp_panel_page
     #id = Col('Id')
-    make_live = LinkCol('Make Live', 'make_virtualpanel_live', url_kwargs=dict(id='id'))
+    make_live = LinkCol('Make Live', 'make_virtualpanel_live', url_kwargs=dict(id='id', panelid='panel_id'))
+    #todo fix filter on make live page
     delete = LinkCol('Delete', 'delete_virtualpanel', url_kwargs=dict(id='id'))
 
 
@@ -104,7 +105,7 @@ class ItemTablePanels(Table):
 class ItemTableVirtualPanels(Table):
     paelname = Col('Panel Name')
     virtualpanelname = Col('Virtual Panel')
-    edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='panelid'))
+    edit = LinkCol('Edit', 'edit_vp_panel_page', url_kwargs=dict(id='panelid'))
     make_live = LinkCol('Make Live', 'make_live', url_kwargs=dict(id='panelid'))
 
 
@@ -302,8 +303,8 @@ def make_live():
     current_version = get_current_version(s, panelid)
     new_version = current_version + 1
     make_panel_live(s, panelid, new_version)
-
-    return redirect(url_for('view_panels'))
+    projectid = get_project_by_panelid(s, panelid)
+    return redirect(url_for('view_panels', id=projectid))
 
 @app.route('/virtualpanels/live', methods=['GET', 'POST'])
 def make_virtualpanel_live():
@@ -312,12 +313,15 @@ def make_virtualpanel_live():
 
     :return: redirection to view panels
     """
-    panelid = request.args.get('id')
-    current_version = get_current_vp_version(s, panelid)
+    vpanelid = request.args.get('id')
+    current_version = get_current_vp_version(s, vpanelid)
     new_version = current_version + 1
-    make_vp_panel_live(s, panelid, new_version)
-
-    return redirect(url_for('view_virtual_panels'))
+    make_vp_panel_live(s, vpanelid, new_version)
+    panels = get_panel_by_vpid(s, vpanelid)
+    for i in panels:
+        panel = dict(zip(i.keys(), i))
+        panelid = panel["id"]
+    return redirect(url_for('view_virtual_panels', id=panelid))
 
 @app.route('/panels/edit')
 def edit_panel_page(panel_id=None):
@@ -543,6 +547,19 @@ def view_virtual_panels(id=None):
 
     table = ItemTableVirtualPanel(all_results, classes=['table', 'table-striped'])
     return render_template("virtualpanels.html", virtualpanels=table)
+
+@app.route('/virtualpanels/edit', methods=['GET', 'POST'])
+def edit_vp_panel_page(id=None):
+    if not id:
+        id = request.args.get('id')
+    panels = get_panel_by_vpid(s, id)
+    for i in panels:
+        panel = dict(zip(i.keys(), i))
+    genes = get_genes_by_panelid(s, panel["id"])
+    results = []
+    for i in genes:
+        gene = dict(zip(i.keys(), i))
+        results.append(gene)
 
 
 #################
