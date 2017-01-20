@@ -262,7 +262,16 @@ def create_virtualpanel_query(s, name):
     except exc.IntegrityError:
         return -1
 
+def remove_virtualpanel_query(s, name):
+    """
 
+    :param s:
+    :param name:
+    :return:
+    """
+    s.query(VirtualPanels).filter_by(name=name).delete()
+    s.commit()
+    return True
 
 def add_region_to_panel(s, regionid, panelid):
     """
