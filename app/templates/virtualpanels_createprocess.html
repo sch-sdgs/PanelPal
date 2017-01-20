@@ -18,26 +18,26 @@
                     <div class="process-row nav nav-tabs">
                         <div class="col-sm-12 text-center">
                             <div class="process-step col-sm-3">
-                                <span class="glyphicon glyphicon-new-selected glyphicon-pencil" data-toggle="tab"
+                                <span id="glyphicon-pencil" class="glyphicon glyphicon-new-selected glyphicon-pencil" data-toggle="tab"
                                       href="#initialise"></span>
                                 <p><small>Virtual Panel Name</small></p>
                             </div>
                             <div class="process-step col-sm-3">
-                                <span class="glyphicon glyphicon-new glyphicon-list-alt" data-toggle="tab"
+                                <span id="glyphicon-list-alt" class="glyphicon glyphicon-new glyphicon-list-alt" data-toggle="tab"
                                       href="#initialise"></span>
                                 <p>
                                     <small>Genes</small>
                                 </p>
                             </div>
                             <div class="process-step col-sm-3">
-                                <span class="glyphicon glyphicon-new glyphicon-th-large" data-toggle="tab"
+                                <span id="glyphicon-th-large" class="glyphicon glyphicon-new glyphicon-th-large" data-toggle="tab"
                                       href="#initialise"></span>
                                 <p>
                                     <small>Regions</small>
                                 </p>
                             </div>
                             <div class="process-step col-sm-3">
-                                <span class="glyphicon glyphicon-new glyphicon-ok" data-toggle="tab"
+                                <span id="glyphicon-ok" class="glyphicon glyphicon-new glyphicon-ok" data-toggle="tab"
                                       href="#initialise"></span>
                                 <p>
                                     <small>Success</small>
@@ -116,9 +116,7 @@
                             </div>
                         </div>
                         <div id="submit_vp" class="tab-pane fade">
-                            <h3>Congratulations! You have completed your virtual panel</h3>
-                            <br/>
-                            <h4>Click done to add this to the database</h4>
+                            <div class="alert alert-danger"><strong>Oopsie Daisy!</strong> You haven't added any regions to this panel yet...</div>
                             <ul class="list-unstyled list-inline pull-right">
                                 <li>
                                     <button type="button" class="btn btn-default prev-step"><i
@@ -126,7 +124,9 @@
                                     </button>
                                 </li>
                                 <li>
-                                    {{ form.submitname(class_="btn btn-primary") }}
+                                    <button id="cancel" type="button" class="btn btn-danger"><i
+                                            class="fa fa-remove"></i> Cancel
+                                    </button>
                                 </li>
                             </ul>
                         </div>

@@ -46,6 +46,7 @@ class Panels(db.Model):
     versions = db.relationship('Versions', backref='author', lazy='dynamic')
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
     locked = db.Column(db.Integer,db.ForeignKey('users.id'))
+    project = relationship("Projects")
 
     def __init__(self, name, project_id, current_version, locked):
         self.name = name
