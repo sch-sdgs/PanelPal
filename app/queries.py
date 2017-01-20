@@ -841,6 +841,19 @@ def get_panel_by_id(s, panel_id):
 
     return panel
 
+def get_vpanel_by_gene_id(s, gene_id):
+    vpanel = s.query(Genes, Tx, Exons, Regions, Versions, VPRelationships, VirtualPanels). \
+        join(Tx). \
+        join(Exons). \
+        join(Regions). \
+        join(Versions). \
+        join(VPRelationships). \
+        join(VirtualPanels). \
+        filter(Genes.id == gene_id). \
+        values(VirtualPanels.id.label("vpanelid"),VirtualPanels.name("vpanelname"),VirtualPanels.current_version,VPRelationships.last,VPRelationships.intro)
+    return vpanel
+
+
 def get_vpanel_by_id(s, vpanel_id):
     current_version = get_current_vpanel_version(s, vpanel_id)
     panel = s.query(Projects, Panels, Versions, VPRelationships, VirtualPanels, Regions, Exons, Tx, Genes). \
@@ -967,3 +980,4 @@ def toggle_admin_query(s,user_id):
 def get_all_projects(s):
     projects = s.query(Projects).values(Projects.id,Projects.name)
     return projects
+

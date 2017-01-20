@@ -6,7 +6,7 @@ from app.activedirectory import UserAuthentication
 import json
 from app.queries import *
 from flask_table import Table, Col, LinkCol
-from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanelProcess, UserForm
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanelProcess, UserForm, Search
 from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
 from functools import wraps
@@ -314,6 +314,9 @@ class ItemTableUsers(Table):
     username = Col('User')
     admin = Col('Admin')
     toggle_admin = LinkCol('Toggle Admin', 'toggle_admin', url_kwargs=dict(id='id'))
+
+class ItemTableSearchTx(Table):
+    id = Col('Transcript Accession')
 
 def row2dict(row):
     """
@@ -1268,6 +1271,74 @@ def logout():
     logout_user()
     form = Login()
     return render_template("login.html", form=form, message="You have logged out of PanelPal")
+
+
+################
+# SEARCH
+################
+@app.route('/search', methods=['GET', 'POST'])
+@login_required
+def search_for():
+    form = Search()
+    if request.method == 'GET':
+        return render_template("search.html", form=form)
+    else:
+        type = request.form["tables"]
+        #print type
+        term = request.form["search_term"]
+        #print term
+
+        if type == "Genes":
+            tx_result=[]
+            #print "Gene!"
+            gene_id = get_gene_id_from_name(s, term)
+            tx = get_tx_by_gene_id(s, gene_id)
+
+            for t in tx:
+                #row = dict(zip(i.keys(), i))
+                tx_accession = {'id':t[1]}
+                tx_result.append(tx_accession)
+            table_one = ItemTableSearchTx(tx_result, classes=['table', 'table-striped'])
+
+            vpanel = get_vpanel_by_gene_id(s, gene_id)
+            for panel in vpanel:
+                print panel
+
+            # panel = get_panel_by_gene_id(s, gene_id)
+            return render_template("search_results.html", tx=table_one)
+
+        if type == "Transcripts":
+            tx_id = get_tx_id_by_name(s, term)
+            gene_id = get_gene_id_by_tx(g, tx_id)
+            vpanel = get_vpanel_by_gene_id(s, gene_id)
+            panel = get_panel_by_gene_id(s, gene_id)
+
+        if type == "Panels":
+            panel_id = get_panel_id_by_name(s,term)
+            vpanel = get_virtual_panels_by_panel_id(s, panel_id)
+            project = get_project_id_by_panel_id(s,panel_id)
+            genes = get_genes_by_panelid(s, panel_id, version)
+            users = get_user_rel_by_project_id(s, project_id)
+
+        if type == "VPanels":
+            vpanel_id = get_vpanel_id_by_vpanelname(s, term)
+            genes = get_genes_by_vpanel_id(s, vpanel_id)
+            panel_id = get_panel_by_vpanel_id(s, vpanel_id)
+            project_id = get_project_id_by_panel_id(s, panel_id)
+            users = get_user_rel_by_project_id(s, project_id)
+
+        if type == "Projects":
+            project_id = get_project_id_by_name(s, term)
+            panels = get_panels_by_project_id(s, project_id)
+            vpanels = get_virtual_panels_by_panel_id(s, panels)
+            users = get_user_rel_by_project_id(s, project_id)
+
+        if type == "Users":
+            projects = get_projects_by_user(s, term)
+
+
+
+
 
 
 #################
