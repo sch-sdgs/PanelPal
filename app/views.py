@@ -500,6 +500,8 @@ def view_panel():
     id = request.args.get('id')
     try:
         version = request.form["versions"]
+        print 'version1'
+        print version
     except KeyError:
         version = None
     if id:
@@ -513,6 +515,8 @@ def view_panel():
             if not version:
                 version = i.current_version
             panel_name = i.name
+        print 'version'
+        print version
         panel = get_panel_by_id(s, id, version)
         project_id = get_project_id_by_panel_id(s, id)
         print project_id
@@ -526,12 +530,13 @@ def view_panel():
                 # row["status"] = status
                 result.append(row)
                 panel_name = row["name"]
-                version = row["current_version"]
+                current_version = row["current_version"]
             table = ItemTablePanelView(result, classes=['table', 'table-striped'])
         else:
             table = ""
             message = "This Panel has no regions yet & may also have changes that have not been made live"
             bed = 'disabled'
+            current_version = version
 
         if check_user_has_permission(s, current_user.id, project_id):
             edit = ''
@@ -539,8 +544,13 @@ def view_panel():
             edit = 'disabled'
 
         form = ViewPanel()
-        form.versions.default = version
-        form.versions.query = get_all_versions(s, id)
+        v_list = range(1,current_version + 1)
+        choices = []
+        for i in v_list:
+            choices.append((i, i))
+        form.versions.choices = choices
+        form.versions.default = current_version
+        form.process()
         return render_template('panel_view.html', panel=table, panel_name=panel_name, edit=edit, bed=bed,
                                version=version, panel_id=id, message=message, form=form)
 

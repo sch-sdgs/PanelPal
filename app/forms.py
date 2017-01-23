@@ -39,7 +39,7 @@ def panels_unlocked():
     return s.query(models.Panels).filter(and_(models.Panels.project.has(models.Projects.user.any(models.UserRelationships.user.has(models.Users.username == current_user.id))), models.Panels.locked == None)).all()
 
 class ViewPanel(Form):
-    versions = QuerySelectField(get_label='intro')
+    versions = SelectField()
     submit = SubmitField("Go")
 
 class CreatePanel(Form):

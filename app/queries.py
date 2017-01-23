@@ -201,15 +201,22 @@ def get_all_versions(s, panel_id):
     :param panel_id:
     :return:
     """
-    #versions = s.query(Versions).distinct(Versions.intro).group_by(Versions.intro).filter(Versions.panel_id==panel_id).all()
-    #return versions
+    versions = s.query(Versions).distinct(Versions.intro).group_by(Versions.intro).filter(Versions.panel_id==panel_id).all()
+    print versions
+    return versions
 
-    version = s.query(Panels).filter_by(id= panel_id).values(Panels.current_version)
+    # versions = range(1,c_v)
 
-    version_int = int(version)
-    print version
-    num_versions = list(1,version_int)
-    return num_versions
+
+
+    #c_v = s.query(Panels).filter_by(id= panel_id).values(Panels.current_version)
+    #c_v = int(c_v)
+    #for i in c_v:
+        #i = str(i)
+        #versions = range(1,i)
+        #print versions
+        #return versions
+
 
 
 def get_current_vpanel_version(s, vpanelid):
@@ -846,7 +853,7 @@ def get_panel_by_id(s, panel_id, version=None):
         current_version = get_current_version(s, panel_id)
     else:
         current_version = version
-        panel = s.query(Projects, Panels, Versions, Regions, Exons, Tx, Genes). \
+    panel = s.query(Projects, Panels, Versions, Regions, Exons, Tx, Genes). \
         join(Panels). \
         join(Versions). \
         join(Regions). \
