@@ -318,6 +318,22 @@ class ItemTableUsers(Table):
 class ItemTableSearchTx(Table):
     id = Col('Transcript Accession')
 
+class ItemTableSearchGene(Table):
+    gene_name = Col('Gene')
+
+class ItemTableSearchVPanels(Table):
+    vpanel_name = LinkCol('Virtual Panel', 'view_vpanel', url_kwargs=dict(id='vpanel_id'), attr='vpanel_name')
+    panel_name = LinkCol('Panel', 'view_panel', url_kwargs=dict(id='panel_id'), attr='panel_name')
+
+class ItemTableSearchVPanelsTwo(Table):
+    vpanel_name = LinkCol('', 'view_vpanel', url_kwargs=dict(id='vpanel_id'), attr='vpanel_name')
+
+class ItemTableSearchPanels(Table):
+    panel_name = LinkCol('Panel', 'view_panel', url_kwargs=dict(id='panel_id'), attr='panel_name')
+
+class ItemTableSearchProjects(Table):
+    project_name = LinkCol('', 'view_panels', url_kwargs=dict(id='project_id'), attr='project_name')
+
 def row2dict(row):
     """
     converts a database row from certain queries (I think .all() style queries) to a dict
@@ -1284,41 +1300,97 @@ def search_for():
         return render_template("search.html", form=form)
     else:
         type = request.form["tables"]
-        #print type
         term = request.form["search_term"]
-        #print term
 
         if type == "Genes":
             tx_result=[]
-            #print "Gene!"
             gene_id = get_gene_id_from_name(s, term)
             tx = get_tx_by_gene_id(s, gene_id)
 
             for t in tx:
-                #row = dict(zip(i.keys(), i))
                 tx_accession = {'id':t[1]}
                 tx_result.append(tx_accession)
             table_one = ItemTableSearchTx(tx_result, classes=['table', 'table-striped'])
 
+            vpanel_result = []
             vpanel = get_vpanel_by_gene_id(s, gene_id)
-            for panel in vpanel:
-                print panel
 
-            # panel = get_panel_by_gene_id(s, gene_id)
-            return render_template("search_results.html", tx=table_one)
+            if len(list(vpanel)) > 0:
+                for vp in vpanel:
+                    vp_id = vp[0]
+                    vp_name = vp[1]
+                    broad_name = get_panel_by_vpanel_id(s, vp_id)
+                    for b in broad_name:
+                        vpanel_info = {'vpanel_name': vp_name, 'vpanel_id': vp_id, 'panel_name': b[0], 'panel_id': b[1]}
+                        vpanel_result.append(vpanel_info)
+                table_two = ItemTableSearchVPanels(vpanel_result, classes=['table', 'table-striped'])
+            else:
+                panel_results=[]
+                panel = get_panel_by_gene_id(s, gene_id)
+                for p in panel:
+                    p_info = {'panel_name':p[1], 'panel_id':p[0]}
+                    panel_results.append(p_info)
+                table_two = ItemTableSearchPanels(panel_results, classes=['table', 'table-striped'])
+
+            return render_template("search_results.html", tx=table_one, panels=table_two)
 
         if type == "Transcripts":
-            tx_id = get_tx_id_by_name(s, term)
-            gene_id = get_gene_id_by_tx(g, tx_id)
+            tx_id = get_tx_id_from_name(s,term)
+            gene = get_gene_from_tx(s, tx_id)
+            gene_result=[]
+
+            for g in gene:
+                gene_info = {'gene_name':g[0]}
+                gene_id = g[1]
+                gene_result.append(gene_info)
+            table_one = ItemTableSearchGene(gene_result, classes=['table', 'table-striped'])
+
+            vpanel_result = []
             vpanel = get_vpanel_by_gene_id(s, gene_id)
-            panel = get_panel_by_gene_id(s, gene_id)
+            if len(list(vpanel)) > 0:
+                for vp in vpanel:
+                    vp_id = vp[0]
+                    vp_name = vp[1]
+                    broad_name = get_panel_by_vpanel_id(s, vp_id)
+                    for b in broad_name:
+                        vpanel_info = {'vpanel_name': vp_name, 'vpanel_id': vp_id, 'panel_name': b[0], 'panel_id': b[1]}
+                        vpanel_result.append(vpanel_info)
+                table_two = ItemTableSearchVPanels(vpanel_result, classes=['table', 'table-striped'])
+            else:
+                panel_results=[]
+                panel = get_panel_by_gene_id(s, gene_id)
+                for p in panel:
+                    p_info = {'panel_name':p[1], 'panel_id':p[0]}
+                    panel_results.append(p_info)
+                table_two = ItemTableSearchPanels(panel_results, classes=['table', 'table-striped'])
+
+            return render_template("search_results_tx.html", genes=table_one, panels=table_two)
 
         if type == "Panels":
-            panel_id = get_panel_id_by_name(s,term)
-            vpanel = get_virtual_panels_by_panel_id(s, panel_id)
-            project = get_project_id_by_panel_id(s,panel_id)
-            genes = get_genes_by_panelid(s, panel_id, version)
-            users = get_user_rel_by_project_id(s, project_id)
+            panel = get_panel_id_by_name(s,term)
+            panel_results=[]
+            for p in panel:
+                panel_id = p[0]
+                project_id = p[1]
+                panel_info = {'panel_name': term, 'panel_id': panel_id}
+                panel_results.append(panel_info)
+            table_one = ItemTableSearchPanels(panel_results, classes=['table', 'table-striped'])
+
+            project = get_project_name(s,project_id)
+            project_results = [{'project_name': project, 'project_id': project_id}]
+            table_two = ItemTableSearchProjects(project_results, classes=['table', 'table-striped'])
+
+            vpanels = get_virtual_panels_by_panel_id(s, panel_id)
+            vpanel_results=[]
+            for vp in vpanels:
+                print vp
+                vpanel_info={'vpanel_name': vp[6], 'vpanel_id': vp[0]}
+                vpanel_results.append(vpanel_info)
+            table_three = ItemTableSearchVPanelsTwo(vpanel_results, classes=['table', 'table-striped'])
+
+            # genes = get_genes_by_panelid(s, panel_id, version)
+            # users = get_user_rel_by_project_id(s, project_id)
+            return render_template("search_results_panels.html", panels = table_one, projects=table_two, vpanels=table_three)
 
         if type == "VPanels":
             vpanel_id = get_vpanel_id_by_vpanelname(s, term)
