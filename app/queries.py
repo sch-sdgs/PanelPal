@@ -618,7 +618,6 @@ def get_preftx_current_version(s, project_id):
     for i in version:
         return [i.current_version, i.id]
 
-
 def get_gene_id_from_name(s,gene_name):
     gene = s.query(Genes).filter(Genes.name == gene_name).values(Genes.id)
     for i in gene:
@@ -864,8 +863,11 @@ def get_panel_by_vpanel_id(s, vp_id):
         values(Panels.name, Panels.id)
     return panel
 
-def get_panel_by_id(s, panel_id):
-    current_version = get_current_version(s, panel_id)
+def get_panel_by_id(s, panel_id, version=None):
+    if not version:
+        current_version = get_current_version(s, panel_id)
+    else:
+        current_version = version
     panel = s.query(Projects, Panels, Versions, Regions, Exons, Tx, Genes). \
         join(Panels). \
         join(Versions). \
@@ -911,6 +913,14 @@ def get_panel_by_gene_id(s, gene_id):
 
 def get_vpanel_by_id(s, vpanel_id):
     current_version = get_current_vpanel_version(s, vpanel_id)
+
+
+
+def get_vpanel_by_id(s, vpanel_id, version=None):
+    if not version:
+        current_version = get_current_vpanel_version(s, vpanel_id)
+    else:
+        current_version = version
     panel = s.query(Projects, Panels, Versions, VPRelationships, VirtualPanels, Regions, Exons, Tx, Genes). \
         join(Panels). \
         join(Versions). \
@@ -1047,4 +1057,3 @@ def toggle_admin_query(s,user_id):
 def get_all_projects(s):
     projects = s.query(Projects).values(Projects.id,Projects.name)
     return projects
-

@@ -43,6 +43,10 @@ class Search(Form):
     tables = SelectField("Type", choices=categories)
     submit = SubmitField("Search")
 
+class ViewPanel(Form):
+    versions = SelectField()
+    submit = SubmitField("Go")
+
 class CreatePanel(Form):
     project = QuerySelectField(query_factory=projects,get_label='name')
     panelname = TextField("Panel Name")

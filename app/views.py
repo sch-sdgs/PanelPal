@@ -6,7 +6,7 @@ from app.activedirectory import UserAuthentication
 import json
 from app.queries import *
 from flask_table import Table, Col, LinkCol
-from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanelProcess, UserForm, Search
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanelProcess, UserForm, Search, ViewPanel
 from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
 from functools import wraps
@@ -545,6 +545,17 @@ def user_admin():
     table = ItemTableUsers(result, classes=['table', 'table-striped'])
     return render_template('users.html',form=form,table=table)
 
+@app.route('/panels/add_pref_tx', methods=['POST'])
+@login_required
+def add_pref_tx():
+    """
+
+    :return:
+    """
+    gene_id = request.args.get('gene_id')
+    tx = get_tx_by_gene_id(s, gene_id)
+    return jsonify(tx)
+
 @app.route('/admin/user/admin',methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -616,6 +627,10 @@ def view_panels(id=None):
 @message
 def view_panel():
     id = request.args.get('id')
+    try:
+        version = request.form["versions"]
+    except KeyError:
+        version = None
     if id:
         status = check_panel_status(s, id)
         if not status:
@@ -624,9 +639,12 @@ def view_panel():
             message = None
         panel_details = get_panel_details_by_id(s, id)
         for i in panel_details:
-            version = i.current_version
+            if not version:
+                version = i.current_version
             panel_name = i.name
-        panel = get_panel_by_id(s, id)
+        print 'version'
+        print version
+        panel = get_panel_by_id(s, id, version)
         project_id = get_project_id_by_panel_id(s, id)
         print project_id
         result = []
@@ -639,19 +657,30 @@ def view_panel():
                 # row["status"] = status
                 result.append(row)
                 panel_name = row["name"]
-                version = row["current_version"]
+                current_version = row["current_version"]
             table = ItemTablePanelView(result, classes=['table', 'table-striped'])
         else:
             table = ""
-            message = "This Panel has no regions yet & may also have chnages that have not been made live"
+            message = "This Panel has no regions yet & may also have changes that have not been made live"
             bed = 'disabled'
+            current_version = version
 
         if check_user_has_permission(s, current_user.id, project_id):
             edit = ''
         else:
             edit = 'disabled'
+
+        form = ViewPanel()
+        v_list = range(1,current_version + 1)
+        choices = []
+        for i in v_list:
+            choices.append((i, i))
+        form.versions.choices = choices
+        form.versions.default = current_version
+        form.process()
         return render_template('panel_view.html', panel=table, panel_name=panel_name, edit=edit, bed=bed,
-                               version=version, panel_id=id, message=message)
+                               version=version, panel_id=id, message=message, url = url_for('view_panel'),
+                               form=form)
 
     else:
         return redirect(url_for('view_panels'))
@@ -661,6 +690,10 @@ def view_panel():
 @login_required
 def view_vpanel():
     id = request.args.get('id')
+    try:
+        version = request.form["versions"]
+    except KeyError:
+        version = None
     if id:
         status = check_virtualpanel_status(s, id)
         if not status:
@@ -669,7 +702,8 @@ def view_vpanel():
             message = None
         panel_details = get_vpanel_details_by_id(s, id)
         for i in panel_details:
-            version = i.current_version
+            if not version:
+                version = i.current_version
             panel_name = i.name
             project_id = i.project_id
         panel = get_vpanel_by_id(s, id)
@@ -683,23 +717,35 @@ def view_vpanel():
                 # row["status"] = status
                 result.append(row)
                 panel_name = row["name"]
-                version = row["current_version"]
+                current_version = row["current_version"]
             table = ItemTablePanelView(result, classes=['table', 'table-striped'])
         else:
             table = ""
             message = "This Panel has no regions yet & may also have chnages that have not been made live yet"
             bed = 'disabled'
+            current_version = version
+        print 'version'
+        print current_version
 
         if check_user_has_permission(s, current_user.id, project_id):
             edit = ''
         else:
             edit = 'disabled'
+
+        form = ViewPanel()
+        v_list = range (1, current_version+1)
+        choices = []
+        for i in v_list:
+            choices.append((i,i))
+        form.versions.choices = choices
+        form.versions.default = current_version
+        form.process()
         return render_template('panel_view.html', panel=table, panel_name=panel_name, edit=edit, bed=bed,
-                               version=version, panel_id=id, message=message, scope='Virtual')
+                                version=version, panel_id=id, message=message, url= url_for('view_vpanel'),
+                                scope='Virtual', form=form)
 
     else:
-        return redirect(url_for('view_panels'))
-
+        return redirect(url_for('view_vpanels'))
 
 @app.route('/panels/create', methods=['GET', 'POST'])
 @login_required
@@ -772,16 +818,12 @@ def edit_panel_page(panel_id=None):
     panel_info = s.query(Panels, Projects).join(Projects).filter(Panels.id == id).values(
         Panels.current_version,
         Panels.name,
-        Panels.locked
-    )
+        Panels.locked)
     print panel_info
     for i in panel_info:
-        print i.current_version
         version = i.current_version
         name = i.name
-
     panel = get_panel_edit(s, id=id, version=version)
-
     form = RemoveGene(panelId=id)
     print "PANEL ID" + str(id)
     add_form = AddGene(panelIdAdd=id)
