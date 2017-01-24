@@ -3,20 +3,76 @@
 {% block content %}
 
 <form action="{{ url_for('search_for') }}" method="POST" class="form-create">
-    <h2>Results</h2>
+    <h2>Results for "{{ term }}"</h2>
     <br>
-    <h5>Gene has these transcripts:</h5>
-        <div class="row">
-            <div class="col-md-12 white-bk">
-                {{ tx }}
-            </div>
+
+{% if genes_tx %}
+<h5>Gene has these transcripts:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ genes_tx }}
         </div>
-    <br>
-    <h5>Gene is present in these panels:</h5>
-        <div class="row">
-            <div class="col-md-12 white-bk">
-                {{ panels }}
-            </div>
+    </div>
+<br>
+<h5>Gene is present in these panels:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ genes_panels }}
         </div>
+    </div>
+{% endif %}
+
+{% if tx_genes %}
+<h5>Transcript belongs to gene:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ tx_genes }}
+        </div>
+    </div>
+<br>
+<h5>Gene is present in these panels:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ tx_panels }}
+        </div>
+    </div>
+{% endif %}
+
+{% if panels_projects %}
+<div class="row">
+    <div class="col-md-12 white-bk">
+        {{ panels_panels }}
+    </div>
+</div>
+<br>
+<h5>Part of project:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ panels_projects }}
+        </div>
+    </div>
+<br>
+<h5>Contains the following virtual panels:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ panels_vpanels }}
+        </div>
+    </div>
+<br>
+<h5>Users with edit access:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ panels_users }}
+        </div>
+    </div>
+<br>
+<h5>Genes present in this panel:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ panels_genes }}
+        </div>
+    </div>
+{% endif %}
+
 </form>
 {% endblock %}

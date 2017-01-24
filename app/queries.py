@@ -873,7 +873,7 @@ def get_vpanel_by_gene_id(s, gene_id):
         filter(and_(Genes.id == gene_id, or_(VPRelationships.last >= VirtualPanels.current_version, VPRelationships.last == None))). \
         distinct(VirtualPanels.id). \
         group_by(VirtualPanels.id). \
-        values(VirtualPanels.id.label("vpanelid"),VirtualPanels.name.label("vpanelname"))
+        values(VirtualPanels.id,VirtualPanels.name)
     return vpanel
 
 def get_panel_by_gene_id(s, gene_id):
