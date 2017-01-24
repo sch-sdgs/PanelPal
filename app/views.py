@@ -693,11 +693,10 @@ def edit_panel_page(panel_id=None):
     panel_info = s.query(Panels, Projects).join(Projects).filter(Panels.id == id).values(
         Panels.current_version,
         Panels.name,
-        Panels.locked
-    )
+        Panels.locked)
+
     print panel_info
     for i in panel_info:
-        print i.current_version
         version = i.current_version
         name = i.name
 
