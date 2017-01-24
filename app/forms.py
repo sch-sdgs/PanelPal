@@ -1,5 +1,5 @@
 from flask.ext.wtf import Form
-from wtforms.fields import TextField, TextAreaField, SubmitField, HiddenField, PasswordField, RadioField, BooleanField
+from wtforms.fields import TextField, TextAreaField, SubmitField, HiddenField, PasswordField, RadioField, BooleanField, SelectField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.validators import Required
 from app.main import app,db,s
@@ -36,6 +36,12 @@ def panels():
 
 def panels_unlocked():
     return s.query(models.Panels).filter(and_(models.Panels.project.has(models.Projects.user.any(models.UserRelationships.user.has(models.Users.username == current_user.id))), models.Panels.locked == None)).all()
+
+class Search(Form):
+    categories = [("Genes",'Gene'), ("Transcripts",'Transcript'), ("Panels",'Panel'), ("VPanels",'Virtual Panel'), ("Projects",'Project'), ("Users",'User')]
+    search_term = TextField("Search term")
+    tables = SelectField("Type", choices=categories)
+    submit = SubmitField("Search")
 
 class CreatePanel(Form):
     project = QuerySelectField(query_factory=projects,get_label='name')

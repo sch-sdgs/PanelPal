@@ -538,6 +538,28 @@ def get_genes_by_panelid(s, panelid, current_version):
                Genes.id)
     return genes
 
+def get_genes_by_vpanelid(s, vpanel_id, current_version):
+    genes = s.query(Genes, Tx, Exons, Regions, Versions, VPRelationships, VirtualPanels). \
+        join(Tx). \
+        join(Exons). \
+        join(Regions). \
+        join(Versions). \
+        join(VPRelationships). \
+        join(VirtualPanels). \
+        filter(and_(VirtualPanels.id == vpanel_id, VPRelationships.intro <= current_version, or_(VPRelationships.last >= current_version, VPRelationships.last == None))). \
+        distinct(Genes.name). \
+        group_by(Genes.name). \
+        values(Genes.name, Genes.id)
+
+    return genes
+
+def get_gene_from_tx(s,tx_id):
+    genes = s.query(Tx, Genes). \
+        join(Genes). \
+        filter(Tx.id == tx_id). \
+        values(Genes.name, Genes.id)
+    return genes
+
 def get_regions_by_geneid(s, geneid, panelid):
     """
     gets current regions for a given gene within a given panel
@@ -596,9 +618,15 @@ def get_preftx_current_version(s, project_id):
     for i in version:
         return [i.current_version, i.id]
 
+
 def get_gene_id_from_name(s,gene_name):
     gene = s.query(Genes).filter(Genes.name == gene_name).values(Genes.id)
     for i in gene:
+        return i.id
+
+def get_tx_id_from_name(s,tx_name):
+    trans = s.query(Tx).filter(Tx.accession == tx_name).values(Tx.id)
+    for i in trans:
         return i.id
 
 def add_preftxs_to_panel(s, project_id, tx_ids):
@@ -826,7 +854,15 @@ def get_preftx_api(s,project_name,version='current'):
 
     return PanelApiReturn(current_version, preftx)
 
-
+def get_panel_by_vpanel_id(s, vp_id):
+    panel = s.query(Panels, Versions, VPRelationships, VirtualPanels). \
+        join(Versions). \
+        join(VPRelationships). \
+        join(VirtualPanels). \
+        filter(VirtualPanels.id == vp_id). \
+        distinct(Panels.id). \
+        values(Panels.name, Panels.id)
+    return panel
 
 def get_panel_by_id(s, panel_id):
     current_version = get_current_version(s, panel_id)
@@ -844,6 +880,33 @@ def get_panel_by_id(s, panel_id):
                Versions.last, Regions.chrom, Regions.start, Regions.end, Tx.accession, Genes.name.label("genename"),
                Exons.number)
 
+    return panel
+
+def get_vpanel_by_gene_id(s, gene_id):
+    vpanel = s.query(Genes, Tx, Exons, Regions, Versions, VPRelationships, VirtualPanels). \
+        join(Tx). \
+        join(Exons). \
+        join(Regions). \
+        join(Versions). \
+        join(VPRelationships). \
+        join(VirtualPanels). \
+        filter(and_(Genes.id == gene_id, or_(VPRelationships.last >= VirtualPanels.current_version, VPRelationships.last == None))). \
+        distinct(VirtualPanels.id). \
+        group_by(VirtualPanels.id). \
+        values(VirtualPanels.id,VirtualPanels.name)
+    return vpanel
+
+def get_panel_by_gene_id(s, gene_id):
+    panel = s.query(Genes, Tx, Exons, Regions, Versions, Panels). \
+        join(Tx). \
+        join(Exons). \
+        join(Regions). \
+        join(Versions). \
+        join(Panels). \
+        filter(and_(Genes.id == gene_id, or_(Versions.last >= Panels.current_version, Versions.last == None))). \
+        distinct(Panels.id). \
+        group_by(Panels.id). \
+        values(Panels.id, Panels.name)
     return panel
 
 def get_vpanel_by_id(s, vpanel_id):
@@ -866,12 +929,24 @@ def get_vpanel_by_id(s, vpanel_id):
 
     return panel
 
+def get_vpanel_id_by_name(s, vpanel_name):
+    vpanel = s.query(VirtualPanels). \
+        filter(VirtualPanels.name == vpanel_name). \
+        values(VirtualPanels.id)
+    return vpanel
+
 def get_panel_details_by_id(s, panel_id):
     panel = s.query(Projects, Panels). \
         join(Panels). \
         filter(Panels.id == panel_id). \
         values(Panels.name, Panels.current_version)
 
+    return panel
+
+def get_panel_id_by_name(s, panel_name):
+    panel = s.query(Panels). \
+        filter(Panels.name == panel_name). \
+        values(Panels.id, Panels.project_id)
     return panel
 
 def get_vpanel_details_by_id(s, vpanel_id):
@@ -972,3 +1047,4 @@ def toggle_admin_query(s,user_id):
 def get_all_projects(s):
     projects = s.query(Projects).values(Projects.id,Projects.name)
     return projects
+
