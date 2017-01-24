@@ -694,14 +694,11 @@ def edit_panel_page(panel_id=None):
         Panels.current_version,
         Panels.name,
         Panels.locked)
-
     print panel_info
     for i in panel_info:
         version = i.current_version
         name = i.name
-
     panel = get_panel_edit(s, id=id, version=version)
-
     form = RemoveGene(panelId=id)
     print "PANEL ID" + str(id)
     add_form = AddGene(panelIdAdd=id)
