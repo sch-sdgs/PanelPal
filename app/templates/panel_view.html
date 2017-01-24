@@ -1,11 +1,14 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<form action="{{ url_for('view_panel') }}?id={{ panel_id }}" method="POST">
+<form action="{{ url }}?id={{ panel_id }}" method="POST">
 <div class="container">
     <div class="row">
         <div class="col-md-8">
             <h2>Viewing Live {{ scope }} Panel | <strong>{{ panel_name }} (v{{ version }})</strong></h2>
+             <div class="form-group">
+                 <h4> Select a previous version: {{ form.versions(class_="form-inline") }}{{ form.submit(class_="btn btn-primary btn-sm") }}</h4>
+             </div>
         </div>
 
         <div class="col-md-4">
@@ -19,10 +22,6 @@
                         class="glyphicon glyphicon-edit"></span> Edit Panel</a>
             </div>
 
-             <div class="form-group">
-                 {{ form.versions(class_="form-control") }}
-                 {{ form.submit(class_="btn btn-primary") }}
-             </div>
 
         </div>
     </div>
@@ -39,5 +38,6 @@
         </div>
     </div>
 </div>
-</form>
+
+
 {% endblock %}

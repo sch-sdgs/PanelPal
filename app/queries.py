@@ -194,30 +194,6 @@ def get_current_version(s, panelid):
     for i in version:
         return i.current_version
 
-def get_all_versions(s, panel_id):
-    """
-
-    :param s:
-    :param panel_id:
-    :return:
-    """
-    versions = s.query(Versions).distinct(Versions.intro).group_by(Versions.intro).filter(Versions.panel_id==panel_id).all()
-    print versions
-    return versions
-
-    # versions = range(1,c_v)
-
-
-
-    #c_v = s.query(Panels).filter_by(id= panel_id).values(Panels.current_version)
-    #c_v = int(c_v)
-    #for i in c_v:
-        #i = str(i)
-        #versions = range(1,i)
-        #print versions
-        #return versions
-
-
 
 def get_current_vpanel_version(s, vpanelid):
     """
@@ -872,8 +848,11 @@ def get_panel_by_id(s, panel_id, version=None):
 
 
 
-def get_vpanel_by_id(s, vpanel_id):
-    current_version = get_current_vpanel_version(s, vpanel_id)
+def get_vpanel_by_id(s, vpanel_id, version=None):
+    if not version:
+        current_version = get_current_vpanel_version(s, vpanel_id)
+    else:
+        current_version = version
     panel = s.query(Projects, Panels, Versions, VPRelationships, VirtualPanels, Regions, Exons, Tx, Genes). \
         join(Panels). \
         join(Versions). \
