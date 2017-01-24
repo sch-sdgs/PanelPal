@@ -74,5 +74,74 @@
     </div>
 {% endif %}
 
+{% if vpanels_projects %}
+<div class="row">
+    <div class="col-md-12 white-bk">
+        {{ vpanels_vpanels }}
+    </div>
+</div>
+<br>
+<h5>In panel:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ vpanels_panels }}
+        </div>
+    </div>
+<br>
+<h5>Part of project:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ vpanels_projects }}
+        </div>
+    </div>
+<br>
+<h5>Users with edit access:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ vpanels_users }}
+        </div>
+    </div>
+<br>
+<h5>Genes present in this panel:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ vpanels_genes }}
+        </div>
+    </div>
+{% endif %}
+
+{% if projects_project %}
+<h5>Project:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ projects_project }}
+        </div>
+    </div>
+<br>
+<h5>Project contains these panels:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ projects_panels }}
+        </div>
+    </div>
+<br>
+<h5>Users with edit access:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ projects_users }}
+        </div>
+    </div>
+<br>
+{% endif %}
+
+{% if users_projects %}
+<h5>User has access to these projects:</h5>
+    <div class="row">
+        <div class="col-md-12 white-bk">
+            {{ users_projects }}
+        </div>
+    </div>
+{% endif %}
+
 </form>
 {% endblock %}

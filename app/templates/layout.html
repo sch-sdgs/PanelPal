@@ -486,6 +486,54 @@
             });
         })
     </script>
+    <script>
+        $(function () {
+            $("#search_term").autocomplete({
+                source: function (request, response) {
+                    var url = ''
+                    var value = $('#tables').val()
+                    var length = 2
+                    if (value == "Genes")
+                    {
+                        url = "{{url_for('autocomplete')}}"
+                    }
+                    else if (value == "Transcripts")
+                    {
+                        url = "{{url_for('autocomplete_tx')}}"
+                        length = 5
+                    }
+                    else if (value == "Panels")
+                    {
+                        url = "{{url_for('autocomplete_panel')}}"
+                    }
+                    else if (value == "VPanels")
+                    {
+                        url = "{{url_for('autocomplete_vp')}}"
+                    }
+                    else if (value == "Projects")
+                    {
+                        url = "{{url_for('autocomplete_project')}}"
+                    }
+                    else if (value == "Users")
+                    {
+                        url = "{{url_for('autocomplete_user')}}"
+                    }
+                    console.log(url)
+                    console.log(value)
+                    $.getJSON(url, {
+                        q: request.term, // in flask, "q" will be the argument to look for using request.args
+                    }, function (data) {
+                        response(data.matching_results); // matching_results from jsonify
+                    });
+                },
+                minLength: length,
+                select: function (event, ui) {
+                    console.log(ui.item.value); // not in your question, but might help later
+                }
+            });
+        })
+    </script>
+
     {% if delete == True %}
     <script type="text/javascript">
         $(document).ready(function () {

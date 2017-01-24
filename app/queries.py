@@ -533,6 +533,21 @@ def get_genes_by_panelid(s, panelid, current_version):
                Genes.id)
     return genes
 
+def get_genes_by_vpanelid(s, vpanel_id, current_version):
+    genes = s.query(Genes, Tx, Exons, Regions, Versions, VPRelationships, VirtualPanels). \
+        join(Tx). \
+        join(Exons). \
+        join(Regions). \
+        join(Versions). \
+        join(VPRelationships). \
+        join(VirtualPanels). \
+        filter(and_(VirtualPanels.id == vpanel_id, VPRelationships.intro <= current_version, or_(VPRelationships.last >= current_version, VPRelationships.last == None))). \
+        distinct(Genes.name). \
+        group_by(Genes.name). \
+        values(Genes.name, Genes.id)
+
+    return genes
+
 def get_gene_from_tx(s,tx_id):
     genes = s.query(Tx, Genes). \
         join(Genes). \
@@ -908,6 +923,12 @@ def get_vpanel_by_id(s, vpanel_id):
                Exons.number)
 
     return panel
+
+def get_vpanel_id_by_name(s, vpanel_name):
+    vpanel = s.query(VirtualPanels). \
+        filter(VirtualPanels.name == vpanel_name). \
+        values(VirtualPanels.id)
+    return vpanel
 
 def get_panel_details_by_id(s, panel_id):
     panel = s.query(Projects, Panels). \
