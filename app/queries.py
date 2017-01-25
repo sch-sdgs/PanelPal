@@ -12,6 +12,12 @@ handler = TimedRotatingFileHandler('PanelPal.log', when="d",interval=1,backupCou
 handler.setLevel(logging.INFO)
 
 def message(f):
+    """
+    decorator that allows query methods to log their actions to a log file so that we can track users
+
+    :param f:
+    :return:
+    """
     @wraps(f)
     def decorated_function(*args,**kwargs):
         method = f.__name__
@@ -984,7 +990,13 @@ def get_tx_by_gene_id(s, gene_id):
     return tx
 
 def check_if_admin(s,username):
+    """
+    check if the user is an admin
 
+    :param s: database session
+    :param username: the username of the user
+    :return: True or False for admin status
+    """
     user_id = get_user_id_by_username(s,username)
     query = s.query(Users).filter(Users.id == user_id).values(Users.admin)
     for i in query:
@@ -995,32 +1007,65 @@ def check_if_admin(s,username):
 
 @message
 def create_user(s,username):
+    """
+    create a user
+    :param s: database session
+    :param username: the username of the new user
+    :return: True or False
+    """
     user = Users(username=username,admin=0)
-    s.add(user)
-    s.commit()
-    return True
+    try:
+        s.add(user)
+        s.commit()
+        return True
+    except:
+        return False
 
 def get_users(s):
+    """
+    gets all users
+    :param s: database session
+    :return: sql alchemy generator object
+    """
     users = s.query(Users).order_by(Users.username).values(Users.id,Users.username,Users.admin)
     return users
 
 @message
 def toggle_admin_query(s,user_id):
+    """
+    toggles a user admin rights
+    :param s: database session
+    :param user_id: the id of the user
+    :return: True or False
+    """
     query = s.query(Users).filter(Users.id == user_id).values(Users.admin)
     for i in query:
         if i.admin == 1:
             new_value = 0
         else:
             new_value = 1
-    s.query(Users).filter_by(id=user_id).update({Users.admin: new_value})
-    s.commit()
-    return True
+    try:
+        s.query(Users).filter_by(id=user_id).update({Users.admin: new_value})
+        s.commit()
+        return True
+    except:
+        return False
 
 
 def get_all_projects(s):
+    """
+    gets all projects, ids and names
+    :param s: database session
+    :return: sql alchemcy generator object
+    """
     projects = s.query(Projects).values(Projects.id,Projects.name)
     return projects
 
 def get_all_locked(s):
+    """
+    gets all locked panels
+    :param s: database session
+    :return: sql alchemy generator object
+    """
     locked = s.query(Panels,Users).join(Users).filter(Panels.locked != None).values(Panels.name,Users.username,Panels.id.label("id"))
     return locked

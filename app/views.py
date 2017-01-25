@@ -458,8 +458,9 @@ def user_admin():
     users = get_users(s)
     result = []
     for i in users:
-        row = dict(zip(i.keys(), i))
-        result.append(row)
+        if i.username != current_user.id:
+            row = dict(zip(i.keys(), i))
+            result.append(row)
     table = ItemTableUsers(result, classes=['table', 'table-striped'])
     return render_template('users.html',form=form,table=table,message=message)
 
