@@ -429,8 +429,7 @@ def get_preftx_by_project_id(s, id):
     :param id: project id
     :return: sql alchemy object
     """
-    print "QUERY"
-    print id
+
     preftx = s.query(Genes, Tx, PrefTxVersions, PrefTx, Projects). \
         filter(and_(PrefTx.project_id == id, \
                     or_(PrefTxVersions.last >= PrefTx.current_version, PrefTxVersions.last == None), \
@@ -878,6 +877,19 @@ def get_panel_by_id(s, panel_id):
                Exons.number)
 
     return panel
+
+def get_vpanel_by_gene_id(s, gene_id):
+    vpanel = s.query(Genes, Tx, Exons, Regions, Versions, VPRelationships, VirtualPanels). \
+        join(Tx). \
+        join(Exons). \
+        join(Regions). \
+        join(Versions). \
+        join(VPRelationships). \
+        join(VirtualPanels). \
+        filter(Genes.id == gene_id). \
+        values(VirtualPanels.id.label("vpanelid"),VirtualPanels.name("vpanelname"),VirtualPanels.current_version,VPRelationships.last,VPRelationships.intro)
+    return vpanel
+
 
 def get_vpanel_by_id(s, vpanel_id):
     current_version = get_current_vpanel_version(s, vpanel_id)
