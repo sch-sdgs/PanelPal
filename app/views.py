@@ -1,17 +1,18 @@
-from flask import render_template, request, flash, url_for, Markup, jsonify, redirect, Response, current_app
-from sqlalchemy.orm import scoped_session
-from app.main import s, app, db
-from app.models import *
-from app.activedirectory import UserAuthentication
 import json
-from app.queries import *
-from flask_table import Table, Col, LinkCol
-from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, PrefTxCreate, EditPermissions, CreateVirtualPanelProcess, UserForm, Search
+from collections import OrderedDict
+from functools import wraps
+
+from flask import render_template, request, flash, url_for, Markup, jsonify, redirect, Response
 from flask.ext.login import LoginManager, UserMixin, \
     login_required, login_user, logout_user, current_user
-from functools import wraps
-from collections import OrderedDict
+from sqlalchemy.orm import scoped_session
 
+from app.activedirectory import UserAuthentication
+from app.main import s, app, db
+from app.queries import *
+from flask_table import Table, Col, LinkCol
+from forms import ProjectForm, RemoveGene, AddGene, CreatePanel, Login, EditPermissions, CreateVirtualPanelProcess, \
+    Search, ViewPanel
 
 app.secret_key = 'development key'
 
@@ -132,8 +133,6 @@ class LockCol(Col):
             **kwargs)
 
     def td_contents(self, item, attr_list):
-        print "HELLO"
-        print item
         if item["locked"] is not None:
             username = get_username_by_user_id(s, item["locked"])
             return '<center><span class="glyphicon glyphicon-lock"  data-toggle="tooltip" data-placement="bottom" title="Locked by: ' + username + '" aria-hidden="true"></span></center>'
@@ -211,15 +210,15 @@ class ItemTablePermissions(Table):
                      url_kwargs=dict(userid='user_id', projectid='project_id', rel_id='rel_id'))
 
 
-class ItemTableVirtualPanel(Table):
-    vp_name = Col('Name')
-    current_version = Col('Version')
-    status = LabelCol('Status')
-    edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='id'))
-    # todo make edit_vp_panel_page
-    # id = Col('Id')
-    make_live = LinkCol('Make Live', 'make_virtualpanel_live', url_kwargs=dict(id='id'))
-    delete = LinkCol('Delete', 'delete_virtualpanel', url_kwargs=dict(id='id'))
+# class ItemTableVirtualPanel(Table):
+#     vp_name = Col('Name')
+#     current_version = Col('Version')
+#     status = LabelCol('Status')
+#     edit = LinkCol('Edit', 'edit_panel_page', url_kwargs=dict(id='id'))
+#     # todo make edit_vp_panel_page
+#     # id = Col('Id')
+#     make_live = LinkCol('Make Live', 'make_virtualpanel_live', url_kwargs=dict(id='id'))
+#     delete = LinkCol('Delete', 'delete_virtualpanel', url_kwargs=dict(id='id'))
 
 
 class ItemTableProject(Table):
@@ -246,7 +245,7 @@ class ItemTablePanels(Table):
 class ItemTableVPanels(Table):
     vp_name = Col('Name')
     current_version = Col('Stable Version')
-    view_panel = LinkCol('View Panel', 'view_vpanel', url_kwargs=dict(id='id'))
+    view_panel = LinkCol('View Panel', 'view_virtual_panel', url_kwargs=dict(id='id'))
     edit = LinkColConditional('Edit Panel', 'edit_panel_page', url_kwargs=dict(id='id'))
     locked = LockCol('Locked')
     status = LabelCol('Status')
@@ -310,6 +309,25 @@ class ItemTableLocked(Table):
 
 class ItemTableSearchTx(Table):
     id = Col('Transcript Accession')
+
+class ItemTableSearchGene(Table):
+    gene_name = Col('Gene')
+
+class ItemTableSearchVPanels(Table):
+    panel_name = LinkCol('Panel', 'view_panel', url_kwargs=dict(id='panel_id'), attr='panel_name')
+    vpanel_name = LinkCol('Virtual Panel', 'view_vpanel', url_kwargs=dict(id='vpanel_id'), attr='vpanel_name')
+
+class ItemTableSearchVPanelsTwo(Table):
+    vpanel_name = LinkCol('', 'view_vpanel', url_kwargs=dict(id='vpanel_id'), attr='vpanel_name')
+
+class ItemTableSearchPanels(Table):
+    panel_name = LinkCol('', 'view_panel', url_kwargs=dict(id='panel_id'), attr='panel_name')
+
+class ItemTableSearchProjects(Table):
+    project_name = LinkCol('', 'view_panels', url_kwargs=dict(id='project_id'), attr='project_name')
+
+class ItemTableSearchUsers(Table):
+    username = Col('')
 
 def row2dict(row):
     """
@@ -437,83 +455,60 @@ def autocomplete():
     data = [i.name for i in result]
     return jsonify(matching_results=data)
 
+@app.route('/autocomplete_tx', methods=['GET'])
+def autocomplete_tx():
+    """
+    this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it
+    :return: jsonified gene list
+    """
+    value = str(request.args.get('q'))
+    result = s.query(Tx).filter(Tx.accession.like("%" + value + "%")).all()
+    data = [i.accession for i in result]
+    return jsonify(matching_results=data)
 
-##################
-# ADMIN
-####################
+@app.route('/autocomplete_panel', methods=['GET'])
+def autocomplete_panel():
+    """
+    this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it
+    :return: jsonified gene list
+    """
+    value = str(request.args.get('q'))
+    result = s.query(Panels).filter(Panels.name.like("%" + value + "%")).all()
+    data = [i.name for i in result]
+    return jsonify(matching_results=data)
 
-@app.route('/admin/user',methods=['GET', 'POST'])
-@login_required
-@admin_required
-def user_admin():
-    form = UserForm()
-    message=None
-    if request.method == 'POST':
-        username = request.form["name"]
-        if check_if_admin(s,current_user.id):
-            create_user(s,username)
-            message = "Added user: " + username
-        else:
-            return render_template('users.html', form=form,message="You can't do that")
-    users = get_users(s)
-    result = []
-    for i in users:
-        if i.username != current_user.id:
-            row = dict(zip(i.keys(), i))
-            result.append(row)
-    table = ItemTableUsers(result, classes=['table', 'table-striped'])
-    return render_template('users.html',form=form,table=table,message=message)
+@app.route('/autocomplete_vp', methods=['GET'])
+def autocomplete_vp():
+    """
+    this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it
+    :return: jsonified gene list
+    """
+    value = str(request.args.get('q'))
+    result = s.query(VirtualPanels).filter(VirtualPanels.name.like("%" + value + "%")).all()
+    data = [i.name for i in result]
+    return jsonify(matching_results=data)
 
-@app.route('/admin/user/admin',methods=['GET', 'POST'])
-@login_required
-@admin_required
-def toggle_admin():
-    user_id=request.args.get('id')
-    toggle_admin_query(s,user_id)
-    return redirect(url_for('user_admin'))
+@app.route('/autocomplete_project', methods=['GET'])
+def autocomplete_project():
+    """
+    this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it
+    :return: jsonified gene list
+    """
+    value = str(request.args.get('q'))
+    result = s.query(Projects).filter(Projects.name.like("%" + value + "%")).all()
+    data = [i.name for i in result]
+    return jsonify(matching_results=data)
 
-@app.route('/admin/locked/toggle',methods=['GET', 'POST'])
-@login_required
-@admin_required
-def toggle_locked():
-    panel_id=request.args.get('id')
-    unlock_panel_query(s,panel_id)
-    return view_locked(message="Panel Unlocked")
-
-@app.route('/admin/logs',methods=['GET', 'POST'])
-@login_required
-@admin_required
-def view_logs():
-    if request.args.get('file'):
-        log = request.args.get('file')
-    else:
-        log = 'PanelPal.log'
-
-    import glob
-    files = []
-    listing = glob.glob('*log*')
-    for filename in listing:
-        files.append(filename)
-
-
-    result=[]
-    with open(log) as f:
-        for line in f:
-            result.append(line.rstrip())
-
-    return render_template('logs.html',log=result,files=files)
-
-@app.route('/admin/locked',methods=['GET', 'POST'])
-@login_required
-@admin_required
-def view_locked(message=None):
-    locked = get_all_locked(s)
-    result = []
-    for i in locked:
-        row = dict(zip(i.keys(), i))
-        result.append(row)
-    table = ItemTableLocked(result, classes=['table', 'table-striped'])
-    return render_template('locked.html',table=table,message=message)
+@app.route('/autocomplete_user', methods=['GET'])
+def autocomplete_user():
+    """
+    this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it
+    :return: jsonified gene list
+    """
+    value = str(request.args.get('q'))
+    result = s.query(Users).filter(Users.username.like("%" + value + "%")).all()
+    data = [i.username for i in result]
+    return jsonify(matching_results=data)
 
 ########################
 # PANELS
@@ -575,6 +570,10 @@ def view_panels(id=None):
 @login_required
 def view_panel():
     id = request.args.get('id')
+    try:
+        version = request.form["versions"]
+    except KeyError:
+        version = None
     if id:
         status = check_panel_status(s, id)
         if not status:
@@ -583,9 +582,12 @@ def view_panel():
             message = None
         panel_details = get_panel_details_by_id(s, id)
         for i in panel_details:
-            version = i.current_version
+            if not version:
+                version = i.current_version
             panel_name = i.name
-        panel = get_panel_by_id(s, id)
+        print 'version'
+        print version
+        panel = get_panel_by_id(s, id, version)
         project_id = get_project_id_by_panel_id(s, id)
         result = []
         rows = list(panel)
@@ -597,19 +599,30 @@ def view_panel():
                 # row["status"] = status
                 result.append(row)
                 panel_name = row["name"]
-                version = row["current_version"]
+                current_version = row["current_version"]
             table = ItemTablePanelView(result, classes=['table', 'table-striped'])
         else:
             table = ""
-            message = "This Panel has no regions yet & may also have chnages that have not been made live"
+            message = "This Panel has no regions yet & may also have changes that have not been made live"
             bed = 'disabled'
+            current_version = version
 
         if check_user_has_permission(s, current_user.id, project_id):
             edit = ''
         else:
             edit = 'disabled'
+
+        form = ViewPanel()
+        v_list = range(1,current_version + 1)
+        choices = []
+        for i in v_list:
+            choices.append((i, i))
+        form.versions.choices = choices
+        form.versions.default = current_version
+        form.process()
         return render_template('panel_view.html', panel=table, panel_name=panel_name, edit=edit, bed=bed,
-                               version=version, panel_id=id, message=message)
+                               version=version, panel_id=id, message=message, url = url_for('view_panel'),
+                               form=form)
 
     else:
         return redirect(url_for('view_panels'))
@@ -619,6 +632,10 @@ def view_panel():
 @login_required
 def view_vpanel():
     id = request.args.get('id')
+    try:
+        version = request.form["versions"]
+    except KeyError:
+        version = None
     if id:
         status = check_virtualpanel_status(s, id)
         if not status:
@@ -627,7 +644,8 @@ def view_vpanel():
             message = None
         panel_details = get_vpanel_details_by_id(s, id)
         for i in panel_details:
-            version = i.current_version
+            if not version:
+                version = i.current_version
             panel_name = i.name
             project_id = i.project_id
         panel = get_vpanel_by_id(s, id)
@@ -641,23 +659,35 @@ def view_vpanel():
                 # row["status"] = status
                 result.append(row)
                 panel_name = row["name"]
-                version = row["current_version"]
+                current_version = row["current_version"]
             table = ItemTablePanelView(result, classes=['table', 'table-striped'])
         else:
             table = ""
             message = "This Panel has no regions yet & may also have chnages that have not been made live yet"
             bed = 'disabled'
+            current_version = version
+        print 'version'
+        print current_version
 
         if check_user_has_permission(s, current_user.id, project_id):
             edit = ''
         else:
             edit = 'disabled'
+
+        form = ViewPanel()
+        v_list = range (1, current_version+1)
+        choices = []
+        for i in v_list:
+            choices.append((i,i))
+        form.versions.choices = choices
+        form.versions.default = current_version
+        form.process()
         return render_template('panel_view.html', panel=table, panel_name=panel_name, edit=edit, bed=bed,
-                               version=version, panel_id=id, message=message, scope='Virtual')
+                                version=version, panel_id=id, message=message, url= url_for('view_vpanel'),
+                                scope='Virtual', form=form)
 
     else:
-        return redirect(url_for('view_panels'))
-
+        return redirect(url_for('view_vpanels'))
 
 @app.route('/panels/create', methods=['GET', 'POST'])
 @login_required
@@ -731,13 +761,11 @@ def edit_panel_page(panel_id=None):
         Panels.name,
         Panels.locked
     )
-
+    print panel_info
     for i in panel_info:
         version = i.current_version
         name = i.name
-
     panel = get_panel_edit(s, id=id, version=version)
-
     form = RemoveGene(panelId=id)
     add_form = AddGene(panelIdAdd=id)
 
@@ -947,7 +975,7 @@ def delete_project():
 
 
 
-@app.route('/virtualpanels')
+@app.route('/virtualpanels', methods=['GET','POST'])
 @login_required
 def view_virtual_panels(id=None):
     """
@@ -1000,20 +1028,13 @@ def create_virtual_panel_process():
     form = CreateVirtualPanelProcess()
 
     if request.method == "POST":
-        #if form.validate() == False:
-           # return render_template('virtualpanels_createprocess.html', form=form, message="You didn't enter a name")
-        tab = request.args.get('tab')
-        if tab is not None:
-            name = request.form["vpanelname"]
-            testvpanel = s.query(VirtualPanels).filter_by(name=name).first()
-            if testvpanel is not None:
-                return render_template('virtualpanels_createprocess.html', form=form, message='Virtual panel name exists')
-            else:
-                panel_id = request.form["panel"]
-                vp_id = create_virtualpanel_query(s, name)
-                current_version = get_current_version(s, panel_id)
-                genes = get_genes_by_panelid(s, panel_id, current_version)
-                return render_template('virtualpanels_createprocess.html', form=form, vp_id=vp_id, panel=panel_id, genes=genes, tab=2)
+        make_live = request.form['make_live']
+        vp_id = request.args.get('id')
+        if make_live == "True":
+            make_vp_panel_live(s, vp_id, 1)
+        panel_id = get_panel_by_vp_id(s, vp_id)
+        unlock_panel_query(s, panel_id)
+        return redirect(url_for('view_virtual_panels'))
     elif request.method == "GET":
         return render_template('virtualpanels_createprocess.html', form=form, tab=1)
 
@@ -1025,7 +1046,10 @@ def add_vp():
     :return:
     """
     vp_name = request.json['vp_name']
+    panel_id = request.json['panel_id']
     vp_id = create_virtualpanel_query(s, vp_name)
+    if vp_id != -1:
+        lock_panel(s, current_user.id, panel_id)
     return jsonify(vp_id)
 
 @app.route('/virtualpanels/remove',  methods=['POST'])
@@ -1076,7 +1100,7 @@ def select_vp_regions():
     regions = get_regions_by_geneid(s, gene_id, panel_id)
     html = "<h3 name=\"" + gene_id + "\">" + gene_name + """</h3><ul class=\"list-unstyled list-inline pull-right\">
                     <li>
-                        <button type=\"button\" class=\"btn btn-success\" id=\"add-regions\" name=\"""" + gene_name + """\">Add Regions</button>
+                        <button type=\"button\" class=\"btn btn-success\" id=\"add-regions\" name=\"""" + gene_name + """\" disabled=\"disabled\">Add Regions</button>
                     </li>
                     <li>
                         <button type=\"button\" class=\"btn btn-danger\" id=\"remove-gene\" name=\"""" + gene_name + """\">Remove Gene</button>
@@ -1202,80 +1226,6 @@ def edit_permissions():
     table = ItemTablePermissions(all_results, classes=['table', 'table-striped'])
     return render_template("permissions.html", table=table, form=form, project_name=project, message=message)
 
-@app.route("/admin/permissions", methods=['GET', 'POST'])
-@login_required
-@admin_required
-def edit_permissions_admin():
-    users = get_users(s)
-    result=OrderedDict()
-    message=None
-    for i in users:
-        username = get_username_by_user_id(s, i.id)
-        result[username] = dict()
-        user_projects = get_projects_by_user(s, username)
-        all_projects = get_all_projects(s)
-        for p in all_projects:
-            result[username][p.id] = {'name': p.name, 'checked': ''}
-        for u in user_projects:
-            result[username][u.id] = {'name': u.name, 'checked': 'checked'}
-
-    if request.method == 'POST':
-        status = {}
-        for i in request.form.getlist('check'):
-            print i
-            username, project_id = i.split("_")
-            print username
-            print status
-            if username not in status:
-                status[username]=list()
-                status[username].append(int(project_id))
-            else:
-                status[username].append(int(project_id))
-        message = "Your changes have been made"
-
-        print status
-        #find changes
-        for username in result:
-            print username
-            for project_id in result[username]:
-                checked = result[username][project_id]["checked"]
-                name = result[username][project_id]["name"]
-                if username in status:
-                    if checked == "checked":
-                        print status[username]
-                        print project_id
-                        if project_id in status[username]:
-                            #this is OK it's checked and project
-                            pass
-                        else:
-                            #not OK - it's been unchecked
-                            print "username in but UNCHECKED"
-                            remove_user_project_rel_no_id(s, username, project_id)
-                    else:
-                        if project_id in status[username]:
-                            user_id=get_user_id_by_username(s,username)
-                            add_user_project_rel(s,user_id,project_id)
-                            print "NOW CHECKED"
-                else:
-                    if checked == "checked":
-                        print "UNCHECKED"
-                        remove_user_project_rel_no_id(s,username,project_id)
-
-    users = get_users(s)
-    result = OrderedDict()
-    for i in users:
-        username = get_username_by_user_id(s, i.id)
-        result[username] = dict()
-        user_projects = get_projects_by_user(s, username)
-        all_projects = get_all_projects(s)
-        for p in all_projects:
-            row = dict(zip(p.keys(), p))
-            result[username][p.id] = {'name': p.name, 'checked': ''}
-        for u in user_projects:
-            result[username][u.id] = {'name': u.name, 'checked': 'checked'}
-
-    return render_template("permissions_admin.html", permissions=result, message=message)
-
 @app.route("/remove_permissions")
 @login_required
 def remove_permission():
@@ -1308,58 +1258,200 @@ def search_for():
         return render_template("search.html", form=form)
     else:
         type = request.form["tables"]
-        #print type
         term = request.form["search_term"]
-        #print term
 
         if type == "Genes":
             tx_result=[]
-            #print "Gene!"
             gene_id = get_gene_id_from_name(s, term)
             tx = get_tx_by_gene_id(s, gene_id)
 
             for t in tx:
-                #row = dict(zip(i.keys(), i))
                 tx_accession = {'id':t[1]}
                 tx_result.append(tx_accession)
             table_one = ItemTableSearchTx(tx_result, classes=['table', 'table-striped'])
 
+            vpanel_result = []
             vpanel = get_vpanel_by_gene_id(s, gene_id)
-            for panel in vpanel:
-                print panel
+            vpanel_list = list(vpanel)
 
-            # panel = get_panel_by_gene_id(s, gene_id)
-            return render_template("search_results.html", tx=table_one)
+            if len(vpanel_list) > 0:
+                for vp in vpanel_list:
+                    vp_id = vp[0]
+                    vp_name = vp[1]
+                    broad_name = get_panel_by_vpanel_id(s, vp_id)
+                    for b in broad_name:
+                        vpanel_info = {'vpanel_name': vp_name, 'vpanel_id': vp_id, 'panel_name': b[0], 'panel_id': b[1]}
+                        vpanel_result.append(vpanel_info)
+                table_two = ItemTableSearchVPanels(vpanel_result, classes=['table', 'table-striped'])
+            else:
+                panel_results=[]
+                panel = get_panel_by_gene_id(s, gene_id)
+                for p in panel:
+                    p_info = {'panel_name':p[1], 'panel_id':p[0]}
+                    panel_results.append(p_info)
+                table_two = ItemTableSearchPanels(panel_results, classes=['table', 'table-striped'])
+
+            return render_template("search_results.html", genes_tx=table_one, genes_panels=table_two, term=term)
 
         if type == "Transcripts":
-            tx_id = get_tx_id_by_name(s, term)
-            gene_id = get_gene_id_by_tx(g, tx_id)
+            tx_id = get_tx_id_from_name(s,term)
+            gene = get_gene_from_tx(s, tx_id)
+            gene_result=[]
+
+            for g in gene:
+                gene_info = {'gene_name':g[0]}
+                gene_id = g[1]
+                gene_result.append(gene_info)
+            table_one = ItemTableSearchGene(gene_result, classes=['table', 'table-striped'])
+
+            vpanel_result = []
             vpanel = get_vpanel_by_gene_id(s, gene_id)
-            panel = get_panel_by_gene_id(s, gene_id)
+            vpanel_list = list(vpanel)
+            if len(vpanel_list) > 0:
+                for vp in vpanel_list:
+                    vp_id = vp[0]
+                    vp_name = vp[1]
+                    broad_name = get_panel_by_vpanel_id(s, vp_id)
+                    for b in broad_name:
+                        vpanel_info = {'vpanel_name': vp_name, 'vpanel_id': vp_id, 'panel_name': b[0], 'panel_id': b[1]}
+                        vpanel_result.append(vpanel_info)
+                table_two = ItemTableSearchVPanels(vpanel_result, classes=['table', 'table-striped'])
+            else:
+                panel_results=[]
+                panel = get_panel_by_gene_id(s, gene_id)
+                for p in panel:
+                    p_info = {'panel_name':p[1], 'panel_id':p[0]}
+                    panel_results.append(p_info)
+                table_two = ItemTableSearchPanels(panel_results, classes=['table', 'table-striped'])
+
+            return render_template("search_results.html", tx_genes=table_one, tx_panels=table_two, term=term)
 
         if type == "Panels":
-            panel_id = get_panel_id_by_name(s,term)
-            vpanel = get_virtual_panels_by_panel_id(s, panel_id)
-            project = get_project_id_by_panel_id(s,panel_id)
-            genes = get_genes_by_panelid(s, panel_id, version)
+            panel = get_panel_id_by_name(s,term)
+            panel_results=[]
+            for p in panel:
+                panel_id = p[0]
+                project_id = p[1]
+                panel_info = {'panel_name': term, 'panel_id': panel_id}
+                panel_results.append(panel_info)
+            table_one = ItemTableSearchPanels(panel_results, classes=['table', 'table-striped'])
+
+            project = get_project_name(s,project_id)
+            project_results = [{'project_name': project, 'project_id': project_id}]
+            table_two = ItemTableSearchProjects(project_results, classes=['table', 'table-striped'])
+
+            vpanels = get_virtual_panels_by_panel_id(s, panel_id)
+            vpanel_results=[]
+            for vp in vpanels:
+                vpanel_info={'vpanel_name': vp[6], 'vpanel_id': vp[0]}
+                vpanel_results.append(vpanel_info)
+            table_three = ItemTableSearchVPanelsTwo(vpanel_results, classes=['table', 'table-striped'])
+
             users = get_user_rel_by_project_id(s, project_id)
+            user_results = []
+            for u in users:
+                user_info = {'username': u[0]}
+                user_results.append(user_info)
+            table_four = ItemTableSearchUsers(user_results, classes=['table', 'table-striped'])
+
+
+            version = get_current_version(s, panel_id)
+            genes = get_genes_by_panelid(s, panel_id, version)
+            gene_results=[]
+            for g in genes:
+                gene_info={'gene_name': g[0]}
+                gene_results.append(gene_info)
+            table_five = ItemTableSearchGene(gene_results, classes=['table', 'table-striped'])
+
+            return render_template("search_results.html", panels_panels=table_one, panels_projects=table_two, panels_vpanels=table_three, \
+                                   panels_users=table_four, panels_genes=table_five, term=term)
+
 
         if type == "VPanels":
-            vpanel_id = get_vpanel_id_by_vpanelname(s, term)
-            genes = get_genes_by_vpanel_id(s, vpanel_id)
-            panel_id = get_panel_by_vpanel_id(s, vpanel_id)
+            vpanel_id = get_vpanel_id_by_name(s, term)
+            for vp in vpanel_id:
+                vpanel_id = vp[0]
+                vpanel_results=[{'vpanel_name': term, 'vpanel_id': vpanel_id}]
+            table_one = ItemTableSearchVPanelsTwo(vpanel_results, classes=['table', 'table-striped'])
+
+
+            panel = get_panel_by_vpanel_id(s, vpanel_id)
+            for p in panel:
+                panel_id = p[1]
+                panel_results=[{'panel_name': p[0], 'panel_id': panel_id}]
+            table_two = ItemTableSearchPanels(panel_results, classes=['table', 'table-striped'])
+
             project_id = get_project_id_by_panel_id(s, panel_id)
+            project_name = get_project_name(s, project_id)
+            project_results=[{'project_name': project_name, 'project_id': project_id}]
+            table_three = ItemTableSearchProjects(project_results, classes=['table', 'table-striped'])
+
             users = get_user_rel_by_project_id(s, project_id)
+            user_results = []
+            for u in users:
+                user_info = {'username': u[0]}
+                user_results.append(user_info)
+            table_four = ItemTableSearchUsers(user_results, classes=['table', 'table-striped'])
+
+            version = get_current_vpanel_version(s, vpanel_id)
+            genes = get_genes_by_vpanelid(s, panel_id, version)
+            gene_results = []
+            for g in genes:
+                gene_info = {'gene_name': g[0]}
+                gene_results.append(gene_info)
+            table_five = ItemTableSearchGene(gene_results, classes=['table', 'table-striped'])
+
+            return render_template("search_results.html", vpanels_vpanels=table_one, vpanels_panels=table_two, vpanels_projects=table_three, \
+                                   vpanels_users=table_four, vpanels_genes=table_five, term=term)
 
         if type == "Projects":
             project_id = get_project_id_by_name(s, term)
+            project_results = [{'project_name': term, 'project_id': project_id}]
+            table_one = ItemTableSearchProjects(project_results, classes=['table', 'table-striped'])
+
             panels = get_panels_by_project_id(s, project_id)
-            vpanels = get_virtual_panels_by_panel_id(s, panels)
+            panel_results = []
+            for p in panels:
+                panel_id = p[4]
+                panel_name = p[2]
+                vpanels = get_virtual_panels_by_panel_id(s, panel_id)
+                vp_list = list(vpanels)
+                count=1
+                if len(vp_list)>0:
+                    for vp in vp_list:
+                        vp_id = vp[0]
+                        vp_name = vp[6]
+                        if count == 1:
+                            panel_info = {'panel_name': panel_name, 'panel_id': panel_id, 'vpanel_name': vp_name, 'vpanel_id': vp_id}
+                            panel_results.append(panel_info)
+                            count=2
+                        else:
+                            panel_info = {'panel_name': '', 'panel_id': '', 'vpanel_name': vp_name, 'vpanel_id': vp_id}
+                            panel_results.append(panel_info)
+                else:
+                    panel_info = {'panel_name': panel_name, 'panel_id': panel_id, 'vpanel_name': '', 'vpanel_id': ''}
+                    panel_results.append(panel_info)
+            table_two = ItemTableSearchVPanels(panel_results, classes=['table', 'table-striped'])
+
             users = get_user_rel_by_project_id(s, project_id)
+            user_results = []
+            for u in users:
+                user_info = {'username': u[0]}
+                user_results.append(user_info)
+            table_three = ItemTableSearchUsers(user_results, classes=['table', 'table-striped'])
+
+            return render_template("search_results.html", projects_project=table_one, projects_panels=table_two, projects_users=table_three, term=term)
+
 
         if type == "Users":
             projects = get_projects_by_user(s, term)
+            project_results=[]
+            for p in projects:
+                project_info = {'project_id': p[0], 'project_name': p[1]}
+                project_results.append(project_info)
+            table_one = ItemTableSearchProjects(project_results, classes=['table', 'table-striped'])
 
+            return render_template("search_results.html", users_projects=table_one, term=term)
 
 
 
@@ -1498,8 +1590,7 @@ class ChrSorter():
 
 
 from flask_restful_swagger import swagger
-from flask_restful import Resource, Api, reqparse, fields, marshal
-from sqlalchemy.ext.serializer import loads, dumps
+from flask_restful import Resource, Api, reqparse, fields
 
 # app = Flask(__name__)
 # app.config['BUNDLE_ERRORS'] = True

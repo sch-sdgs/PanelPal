@@ -6,5 +6,7 @@ app.config.from_object('config')
 db = SQLAlchemy(app)
 s = db.session
 
-from app.views import *
+from app.mod_admin.views import admin
+
+app.register_blueprint(admin)
 

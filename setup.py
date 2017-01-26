@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='PanelPal',
     version='0.0',
-    packages=['panel_pal','app'],
+    packages=['panel_pal','app','mod_admin'],
     url='',
     license='',
     zip_safe=False,

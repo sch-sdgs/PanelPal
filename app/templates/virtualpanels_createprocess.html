@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="form-vpgenes">
-    <form id="main" name="main" action="{{ url_for('view_virtual_panels') }}" method="POST">
+    <form id="main" name="main" action="{{ url_for('create_virtual_panel_process') }}" method="POST">
 
         <center><h2>Virtual Panel Wizard</h2></center>
         <div class="row">
@@ -149,31 +149,41 @@
                         </div>
                     </div>
                     <div id="submit_vp" class="tab-pane fade">
-                        <div class="row top-buffer bttm-buffer">
+                        <div id="complete_message" class="alert alert-danger"><strong>Oopsie Daisy!</strong> You haven't
+                            added any regions to this panel yet...
+                        </div>
+                        <div id="make_live" hidden>
                             <div class="col-md-2"></div>
                             <div class="col-md-8">
-                                <div class="alert alert-danger"><strong>Oopsie Daisy!</strong> You haven't added any
-                                    regions to
-                                    this panel yet...
-                                </div>
-                                <ul class="list-unstyled list-inline pull-right">
-                                    <li>
-                                        <button type="button" class="btn btn-default prev-step"><i
-                                                class="fa fa-chevron-left"></i> Back
-                                        </button>
-                                    </li>
-                                    <li>
-                                        <button id="cancel" type="button" class="btn btn-danger"><i
-                                                class="fa fa-remove"></i> Cancel
-                                        </button>
-                                    </li>
-                                </ul>
+                                <center>
+                                <tr>{{ form.make_live.label }}</tr>
+                                {% for subfield in form.make_live %}
+                                <tr>
+                                    <td>{{ subfield }}</td>
+                                    <td>{{ subfield.label }}</td>
+                                </tr>
+                                {% endfor %}
+                                </center>
                             </div>
+                            <div class="col-md-2"></div>
                         </div>
-                        <div class="col-md-2"></div>
+                        <ul class="list-unstyled list-inline pull-right">
+                            <li>
+                                <button type="button" class="btn btn-default prev-step"><i
+                                        class="fa fa-chevron-left"></i> Back
+                                </button>
+                            </li>
+                            <li>
+                                <button id="cancel" type="button" class="btn btn-danger"><i id="cancel_logo"
+                                                                                            class="fa fa-remove"></i>
+                                    Cancel
+                                </button>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
+        </div>
 
     </form>
 </div>
