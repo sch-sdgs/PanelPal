@@ -32,3 +32,11 @@ def check_virtualpanel_status_query(s, id):
                VPRelationships.intro)
 
     return panels
+
+@message
+def lock_panel(s, username, panel_id):
+    user_id = get_user_id_by_username(s, username)
+    lock = s.query(Panels).filter_by(id=panel_id).update(
+        {Panels.locked: user_id})
+    s.commit()
+    return True

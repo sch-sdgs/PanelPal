@@ -97,8 +97,8 @@
                     else
                     {
                         var newUrl = "{{url_for('panels.create_virtual_panel_process') }}?id=" + response;
-                        $('#).attr('name', response);
-                        $('#).attr('action', newUrl)
+                        $('#').attr('name', response);
+                        $('#').attr('action', newUrl)
                         $('.glyphicon-list-alt').attr('href', '#select_genes');
                         $('.glyphicon-th-large').attr('href', '#select_regions');
                         $('.glyphicon-ok').attr('href', '#submit_vp');
@@ -408,7 +408,7 @@
         $(document).on('click', "#add-regions", function () {
             var geneName = $('#add-regions').attr('name');
             var ids = count_ids();
-            var vpanel_id = $('#).attr('name');
+            var vpanel_id = $('#').attr('name');
 
             if(ids.length == 0)
             {

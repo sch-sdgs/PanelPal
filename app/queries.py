@@ -494,14 +494,6 @@ def get_user_by_username(s, username):
 
 
 @message
-def lock_panel(s, username, panel_id):
-    user_id = get_user_id_by_username(s, username)
-    lock = s.query(Panels).filter_by(id=panel_id).update(
-        {Panels.locked: user_id})
-    s.commit()
-    return True
-
-@message
 def unlock_panel_query(s, panel_id):
     unlock = s.query(Panels).filter_by(id=panel_id).update(
         {Panels.locked: None})
