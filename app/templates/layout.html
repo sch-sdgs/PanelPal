@@ -42,12 +42,12 @@
 
             $.ajax({
                 type: "POST",
-                url: "{{url_for('remove_vp')}}",
+                url: "{{url_for('panels.remove_vp')}}",
                 data: data,
                 dataType: "json",
                 contentType: "application/json",
                 success: function (response) {
-                    window.location.replace("{{url_for('create_virtual_panel_process')}}");
+                    window.location.replace("{{url_for('panels.create_virtual_panel_process')}}");
                 },
                 error: function (response) {
                     console.log($(response).responseText);
@@ -78,7 +78,7 @@
             var complete = false;
             $.when($.ajax({
                 type:"POST",
-                url:"{{url_for('add_vp')}}",
+                url:"{{url_for('panels.add_vp')}}",
                 data:data,
                 dataType:"json",
                 contentType:"application/json",
@@ -96,9 +96,9 @@
                     }
                     else
                     {
-                        var newUrl = "{{url_for('create_virtual_panel_process') }}?id=" + response;
-                        $('#main').attr('name', response);
-                        $('#main').attr('action', newUrl)
+                        var newUrl = "{{url_for('panels.create_virtual_panel_process') }}?id=" + response;
+                        $('#).attr('name', response);
+                        $('#).attr('action', newUrl)
                         $('.glyphicon-list-alt').attr('href', '#select_genes');
                         $('.glyphicon-th-large').attr('href', '#select_regions');
                         $('.glyphicon-ok').attr('href', '#submit_vp');
@@ -211,7 +211,7 @@
 
             $.ajax({
                 type:"POST",
-                url:"{{url_for('select_vp_genes')}}",
+                url:"{{url_for('panels.select_vp_genes')}}",
                 data:data,
                 dataType:"json",
                 contentType:"application/json",
@@ -288,7 +288,7 @@
 
                 $.ajax({
                     type: "POST",
-                    url: "{{url_for('select_vp_regions')}}",
+                    url: "{{url_for('panels.select_vp_regions')}}",
                     data: data,
                     dataType: "json",
                     contentType: "application/json",
@@ -408,7 +408,7 @@
         $(document).on('click', "#add-regions", function () {
             var geneName = $('#add-regions').attr('name');
             var ids = count_ids();
-            var vpanel_id = $('#main').attr('name');
+            var vpanel_id = $('#).attr('name');
 
             if(ids.length == 0)
             {
@@ -423,7 +423,7 @@
             var data=JSON.stringify(dict);
             $.ajax({
                 type:"POST",
-                url:"{{url_for('add_vp_regions')}}",
+                url:"{{url_for('panels.add_vp_regions')}}",
                 data:data,
                 dataType:"json",
                 contentType:"application/json",
@@ -589,9 +589,9 @@
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">Projects <span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="{{ url_for('view_projects') }}">View Projects</a></li>
+                        <li><a href="{{ url_for('projects.view_projects') }}">View Projects</a></li>
                         <li role="separator" class="divider"></li>
-                        <li><a href="{{ url_for('add_projects') }}">Create Project</a></li>
+                        <li><a href="{{ url_for('projects.add_projects') }}">Create Project</a></li>
                     </ul>
                 </li>
 
@@ -600,7 +600,7 @@
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">Panels <span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="{{ url_for('view_panels') }}">View Panels</a></li>
+                        <li><a href="{{ url_for('panels.view_panels') }}">View Panels</a></li>
                         <li role="separator" class="divider"></li>
                         <li><a href="/panels/create">Create Panel</a></li>
                         <!--<li><a href="#">Create Panel From Panel App</a></li>-->
@@ -613,9 +613,9 @@
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">Virtual Panels <span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="/virtualpanels">View Virtual Panels</a></li>
+                        <li><a href="{{ url_for('panels.view_virtual_panels') }}">View Virtual Panels</a></li>
                         <li role="separator" class="divider"></li>
-                        <li><a href="/virtualpanels/wizard">Create a Virtual Panel</a></li>
+                        <li><a href="{{ url_for('panels.create_virtual_panel_process') }}">Create a Virtual Panel</a></li>
                         <!--<li role="separator" class="divider"></li>-->
                         <!--<li><a href="#">Export Virtual Panel</a></li>-->
                     </ul>
@@ -687,7 +687,7 @@
 {% block popup %}
 {% endblock %}
 
-<div class="container theme-showcase" role="main">
+<div class="container theme-showcase" role=">
     <div class="container">
         {% block content %}
         {% endblock %}

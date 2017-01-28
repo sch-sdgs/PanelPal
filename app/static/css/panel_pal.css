@@ -344,3 +344,8 @@ input[type=checkbox].permissions_checkbox {
  input[type=checkbox].permissions_checkbox:checked:after {
    content: "\2714";
  }
+
+ .inline{
+    display:inline-block;
+     width: 80px;
+}
