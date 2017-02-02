@@ -25,7 +25,7 @@ class ItemTablePanels(Table):
     panelname = Col('Name')
     current_version = Col('Stable Version')
     view_panel = LinkCol('View Panel', 'panels.view_panel', url_kwargs=dict(id='panelid'))
-    edit = LinkColConditional('Edit Panel', 'panels.edit_panel_page', url_kwargs=dict(panelid='panelid'))
+    edit = LinkColConditional('Edit Panel', 'panels.edit_panel_process', url_kwargs=dict(id='panelid'))
     view = LinkCol('View Virtual Panels', 'panels.view_virtual_panels', url_kwargs=dict(id='panelid'))
     locked = LockCol('Locked')
     status = LabelCol('Status')
