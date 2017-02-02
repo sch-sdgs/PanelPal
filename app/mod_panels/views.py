@@ -2,15 +2,22 @@ from app.queries import *
 from flask import Blueprint
 from flask import render_template, request, url_for, jsonify, redirect, Response,Markup
 from flask.ext.login import login_required, current_user
-
+from pybedtools import BedTool
 from app.main import s
-from app.views import LockCol,LinkColConditional, LabelCol, LinkColLive, NumberCol
+from app.views import LockCol,LinkColConditional, LabelCol, LinkColLive, NumberCol, isgene
 from flask_table import Table, Col, LinkCol
 from forms import ViewPanel, CreatePanel, CreatePanelProcess, CreateVirtualPanelProcess, EditVirtualPanelProcess, AddGene, RemoveGene
 from queries import *
 from app.mod_projects.queries import get_preftx_by_gene_id, get_upcoming_preftx_by_gene_id, get_tx_by_gene_id, add_preftxs_to_panel
+import json
+import time
 
 panels = Blueprint('panels', __name__, template_folder='templates')
+
+class RegionCol(Col):
+    def td(self, item, attr):
+        return '<td style="word-wrap: break-word;max-width:800px;">{}</td>'.format(
+            self.td_contents(item, self.get_attr_list(attr)))
 
 class ItemTablePanels(Table):
     panelname = Col('Name')
@@ -38,11 +45,10 @@ class ItemTableVPanels(Table):
 class ItemTablePanelView(Table):
     allow_sort = False
     chrom = Col('Chromosome')
-    start = Col('Start')
-    end = Col('End')
-    number = Col('Exon')
-    accession = Col('Accession')
-    genename = Col('Gene')
+    region_start = Col('Start')
+    region_end = Col('End')
+    name = RegionCol('Region Name')
+    gene_name = Col('Gene')
 
     def sort_url(self, col_key, reverse=False):
         if reverse:
@@ -130,12 +136,52 @@ def check_virtualpanel_status(s, id):
 @panels.route('/download')
 @login_required
 def download_as_bed():
-    bed = "test\ttest\ttest"
+    scope = request.args.get('scope')
+    id = request.args.get('id')
+    version = request.args.get('version')
+    project_id = request.args.get('project_id')
+    panel_name = request.args.get('name')
+    permission = check_user_has_permission(s, current_user.id, project_id)
+
+    if scope == 'panel':
+        panel = get_regions_by_panelid(s,id,version)
+    elif scope == 'virtual_panel':
+        pass
+        #panel = get_vpanel_by_id(s,id,version=version)
+
+    result = []
+
+    for i in panel:
+        line = []
+        line.append(i.chrom)
+        line.append(str(i.region_start))
+        line.append(str(i.region_end))
+        line.append(i.name)
+        result.append(line)
+
+    bed = '\n'.join(['\t'.join(l) for l in result])
+
+    bed_tool = BedTool(bed, from_string=True)
+    bed_sorted = bed_tool.sort()
+    bed_sorted_merged = bed_sorted.merge(nms=True)
+
+    result = []
+    for i in bed_sorted_merged:
+        line = []
+        line.append(i.chrom)
+        line.append(str(i.start))
+        line.append(str(i.end))
+        line.append(i.name.replace(";",","))
+        result.append(line)
+
+    bed = '\n'.join(['\t'.join(l) for l in result])
+
+
     return Response(
         bed,
         mimetype='test/plain',
         headers={"Content-disposition":
-                     "attachment; filename=test.bed"}
+                     "attachment; filename="+panel_name+"_v"+version+"_"+current_user.id+"_"+time.strftime("%d-%m-%Y")+".bed"}
     )
 
 
@@ -198,9 +244,7 @@ def view_panel():
             if not version:
                 version = i.current_version
             panel_name = i.name
-        print 'version'
-        print version
-        panel = get_panel_by_id(s, id, version)
+        panel = get_regions_by_panelid(s, id, version)
         project_id = get_project_id_by_panel_id(s, id)
         result = []
         rows = list(panel)
@@ -208,12 +252,10 @@ def view_panel():
             bed = ''
             for i in rows:
                 row = dict(zip(i.keys(), i))
-                # status = check_panel_status(s, row["panelid"])
-                # row["status"] = status
                 result.append(row)
-                panel_name = row["name"]
-                current_version = row["current_version"]
-            table = ItemTablePanelView(result, classes=['table', 'table-striped'])
+                panel_name = i.panel_name
+                current_version = i.current_version
+            table = ItemTablePanelView(result, classes=['table', 'table-striped','table-nonfluid'])
         else:
             table = ""
             message = "This Panel has no regions yet & may also have changes that have not been made live"
@@ -233,8 +275,20 @@ def view_panel():
         form.versions.choices = choices
         form.versions.default = current_version
         form.process()
-        return render_template('panel_view.html', panel=table, panel_name=panel_name, edit=edit, bed=bed,
-                               version=version, panel_id=id, message=message, url = url_for('panels.view_panel'),
+
+        table=[]
+
+        for i in result:
+            line=[]
+            line.append(i['chrom'])
+            line.append(str(i['region_start']))
+            line.append(str(i['region_end']))
+            line.append(i['gene_name'])
+            line.append(i['name'].replace(',',' '))
+            table.append(line)
+
+        return render_template('panel_view.html', table=json.dumps(table),panel=table, panel_name=panel_name, edit=edit, bed=bed,
+                               version=version, panel_id=id, project_id=project_id, message=message, url = url_for('panels.view_panel'),
                                form=form)
 
     else:
@@ -1092,9 +1146,7 @@ def edit_vp_regions():
 @login_required
 def add_vp_regions():
     version_ids = request.json['ids']
-    print(version_ids)
     vpanel_id = request.json['vp_id']
-    print(vpanel_id)
     for i in version_ids:
         add_version_to_vp(s, vpanel_id, i)
     return jsonify("complete")

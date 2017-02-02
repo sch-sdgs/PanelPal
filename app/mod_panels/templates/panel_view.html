@@ -1,28 +1,33 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<form action="{{ url }}?id={{ panel_id }}" method="POST">
+
 <div class="container">
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-6 vertical no-padding-left">
             <!--<h2>Viewing Live {{ scope }} Panel | <strong>{{ panel_name }} (v{{ version }})</strong></h2>-->
-            <h2><strong>{{ panel_name }} (v{{ version }})</strong></h2>
-           {{ form.versions(class_="inline form-inline form-control") }}
-                {{ form.submit(class_="btn btn-primary") }}
+            <h2 class="no-margin-heading"><strong>{{ panel_name }} (v{{ version }})</strong></h2>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-6 text-right xtra-padding-right">
+            <form action="{{ url }}?id={{ panel_id }}" class="form-inline" method="POST">
+                {{ form.versions.label }}
+                {{ form.versions(class_="form-control") }}
+                {{ form.submit(class_="btn btn-primary") }}
 
-            <div class="btn-group" role="group" aria-label="...">
-                <a href="{{url_for('panels.download_as_bed')}}?database=panel" class="btn btn-default {{ bed }}" role="button"><span
-                        class="glyphicon glyphicon-download"></span> Download as .bed</a>
-                <a href="{{url_for('panels.edit_panel_page')}}?panelid={{ panel_id }}" class="btn btn-primary {{ edit }}"
-                   role="button"><span
-                        class="glyphicon glyphicon-edit"></span> Edit Panel</a>
-            </div>
-
+                <div class="btn-group" role="group" aria-label="...">
+                    <a href="{{url_for('panels.download_as_bed')}}?name={{ panel_name }}&scope=panel&id={{ panel_id }}&version={{ version }}&project_id={{ project_id }}"
+                       class="btn btn-default {{ bed }}" role="button"><span
+                            class="glyphicon glyphicon-download"></span> Download as .bed</a>
+                    <a href="{{url_for('panels.edit_panel_page')}}?panelid={{ panel_id }}"
+                       class="btn btn-primary {{ edit }}"
+                       role="button"><span
+                            class="glyphicon glyphicon-edit"></span> Edit Panel</a>
+                </div>
+            </form>
 
         </div>
     </div>
+
     {% if message %}<br>
     <div class="row">
         <div class="col-md-12">
@@ -30,9 +35,22 @@
         </div>
         {% endif %}
     </div>
-    <div class="row">
+
+
+    <div class="row top-buffer bottom-buffer">
         <div class="col-md-12">
-            {{ panel }}
+            <table class="table table-striped table-bordered" id="panel"></table>
+            <!--<thead>-->
+            <!--<tr>-->
+            <!--<th>Chr</th>-->
+            <!--<th>Start</th>-->
+            <!--<th>End</th>-->
+            <!--<th>Gene</th>-->
+            <!--<th>Region Name</th>-->
+            <!--</tr>-->
+            <!--</thead>-->
+            <!--{{ html|safe }}-->
+            <!--</table>-->
         </div>
     </div>
 </div>
