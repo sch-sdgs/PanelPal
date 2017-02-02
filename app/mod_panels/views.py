@@ -6,9 +6,9 @@ from pybedtools import BedTool
 from app.main import s
 from app.views import LockCol,LinkColConditional, LabelCol, LinkColLive, NumberCol
 from flask_table import Table, Col, LinkCol
-from forms import ViewPanel, CreatePanel, CreatePanelProcess, CreateVirtualPanelProcess, EditVirtualPanelProcess, AddGene, RemoveGene
+from forms import ViewPanel, CreatePanel, CreatePanelProcess, EditPanelProcess, CreateVirtualPanelProcess, EditVirtualPanelProcess, AddGene, RemoveGene
 from queries import *
-from app.mod_projects.queries import get_preftx_by_gene_id, get_upcoming_preftx_by_gene_id, get_tx_by_gene_id, add_preftxs_to_panel
+from app.mod_projects.queries import get_preftx_by_gene_id, get_upcoming_preftx_by_gene_id, get_tx_by_gene_id, add_preftxs_to_panel, make_preftx_live, get_preftx_by_project_id, get_current_preftx_version
 import json
 import time
 
@@ -338,10 +338,106 @@ def create_panel_process():
     """
     form = CreatePanelProcess()
     if request.method == "POST":
-        pass
+        make_live = request.form['make_live']
+        panel_id = request.args.get('id')
+        project_id = get_project_id_by_panel_id(s, panel_id)
+        result = get_preftx_by_project_id(s, project_id)
+        preftx_id = 0
+        for i in result:
+            preftx_id = i.preftx_id
+        version = get_current_preftx_version(s, preftx_id)
+        make_preftx_live(s, preftx_id, version+1,current_user.id)
+        if make_live == "True":
+            make_panel_live(s, panel_id, 1)
+        return redirect(url_for('panels.view_panels') + "id=" + panel_id)
     elif request.method == "GET":
         print('get wizard')
         return render_template('panel_createprocess.html', form=form, panel_id="main", url=url_for('panels.create_panel_process'))
+
+@panels.route('/panels/edit', methods=['GET', 'POST'])
+@login_required
+def edit_panel_process():
+    """
+
+    :return:
+    """
+    if request.method == "POST":
+        make_live = request.form['make_live']
+        panel_id = request.args.get('id')
+        project_id = get_project_id_by_panel_id(s, panel_id)
+        result = get_preftx_by_project_id(s, project_id)
+        preftx_id = 0
+        for i in result:
+            preftx_id = i.preftx_id
+        version = get_current_preftx_version(s, preftx_id)
+        make_preftx_live(s, preftx_id, version + 1, current_user.id)
+        if make_live == "True":
+            make_panel_live(s, panel_id, 1)
+        return redirect(url_for('panels.view_panels') + "?id=" + panel_id)
+    elif request.method == "GET":
+        print('edit wizard')
+        panel_id = request.args.get('id')
+        form = EditPanelProcess()
+        panel_info = get_panel_info(s, panel_id)
+        project_id = panel_info.project_id
+        form.project.choices = [(project_id, panel_info.project_name), ]
+        form.panelname.data = panel_info.name
+
+        genes = get_genes_by_panelid(s, panel_id, panel_info.current_version)
+        html = ""
+        buttonlist = ""
+        for gene in genes:
+            gene_id = gene.id
+            gene_name = gene.name
+            preftx_id = get_preftx_by_gene_id
+            upcoming_preftx = get_upcoming_preftx_by_gene_id(s, project_id, gene_id)
+            all_tx = get_tx_by_gene_id(s, gene_id)
+
+            gene_button = "<button name=\"genebutton\" type=\"button\" class=\"btn btn-success btn-md btngene\" data-name=\"" + \
+                          gene_name + "\" data-id=\"" + str(
+                gene_id) + "\"><span class='glyphicon glyphicon-ok'></span> " + \
+                          gene_name + "</button> "
+            buttonlist += gene_button
+            tx_html = """<tr>
+                            <td>
+                                <label for=\"""" + gene_name + "\">" + gene_name + """</label>
+                            </td>
+                            <td>
+                                <div class=\"form-group\">
+                                <select class=\"form-control\" name=\"""" + gene_name + "\" id=\"" + gene_name + "\" disabled=\"disabled\">"
+
+            for tx in all_tx:
+                print(tx)
+
+                if upcoming_preftx == tx.id:
+
+                    tx_html += "<option value=\"" + str(
+                        tx.id) + "\" class=\"red\">" + tx.accession + " - This Is a Change Not Made Live Yet</option>" + \
+                           """</select>
+                                </div>
+                                   </td>
+                           </tr>"""
+
+                    print('break')
+                    break
+                else:
+                    tx_html += "<option value=\"" + str(tx.id) + "\""
+
+                    if preftx_id == tx.id:
+                        tx_html += " class=\"bolden\" selected"
+                    else:
+                        tx_html += " class=\"\""
+
+                    tx_html += ">" + tx.accession + "</option>"
+            tx_html += """</select>
+                                </div>
+                            </td>
+                        </tr>"""
+            html += tx_html
+
+        print(html)
+        return render_template('panel_createprocess.html', form=form, genes = html, genelist=buttonlist, panel_id=panel_id,
+                               url=url_for('panels.edit_panel_process'))
 
 @panels.route('/panels/add',  methods=['POST'])
 @login_required
@@ -443,8 +539,8 @@ def create_panel_get_tx(gene_name=None, project_id=None):
                         <div class=\"form-group\">
                         <select class=\"form-control\" name=\"""" + gene_name + "\" id=\"" + gene_name + "\">"
 
-        gene_button = "<button name=\"genebutton\" type=\"button\" class=\"btn btn-success btn-md btngene\" data-name=\"" + \
-                      gene_name + "\" data-id=\"" + str(gene_id) + "\"><span class='glyphicon glyphicon-ok'></span> " + \
+        gene_button = "<button name=\"genebutton\" type=\"button\" class=\"btn btn-danger btn-md btngene\" data-name=\"" + \
+                      gene_name + "\" data-id=\"" + str(gene_id) + "\"><span class='glyphicon glyphicon-pencil'></span> " + \
                       gene_name + "</button> "
 
         for tx in all_tx:
@@ -515,30 +611,18 @@ def create_panel_custom_regions():
     regions = select_region_by_location(s, chrom, start, end)#if region already exists, return current entry
     if regions:
         for i in regions:
-            v_id = add_region_to_panel(s, i.id, panel_id)
-            region = i
+            add_region_to_panel(s, i.id, panel_id)
             continue
     else:
-        region, v_id = create_custom_region(s, panel_id, chrom, start, end, name)
+        print('create')
+        create_custom_region(s, panel_id, chrom, start, end, name)
 
-    row = """<tr>
-                        <td><label for=\"""" + v_id + "\">" + v_id + "</label></td>" + \
-          "<td>" + region.chrom + "</td>" + \
-          "<td>" + str(region.start) + "</td>" + \
-          "<td>" + str(region.end) + "</td>" + \
-          "<td style=\"word-wrap: break-word\">" + region.name + "</td>" + \
-          """<td><div class=\"material-switch pull-right\">
-                  <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
-                                <label for=\"""" + v_id + """\" class=\"label-success label-region\" ></label>
-                            </div></td>
-                    </tr>"""
-
-    return jsonify(row)
+    return jsonify("complete")
 
 @panels.route('/panels/add_regions', methods=['POST'])
 @login_required
 def add_panel_regions():
-    version_ids = request.json['ids']
+    version_ids = request.json['id_ext']
     print(version_ids)
     panel_id = request.json['panel_id']
     tx_id = request.json['pref_tx_id']
@@ -548,7 +632,18 @@ def add_panel_regions():
     add_preftxs_to_panel(s, project_id, [{"gene":gene_name, "tx_id":tx_id},])
 
     for i in version_ids:
-        add_region_to_panel(s, i, panel_id)
+        if i["ext_5"] == 0:
+            ext_5 = None
+        else:
+            ext_5 = i["ext_5"]
+
+        if i["ext_3"] == 0:
+            ext_3 = None
+        else:
+            ext_3 = i["ext_3"]
+        print(ext_3)
+        print(ext_5)
+        add_region_to_panel(s, i["id"], panel_id, ext_3=ext_3, ext_5=ext_5)
     s.commit()
     return jsonify("complete")
 
@@ -755,11 +850,11 @@ def add_gene():
 @login_required
 def view_virtual_panels(id=None):
     """
-       method to view panels, if project ID given then only return panels from that project
-       matt
-       :param id: project id
-       :return: rendered template panels.html
-       """
+   method to view panels, if project ID given then only return panels from that project
+
+   :param id: project id
+   :return: rendered template panels.html
+   """
     if not id:
         id = request.args.get('id')
     if id:
@@ -870,7 +965,7 @@ def create_virtual_panel_process():
             make_vp_panel_live(s, vp_id, 1)
         panel_id = get_panel_by_vp_id(s, vp_id)
         unlock_panel_query(s, panel_id)
-        return redirect(url_for('panels.view_virtual_panels'))
+        return redirect(url_for('panels.view_virtual_panels') + "id=" + vp_id)
     elif request.method == "GET":
         url = url_for('panels.create_virtual_panel_process')
         return render_template('virtualpanels_createprocess.html', form=form, url=url, vp_id="main")
@@ -890,14 +985,14 @@ def edit_virtual_panel_process():
         if make_live == "True":
             make_vp_panel_live(s, vp_id, 1)
         unlock_panel_query(s, panel_id)
-        return redirect(url_for('panels.view_virtual_panels'))
+        return redirect(url_for('panels.view_virtual_panels') + "id=" + vp_id)
     elif request.method == "GET":
         lock_panel(s, current_user.id, panel_id)
         panel_info = get_panel_details_by_id(s,panel_id)
         panel_name = ""
         for i in panel_info:
             panel_name = i.name
-        form.panel.choices = [(panel_id, panel_name)]
+        form.panel.choices = [(panel_id, panel_name),]
 
         panel_version = get_current_version(s, panel_id)
         panel_genes = get_genes_by_panelid(s, panel_id, panel_version)
@@ -994,14 +1089,20 @@ def get_custom_regions():
     """
     panel_id = request.json["panel_id"]
     vpanel_id = request.json["vpanel_id"]
+    print(panel_id)
     current_regions = []
 
     regions = get_custom_regions_query(s, panel_id)
+    print(regions)
     html = """<h3 name=\"Custom\">Custom Regions</h3><ul class=\"list-unstyled list-inline pull-right\">
                         <li>
                             <button type=\"button\" class=\"btn btn-success\" id=\"add-regions\" name=\"Custom\" disabled=\"disabled\">Add Regions</button>
-                        </li>
-                    </ul>
+                            </li>"""
+
+    if not vpanel_id:
+        html += "<li><button type=\"button\" class=\"btn btn-primary\" id=\"create-regions\" name=\"Create\">Create Custom Region</button></li>"
+
+    html +="""</ul>
 
                 <table class=\"table table-striped\">
                     <thead>
@@ -1019,10 +1120,13 @@ def get_custom_regions():
                         </tr>
                     </thead>"""
     for i in regions:
+        print(i)
         if not vpanel_id:
-            current_regions.append(i.id)
-        print(i.name)
-        v_id = str(i.version_id)
+            current_regions.append(i.region_id)
+            v_id = str(i.region_id)
+        else:
+            v_id = str(i.version_id)
+
         row = """<tr>
                         <td><label for=\"""" + v_id + "\">" + v_id + "</label></td>" + \
               "<td>" + i.chrom + "</td>" + \
@@ -1045,7 +1149,7 @@ def get_custom_regions():
     return jsonify({'html':html, 'ids':current_regions})
 
 @panels.route('/virtualpanels/getregions', methods=['POST'])
-def select_vp_regions(gene_id=None, gene_name=None, panel_id=None):
+def select_vp_regions(gene_id=None, gene_name=None, panel_id=None, virtual=True, added=False):
     """
 
     :return:
@@ -1057,11 +1161,15 @@ def select_vp_regions(gene_id=None, gene_name=None, panel_id=None):
         gene_id = request.json['gene_id']
         gene_name = request.json['gene_name']
         panel_id = request.json['panel_id']
-    if panel_id:
+        virtual = request.json['virtual']
+    if virtual:
         regions = get_panel_regions_by_geneid(s, gene_id, panel_id)
-    else:
+    elif added:
         print("gene regions")
+        print(gene_id)
         regions = get_regions_by_geneid(s, gene_id)
+    else:
+        regions = get_regions_by_geneid_with_versions(s, gene_id, panel_id)
     html = "<h3 name=\"" + gene_id + "\">" + gene_name + """</h3><ul class=\"list-unstyled list-inline pull-right\">
                     <li>
                         <button type=\"button\" class=\"btn btn-success\" id=\"add-regions\" name=\"""" + gene_name + """\" disabled=\"disabled\">Add Regions</button>
@@ -1087,23 +1195,25 @@ def select_vp_regions(gene_id=None, gene_name=None, panel_id=None):
                     </tr>
                 </thead>"""
     for i in regions:
-        print(i.name)
-        if panel_id:
+        if virtual:
             v_id = str(i.version_id)
+            coord = "<td>" + str(i.region_start) + "</td>" + \
+                    "<td>" + str(i.region_end) + "</td>"
         else:
             v_id = str(i.region_id)
+            coord = "<td><input class=\"form-control\" id=\""+ str(i.region_start) +"\" name=\"region_start\" type=\"text\" value=\"" + str(i.region_start) + "\"></td>" + \
+                    "<td><input class=\"form-control\" id=\"" + str(i.region_end) + "\" name=\"region_end\" type=\"text\" value=\"" + str(i.region_end) +"\"></td>"
 
         row = """<tr>
                     <td><label for=\"""" +  v_id + "\">" + v_id + "</label></td>" +\
-                    "<td>" + i.chrom + "</td>" + \
-                    "<td>" + str(i.region_start) + "</td>" + \
-                    "<td>" + str(i.region_end) + "</td>" + \
+                    "<td>" + i.chrom + "</td>" + coord +\
                     "<td style=\"word-wrap: break-word\">" + i.name.replace(',', '\n') + "</td>" + \
                     """<td><div class=\"material-switch pull-right\">
                             <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
                             <label for=\"""" + v_id + """\" class=\"label-success label-region\" ></label>
                         </div></td>
                 </tr>"""
+        print(row)
         html += row
 
     html += "</table>"
@@ -1131,15 +1241,24 @@ def edit_vp_regions():
         regions = get_vprelationships(s, vpanel_id, gene_id)
     else:
         print("panel")
-        html = select_vp_regions(gene_id, gene_name)
         regions = get_versions(s, panel_id, gene_id)
+
     version_ids = []
     for i in regions:
         print(i[0])
         version_ids.append(i[0])
     print(version_ids)
-    dict = {'html':html,'ids':version_ids}
 
+    if not vpanel_id and len(version_ids) > 0:
+        print('no versions')
+        html = select_vp_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, virtual=False)
+    elif not vpanel_id:
+        html = select_vp_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, virtual=False, added=True)
+
+    if len(version_ids) >0:
+        html = html.replace("Add Regions", "Edit Regions")
+
+    dict = {'html': html, 'ids': version_ids}
     return jsonify(dict)
 
 @panels.route('/virtualpanels/add_regions', methods=['POST'])

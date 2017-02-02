@@ -85,6 +85,23 @@ def create_virtualpanel_query(s, name):
     except exc.IntegrityError:
         return -1
 
+def get_panel_info(s, panel_id):
+    """
+
+    :param s:
+    :param panel_id:
+    :return:
+    """
+    panel_info = s.query(Panels, Projects).join(Projects).filter(Panels.id == panel_id).values(
+        Panels.current_version,
+        Panels.name,
+        Panels.locked,
+        Projects.id.label('project_id'),
+        Projects.name.label('project_name')
+    )
+    for i in panel_info:
+        return i
+
 @message
 def remove_virtualpanel_query(s, name):
     """
@@ -111,7 +128,7 @@ def remove_panel_query(s, panel_name):
     return True
 
 @message
-def add_region_to_panel(s, regionid, panelid):
+def add_region_to_panel(s, regionid, panelid, ext_3=None, ext_5=None):
     """
     called by other query method - this method DOES NOT COMMIT CHANGES TO THE DATABASE
     THIS METHOD MUST BE USED WITH OTHER METHODS
@@ -122,10 +139,12 @@ def add_region_to_panel(s, regionid, panelid):
     :return: the id in the versions table
     """
     current = get_current_version(s, panelid)
-
+    print(ext_3)
+    print(ext_5)
     version = Versions(intro=int(current) + 1, last=None, panel_id=panelid, region_id=regionid, comment=None,
-                       extension_3=None, extension_5=None)
+                       extension_3=ext_3, extension_5=ext_5)
     s.add(version)
+    print(version.extension_5)
     # s.commit()
     return version.id
 
@@ -177,9 +196,11 @@ def create_custom_region(s, panel_id, chrom, start, end, name):
     """
     region = Regions(chrom=chrom, start=start, end=end, name=name)
     s.add(region)
+    s.commit()
+    print(region.id)
     version_id = add_region_to_panel(s, region.id, panel_id)
     s.commit()
-    return region, version_id
+    return region.id , version_id
 
 def select_region_by_location(s, chrom, start, end):
     """
@@ -213,11 +234,13 @@ def get_custom_regions_query(s, panelid):
     print(current_version)
     custom_regions = s.query(Versions, Regions).join(Regions).\
         filter(and_(Versions.panel_id == panelid,
-                    Versions.intro <= current_version,
+                    or_(
+                        and_(Versions.intro == current_version, Versions.last != current_version + 1),
+                        Versions.intro == current_version + 1),
                     or_(Versions.last >= current_version, Versions.last == None),
                     Regions.name.isnot(None))). \
         order_by(chrom_order, Regions.start).\
-        values(Versions.id.label("version_id"), Regions.chrom,
+        values(Versions.id.label("version_id"), Regions.id.label("region_id"), Regions.chrom,
                case([(Versions.extension_5 == None, Regions.start)], else_=Regions.start+Versions.extension_5).label('region_start'),
                case([(Versions.extension_3 == None, Regions.end)], else_=Regions.end+Versions.extension_3).label('region_end'),
                Regions.name)
@@ -255,7 +278,10 @@ def get_vprelationships(s, vp_id, gene_id):
         join(Regions).\
         join(Exons).\
         join(Tx).\
-        filter(and_(Tx.gene_id == gene_id, VPRelationships.vpanel_id == vp_id, VPRelationships.intro <= current_version,
+        filter(and_(Tx.gene_id == gene_id, VPRelationships.vpanel_id == vp_id,
+                    or_(
+                        and_(VPRelationships.intro == current_version, VPRelationships.last != current_version + 1),
+                        VPRelationships.intro == current_version + 1),
                     or_(VPRelationships.last >= current_version, VPRelationships.last == None))).\
         group_by(VPRelationships.id).\
         values(VPRelationships.version_id)
@@ -275,10 +301,14 @@ def get_versions(s, panel_id, gene_id):
         join(Regions).\
         join(Exons).\
         join(Tx).\
-        filter(and_(Tx.gene_id == gene_id, Versions.panel_id == panel_id, Versions.intro <= current_version,
+        filter(and_(Tx.gene_id == gene_id, Versions.panel_id == panel_id,
+                    or_(
+                        and_(Versions.intro <= current_version, Versions.last != current_version + 1),
+                        Versions.intro == current_version + 1),
                     or_(Versions.last >= current_version, Versions.last == None))).\
         group_by(Versions.id).\
-        values(Versions.id)
+        values(Regions.id)
+    print(str(versions))
     return versions
 
 def get_panel_by_vp_id(s, vp_id):
@@ -286,27 +316,59 @@ def get_panel_by_vp_id(s, vp_id):
     for i in panel:
         return i.panel_id
 
+def get_regions_by_geneid_with_versions(s, geneid, panel_id):
+    """
+    gets all regions for gene
+
+    :param s:
+    :param geneid:
+    :param panel_id:
+    :return:
+    """
+    sql = text("""SELECT regions.id as region_id,
+                    regions.chrom,
+                    CASE WHEN (versions.panel_id = :panel_id AND versions.region_id = regions.id AND versions.extension_5 IS NOT NULL) THEN regions.start - versions.extension_5 ELSE regions.start END AS region_start,
+                    CASE WHEN (versions.panel_id = :panel_id AND versions.region_id = regions.id AND versions.extension_3 IS NOT NULL) THEN regions."end" + versions.extension_3 ELSE regions."end" END AS region_end,
+                    group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) AS name
+                    FROM versions
+                    JOIN regions ON versions.region_id = regions.id
+                    JOIN exons ON regions.id = exons.region_id
+                    JOIN tx ON tx.id = exons.tx_id
+                    JOIN genes ON genes.id = tx.gene_id
+                    WHERE genes.id = :gene_id
+                    GROUP BY regions.id ORDER BY region_start""")
+
+    values = {'panel_id': panel_id, 'gene_id': geneid}
+    print('starting')
+    regions = s.execute(sql, values)
+    print('returning')
+    return regions
+
 def get_regions_by_geneid(s, geneid):
     """
     gets all regions for gene
 
     :param s:
     :param geneid:
+    :param panel_id:
     :return:
     """
     sql = text("""SELECT regions.id as region_id,
-                        regions.chrom,
-                        regions.start AS region_start,
-                        regions."end" AS region_end,
-                        CASE WHEN regions.name IS NULL THEN group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) ELSE regions.name END AS name
-                        FROM regions
-                        JOIN exons ON regions.id = exons.region_id
-                        JOIN tx ON tx.id = exons.tx_id
-                        JOIN genes ON genes.id = tx.gene_id
-                        WHERE genes.id = :gene_id
-                        GROUP BY regions.id ORDER BY regions.start""")
+                    regions.chrom,
+                    regions.start AS region_start,
+                    regions."end" AS region_end,
+                    group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) AS name
+                    FROM regions
+                    JOIN exons ON regions.id = exons.region_id
+                    JOIN tx ON tx.id = exons.tx_id
+                    JOIN genes ON genes.id = tx.gene_id
+                    WHERE genes.id = 837
+                    GROUP BY regions.id ORDER BY region_start""")
+
     values = {'gene_id': geneid}
+    print('starting')
     regions = s.execute(sql, values)
+    print('returning')
     return regions
 
 def get_panel_regions_by_geneid(s, geneid, panelid):
@@ -322,7 +384,7 @@ def get_panel_regions_by_geneid(s, geneid, panelid):
 
     sql = text("""SELECT versions.id AS version_id,
                     regions.chrom,
-                    CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start + versions.extension_5 END AS region_start,
+                    CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5 END AS region_start,
                     CASE WHEN (versions.extension_3 IS NULL) THEN regions."end" ELSE regions."end" + versions.extension_3 END AS region_end,
                     group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) AS name
                     FROM panels, versions
@@ -571,9 +633,9 @@ def get_regions_by_panelid(s, panelid, version):
 
     sql = text("""SELECT versions.id AS version_id,
                     regions.chrom, panels.current_version, panels.name AS panel_name, genes.name AS gene_name,
-                    CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start + versions.extension_5 END AS region_start,
+                    CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5 END AS region_start,
                     CASE WHEN (versions.extension_3 IS NULL) THEN regions."end" ELSE regions."end" + versions.extension_3 END AS region_end,
-                    group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) AS name
+                    CASE WHEN regions.name IS NULL THEN group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) ELSE regions.name END AS name
                     FROM panels, versions
                     JOIN regions ON regions.id = versions.region_id
                     JOIN exons ON regions.id = exons.region_id

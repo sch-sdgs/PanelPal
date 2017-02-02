@@ -192,6 +192,7 @@
                                         </th>
                                     </tr>
                                     </thead>
+                                    {{ genes | safe }}
                                 </table>
                                 <div>
                                     <ul class="list-unstyled list-inline pull-right">
@@ -226,13 +227,62 @@
 
                             <div class="form-group centerdiv">
                                 <h3 id="genelist" value="{{ panel }}">
-                                    <button name="genebutton" type="button" class="btn btn-md btn-danger btn-custom"
+                                    <button name="genebutton" type="button" class="btn btn-danger btn-md btn-custom"
                                             data-name="Custom" data-id="Custom">
                                         <span class='glyphicon glyphicon-pencil'></span> Custom Regions
                                     </button>
                                     {{ genelist | safe }}
                                 </h3>
 
+                            </div>
+                            <br/>
+                            <div id="add-custom-region" style="display: none;">
+                                <div id="custom-message" class="alert alert-danger" style="display: none;"><strong>You can't add that!</strong> </div>
+                                <div class="form-group">
+                                    <label for="chrom">Chromosome</label>
+                                    <select class="form-control" id="chrom" name="chrom">
+                                        <option value="0">--Select a chromosome--</option>
+                                        <option value="chr1">Chr1</option>
+                                        <option value="chr2">Chr2</option>
+                                        <option value="chr3">Chr3</option>
+                                        <option value="chr4">Chr4</option>
+                                        <option value="chr5">Chr5</option>
+                                        <option value="chr6">Chr6</option>
+                                        <option value="chr7">Chr7</option>
+                                        <option value="chr8">Chr8</option>
+                                        <option value="chr9">Chr9</option>
+                                        <option value="chr10">Chr10</option>
+                                        <option value="chr11">Chr11</option>
+                                        <option value="chr12">Chr13</option>
+                                        <option value="chr13">Chr13</option>
+                                        <option value="chr14">Chr14</option>
+                                        <option value="chr15">Chr15</option>
+                                        <option value="chr16">Chr16</option>
+                                        <option value="chr17">Chr17</option>
+                                        <option value="chr18">Chr18</option>
+                                        <option value="chr19">Chr19</option>
+                                        <option value="chr20">Chr20</option>
+                                        <option value="chr21">Chr21</option>
+                                        <option value="chr22">Chr22</option>
+                                        <option value="chrX">ChrX</option>
+                                        <option value="chrY">ChrY</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="start-pos">Start Position</label>
+                                    <input class="form-control" id="start-pos" type="text" value="">
+                                </div>
+                                <div class="form-group">
+                                    <label for="end-pos">End Position</label>
+                                    <input class="form-control" id="end-pos" type="text" value="">
+                                </div>
+                                <div class="form-group">
+                                    <label for="region-name">Region Name</label>
+                                    <input class="form-control" id="region-name" type="text" value="">
+                                </div>
+                                <div class="form-group">
+                                    <button class="btn btn-primary" type="button" id="add-custom">Add</button>
+                                </div>
                             </div>
                             <br/>
                         </div>

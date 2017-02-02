@@ -282,6 +282,7 @@ font-style: oblique}
 .process-step{text-align:center;position:relative}
 .process-step p{margin-top:4px}
 .btn-info{background-color:#18bc9c; border-color: #18bc9c;}
+.btn-custom{margin-bottom: 5px;}
 
 .line {
   width:640px;
