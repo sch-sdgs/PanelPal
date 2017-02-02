@@ -52,6 +52,14 @@ class CreatePanelProcess(Form):
     gene_list = FileField('', [regexp('^.+\.txt$')])
     submitname = SubmitField("Complete Panel")
 
+class EditPanelProcess(Form):
+    project = SelectField()
+    panelname = TextField("Panel Name")
+    make_live = RadioField(label='Do you want to make this panel live?', choices=[(True,"Yes"), (False,"No")], default=False)
+    genes = TextField("Genes")
+    gene_list = FileField('Gene List', [regexp('^.+\.txt$')])
+    submitname = SubmitField("Complete Edit")
+
 class CreateVirtualPanelProcess(Form):
     panel = QuerySelectField(query_factory=panels_unlocked, get_label='name', allow_blank=True, blank_text=u'-- please choose a panel -- ')
     vpanelname = TextField("Virtual Panel Name", [Required("Enter a Virtual Panel Name")])

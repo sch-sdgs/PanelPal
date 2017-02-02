@@ -129,7 +129,7 @@ class Versions(db.Model):
 
     panel_id = db.Column(db.Integer, db.ForeignKey('panels.id'))
     region_id = db.Column(db.Integer, db.ForeignKey('regions.id'))
-    vrelationship = db.relationship('VPRelationships', backref='z', lazy='dynamic')
+    vprelationship = db.relationship('VPRelationships', backref='z', lazy='dynamic')
 
     def __init__(self, intro, last, panel_id, region_id, comment, extension_3, extension_5):
         self.intro = intro
@@ -199,7 +199,7 @@ class Exons(db.Model):
 
 class Regions(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    chrom = db.Column(db.String(4), primary_key=True)
+    chrom = db.Column(db.String(5))
     start = db.Column(db.Integer)
     end = db.Column(db.Integer)
     name = db.Column(db.String(50))

@@ -22,7 +22,7 @@
     <script>
         function region_added() {
             $('#complete_message').removeClass('alert-danger').addClass('alert-success');
-            $('#complete_message').html('<strong>Congratulations!</strong> You have completed your virtual panel');
+            $('#complete_message').html('<strong>Congratulations!</strong> You have completed your panel');
             $('#cancel').removeClass('btn-danger').addClass('btn-success');
             $('#cancel').text('Done!');
             $('#cancel').attr('type', 'submit');
@@ -78,10 +78,10 @@
             }
             else if (window.location.pathname.indexOf("edit") >= 0) {
                 if ($('#vpanelname').length) {
-                    window.location.replace("{{url_for('panels.view_virtual_panels')}}");
+                    window.location.replace("{{ url_for('panels.view_virtual_panels') }}?id="+$('#main').attr('name'));
                 }
                 else {
-                    window.location.replace("{{url_for('panels.view_panels')}}");
+                    window.location.replace("{{ url_for('panels.view_panels') }}?id="+$('#main').attr('name'));
                 }
             }
         });
@@ -159,6 +159,8 @@
                         $('.glyphicon-ok').attr('href', '#submit_vp');
                         $("#vpanelname").attr("disabled", "disabled");
                         $("#panel").attr("disabled", "disabled");
+                        $("#panelname").attr("disabled", "disabled");
+                        $("#project").attr("disabled", "disabled");
                         $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
 
                         complete = true;
@@ -270,18 +272,18 @@
         $(document).on('click', '.label-gene', function () {
             var target = $(event.target);
             var gene_switch;
+            var geneName = '';
             if ($(target).is("button")) {
-                var geneName = $(target).attr('name');
+                geneName = $(target).attr('name');
                 $('.label-gene').each(function (i, obj) {
                     if ($(obj).attr('for') == geneName) {
                         gene_switch = $(obj);
                         return false;
                     }
                 });
-                //var gene_switch = $('[for="' + geneName +'"]')
             }
             else {
-                var geneName = $(event.target).attr('for');
+                geneName = $(event.target).attr('for');
                 gene_switch = $(event.target)
             }
 
@@ -309,6 +311,86 @@
     </script>
 
     <script>
+        $(document).on('click', '#create-regions', function () {
+            $('#add-custom-region').removeAttr('style');
+        });
+
+        $(document).on('click', '#add-custom', function () {
+            $('#custom-message').attr('style', "display: none;");
+            $('#custom-message').children().remove();
+            $('#custom-message').append("<strong>You can't add that!</strong> ");
+            var chrom = $('#chrom').val();
+            var start = $('#start-pos').val();
+            var end = $('#end-pos').val();
+            var name = $('#region-name').val();
+            var message = '';
+            if(chrom == 0)
+            {
+                message = "You haven't picked a chromosome"
+            }
+            else if(start.length == 0)
+            {
+                message = 'The start position is not defined'
+            }
+            else if(end.length == 0)
+            {
+                message = 'The end position is not defined'
+            }
+            else if(name.length == 0)
+            {
+                message = 'The region name is not defined'
+            }
+            else if (start > end)
+            {
+                message = "The start position is greater the end position"
+            }
+
+            if (message != '')
+            {
+                $('#custom-message').append(message);
+                $('#custom-message').removeAttr('style')
+            }
+            else
+            {
+                console.log($('#main').attr('name'));
+                var dict = {
+                    "panel_id":$('#main').attr('name'),
+                    "chrom": chrom,
+                    "start": start,
+                    "end": end,
+                    "name": name
+                };
+            var data = JSON.stringify(dict);
+
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('panels.create_panel_custom_regions') }}",
+                data: data,
+                dataType: "json",
+                contentType: "application/json",
+                success: function (response) {
+                    $('#add-custom-region').attr('style', "display: none;");
+                    $('#chrom').val(0);
+                    $('#start-pos').val('');
+                    $('#end-pos').val('');
+                    $('#region-name').val('');
+                    $('#genebutton').each(function (i, obj) {
+                        if($(obj).attr('data-name') == "Custom")
+                        {
+                            $(obj).trigger('click');
+                        }
+                    })
+                    region_added()
+                },
+                error: function (response) {
+                    console.log($(response).responseText);
+                    console.log('Error');
+                }
+
+            });
+            }
+        });
+
         function get_regions(element, target) {
             var gene_id = $(element).attr('data-id');
             var gene_name = $(element).attr('data-name');
@@ -348,7 +430,7 @@
                     console.log(response);
                     $('#regions').children().remove();
                     $('#regions').append(response['html']);
-                    console.log(response['html']);
+                    console.log(response['ids']);
                     var ids = response['ids'];
 
                     sessionStorage.setItem("current_ids", JSON.stringify(response['ids']));
@@ -613,9 +695,25 @@
             var pref_tx_id = $('#'+gene_name).val();
             console.log(pref_tx_id);
 
+            var id_ext = [];
+            console.log(ids)
+            for (var id in ids){
+                //this gets the second parent of the switch (tr)
+                var row = $('[for="'+ids[id]+'"]').parent().parent();
+                //this get the third child (index 2) of the row and the child of that row is the text box
+                //id is original start, value is textbox start so difference is the extension
+                var start = $($($($(row[0])).children().eq(2)[0])[0]).children().eq(0).attr('id');
+                var ext_5 = start - $($($($(row[0])).children().eq(2)[0])[0]).children().eq(0).val();
+
+                var end = $($($($(row[0])).children().eq(3)[0])[0]).children().eq(0).attr('id');
+                var ext_3 = $($($($(row[0])).children().eq(3)[0])[0]).children().eq(0).val() - end;
+
+                id_ext.push({"id":ids[id], "ext_5":ext_5, "ext_3":ext_3})
+            }
+
             var dict = {
                 "panel_id": panel_id,
-                "ids": ids,
+                "id_ext": id_ext,
                 "pref_tx_id":pref_tx_id,
                 "project_id":$('#project').val(),
                 "gene_name":gene_name
