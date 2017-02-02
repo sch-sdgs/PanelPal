@@ -34,7 +34,7 @@ class AddGene(Form):
 
 
 class ViewPanel(Form):
-    versions = SelectField()
+    versions = SelectField("Select a version:")
     submit = SubmitField("Go")
 
 class CreatePanel(Form):

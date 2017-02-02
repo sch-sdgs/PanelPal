@@ -18,3 +18,5 @@ RUN pip install .
 WORKDIR /app
 
 ENV MESSAGE "PanelPal is running..."
+
+
