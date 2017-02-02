@@ -133,8 +133,6 @@ class LockCol(Col):
             **kwargs)
 
     def td_contents(self, item, attr_list):
-        print "HELLO"
-        print item
         if item["locked"] is not None:
             username = get_username_by_user_id(s, item["locked"])
             return '<center><span class="glyphicon glyphicon-lock"  data-toggle="tooltip" data-placement="bottom" title="Locked by: ' + username + '" aria-hidden="true"></span></center>'
@@ -144,7 +142,7 @@ class LockCol(Col):
 
 class LinkColLive(LinkCol):
     def td_contents(self, item, attr_list):
-        if item["conditional"] is True and item["status"] is False:
+        if item["locked"] is None and item["permission"] is True and item["status"] is False:
             return '<a href="{url}">{text}</a>'.format(
                 url=self.url(item),
                 text=self.td_format(self.text(item, attr_list)))
@@ -154,7 +152,7 @@ class LinkColLive(LinkCol):
 
 class LinkColConditional(LinkCol):
     def td_contents(self, item, attr_list):
-        if item["conditional"] is True:
+        if item["permission"] is True:
             return '<a href="{url}">{text}</a>'.format(
                 url=self.url(item),
                 text=self.td_format(self.text(item, attr_list)))

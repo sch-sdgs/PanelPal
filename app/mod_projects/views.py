@@ -2,7 +2,7 @@ from app.queries import *
 from flask import Blueprint
 from flask import render_template, request, url_for, jsonify, redirect, flash
 from flask.ext.login import login_required, current_user
-
+from collections import OrderedDict
 from app.main import s
 from app.views import row2dict,LinkColPrefTx,LinkColConditional
 from flask_table import Table, Col, LinkCol
@@ -42,14 +42,15 @@ def view_projects(delete=False, project_name=None, project_id=None):
     result = []
     for i in projects:
         row = row2dict(i)
-        row['conditional'] = check_user_has_permission(s, current_user.id, row["id"])
+        row['permission'] = check_user_has_permission(s, current_user.id, row["id"])
         preftx = get_preftx_by_project_id(s=s, id=row["id"])
+        print "PREFTX"
+        print "----"
         if len(list(preftx)) == 0:
             row['preftx']=False
         else:
+            print "HELLO"
             row['preftx']=True
-        # if check_user_has_permission(s, current_user.id, row["id"]):
-        #     result.append(row)
         result.append(row)
     table = ItemTableProject(result, classes=['table', 'table-striped'])
     return render_template('projects.html', projects=table, delete=delete, project_name=project_name,
@@ -106,8 +107,6 @@ def delete_project():
 @login_required
 def view_preftx():
     id = request.args.get('id')
-    print "hello"
-    print id
     project = get_project_name(s, id)
     result = get_preftx_by_project_id(s=s, id=id)
     if len(list(result)) == 0:
@@ -119,7 +118,6 @@ def view_preftx():
             preftx_id = i.preftx_id
             row = dict(zip(i.keys(), i))
             all_results.append(row)
-        print all_results
 
         if check_user_has_permission(s, current_user.id, id):
             edit = ''
@@ -135,15 +133,18 @@ def view_preftx():
 @projects.route('/preftx/create', methods=['GET', 'POST'])
 @login_required
 def create_preftx():
-    preftx_id = request.args.get('id')
-    id = get_project_id_by_preftx_id(s,preftx_id)
+    print  request.args.get('id')
+    preftx_id_master = request.args.get('id')
+    project_id = get_project_id_by_preftx_id(s,preftx_id_master)
     if request.method == 'GET':
-        result = get_genes_by_projectid_new(s=s, projectid=id)
-        genes = {}
+        result = get_genes_by_projectid_new(s=s, projectid=project_id)
+        genes = OrderedDict()
         for i in result:
             print i.genename
-            preftx_id = get_preftx_by_gene_id(s, id, i.geneid)
-            upcoming_preftx = get_upcoming_preftx_by_gene_id(s,id,i.geneid)
+            preftx_id = get_preftx_by_gene_id(s, project_id, i.geneid)
+            upcoming_preftx = get_upcoming_preftx_by_gene_id(s,preftx_id_master,i.geneid)
+            print "UPCOMING"
+            print upcoming_preftx
             all_tx = get_tx_by_gene_id(s, i.geneid)
             for j in all_tx:
                 if preftx_id == j.id:
@@ -161,12 +162,14 @@ def create_preftx():
                     else:
                         genes[i.genename].append((j.id, j.accession, selected,""))
 
-        list_of_forms = []
-        return render_template("preftx_create.html", genes=genes, list_of_forms=list_of_forms, project_id=id,
-                               project_name=get_project_name(s, id))
+        print genes
+
+        return render_template("preftx_create.html", genes=genes, project_id=project_id,
+                               project_name=get_project_name(s, project_id))
 
     elif request.method == 'POST':
         print "HERE"
+        print project_id
         print request.form
         tx_ids = []
         for i in request.form:
@@ -178,6 +181,7 @@ def create_preftx():
                 result["tx_id"]=request.form[i]
                 tx_ids.append(result)
         print tx_ids
+        print project_id
         add_preftxs_to_panel(s, project_id, tx_ids)
         return redirect(url_for('projects.view_preftx', id=project_id))
 
@@ -233,7 +237,7 @@ def remove_permission():
     rel_id = request.args.get('rel_id')
     if check_user_has_permission(s, current_user.id, project_id):
         remove_user_project_rel(s, rel_id)
-        return redirect(url_for('edit_permissions', id=project_id))
+        return redirect(url_for('projects.edit_permissions', id=project_id))
 
 def check_preftx_status(s, id):
     """
@@ -243,11 +247,9 @@ def check_preftx_status(s, id):
     :param id: panel id
     :return: true - panel is live or false - panel has changes
     """
-    print "ID" + str(id)
     preftx = check_preftx_status_query(s, id)
     status = True
     for i in preftx:
-        print i
         if i.intro > i.current_version:
             status = False
         if i.last is not None:

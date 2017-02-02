@@ -15,7 +15,7 @@
                 {{ form.submit(class_="btn btn-primary") }}
 
                 <div class="btn-group" role="group" aria-label="...">
-                    <a href="{{url_for('panels.download_as_bed')}}?name={{ panel_name }}&scope=panel&id={{ panel_id }}&version={{ version }}&project_id={{ project_id }}"
+                    <a href="{{url_for('panels.download_as_bed')}}?name={{ panel_name }}&scope={{ scope }}&id={{ panel_id }}&version={{ version }}&project_id={{ project_id }}"
                        class="btn btn-default {{ bed }}" role="button"><span
                             class="glyphicon glyphicon-download"></span> Download as .bed</a>
                     <a href="{{url_for('panels.edit_panel_page')}}?panelid={{ panel_id }}"
