@@ -38,7 +38,7 @@ def get_preftx_by_gene_id(s, project_id, gene_id):
         join(PrefTxVersions).\
         join(Tx).\
         join(Genes).\
-        filter(and_(PrefTx.project_id == project_id,Genes.id == gene_id,or_(PrefTxVersions.last == PrefTx.current_version, PrefTxVersions.last == None), \
+        filter(and_(PrefTx.project_id == project_id,Genes.id == gene_id,or_(PrefTxVersions.last >= PrefTx.current_version, PrefTxVersions.last == None), \
                     PrefTxVersions.intro <= PrefTx.current_version)).values(PrefTxVersions.tx_id)
     for i in preftx:
         return i.tx_id
@@ -58,12 +58,18 @@ def add_preftxs_to_panel(s, project_id, tx_ids):
         #get current preftx for that gene, if different then do the next bit
         stored_preftx = get_preftx_by_gene_id(s,project_id,gene_id)
         #todo this is not working
-        if int(stored_preftx) != int(tx_id):
+        try:
+            stored_id = int(stored_preftx)
+        except TypeError:
+            stored_id = 0
+        if stored_id != int(tx_id):
             print "hello hello"
             print preftx_id
             if preftx_id != 0:
                 preftx = PrefTxVersions(s, pref_tx_id=preftx_id, tx_id=tx_id, intro=current_version + 1, last=None)
                 s.add(preftx)
+                if stored_id != 0:
+                    s.query(PrefTxVersions).filter(and_(PrefTxVersions.tx_id == stored_preftx, PrefTxVersions.project_id == project_id)).update({PrefTxVersions.last: current_version})
                 s.flush()
     s.commit()
 

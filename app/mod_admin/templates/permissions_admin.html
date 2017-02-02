@@ -6,7 +6,7 @@
 <form action="{{ url_for('admin.edit_permissions_admin') }}" method="POST" class="form-permissions">
     <h2>Edit User Permissions</h2><br>
     {% if message %}
-<div class="alert alert-success" id="message"><strong>FYI</strong> {{ message }}</div>
+<div class="alert alert-success" id="message-fade"><strong>FYI</strong> {{ message }}</div>
 {% endif %}
     Tick boxes and click "Submit Changes" to give users permission to certain projects.<br><br>
     <table class="table table-striped">

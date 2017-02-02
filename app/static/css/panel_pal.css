@@ -270,6 +270,7 @@ font-style: oblique}
 .label-region{}
 .label-selectall{}
 .label-added{background-color: #999}
+.label-custom{}
 
 .process-step .btn:focus{outline:none}
 .process{display:table;width:800px; max-width: 800px;margin: auto}

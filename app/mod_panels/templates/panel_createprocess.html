@@ -2,5 +2,295 @@
 
 {% block content %}
 
+<div class="form-vpgenes">
+    <form id="main" name="{{ panel_id }}" action="{{ url }}" method="POST">
+
+        <center><h2>Panel Wizard</h2></center>
+        <div class="row">
+
+            <div class="line hidden-xs"></div>
+            <div class="process">
+                <div class="process-row nav nav-tabs">
+                    <div class="col-sm-12 text-center">
+                        <div class="process-step col-sm-1"></div>
+                        <div class="process-step col-sm-2">
+                                <span id="glyphicon-pencil" class="glyphicon glyphicon-new-selected glyphicon-pencil"
+                                      data-toggle="tab"
+                                      href="#initialise"></span>
+                            <p>
+                                <small>Panel Name</small>
+                            </p>
+                        </div>
+                        <div class="process-step col-sm-2">
+                            {% if genes %}
+                            <span id="glyphicon-list-alt" class="glyphicon glyphicon-new glyphicon-list-alt"
+                                  data-toggle="tab"
+                                  href="#select_genes"></span>
+                            {% else %}
+
+                            <span id="glyphicon-list-alt" class="glyphicon glyphicon-new glyphicon-list-alt"
+                                  data-toggle="tab"
+                                  href="#initialise"></span>
+                            {% endif %}
+                            <p>
+                                <small>Genes</small>
+                            </p>
+                        </div>
+                        <div class="process-step col-sm-2">
+                            {% if genes %}
+                            <span id="glyphicon-transfer" class="glyphicon glyphicon-new glyphicon-transfer"
+                                  data-toggle="tab"
+                                  href="#select_tx"></span>
+                            {% else %}
+
+                            <span id="glyphicon-transfer" class="glyphicon glyphicon-new glyphicon-transfer"
+                                  data-toggle="tab"
+                                  href="#initialise"></span>
+                            {% endif %}
+                            <p>
+                                <small>Transcripts</small>
+                            </p>
+                        </div>
+                        <div class="process-step col-sm-2">
+                            {% if genes %}
+                            <span id="glyphicon-th-large" class="glyphicon glyphicon-new glyphicon-th-large"
+                                  data-toggle="tab"
+                                  href="#select_regions"></span>
+                            {% else %}
+                            <span id="glyphicon-th-large" class="glyphicon glyphicon-new glyphicon-th-large"
+                                  data-toggle="tab"
+                                  href="#initialise"></span>
+                            {% endif %}
+                            <p>
+                                <small>Regions</small>
+                            </p>
+                        </div>
+                        <div class="process-step col-sm-2">
+                            {% if genes %}
+                            <span id="glyphicon-ok" class="glyphicon glyphicon-new glyphicon-ok" data-toggle="tab"
+                                  href="#submit_vp"></span>
+
+                            {% else %}
+                            <span id="glyphicon-ok" class="glyphicon glyphicon-new glyphicon-ok" data-toggle="tab"
+                                  href="#initialise"></span>
+                            {% endif %}
+                            <p>
+                                <small>Success</small>
+                            </p>
+                        </div>
+                        <div class="process-step col-sm-1"></div>
+                    </div>
+                </div>
+
+                <div class="tab-content">
+                    <div id="initialise" class="tab-pane fade active in">
+                        <div class="col-md-2"></div>
+                        <div class="col-md-8">
+                            {% if genes %}
+
+                            <br>
+                            <div class="form-group">
+                                {{ form.project.label }}
+                                {{ form.project(class_="form-control", disabled="disabled") }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.panelname.label }}
+                                {{ form.panelname(class_="form-control", disabled="disabled") }}
+                            </div>
+
+                            {% else %}
+
+
+                            <br>
+                            <div id="message">
+                                {% if message %}
+
+                                <div class="alert alert-danger"><strong>Silly Sausage!</strong> {{ message }}</div>
+
+                                {% endif %}
+                            </div>
+                            <div class="form-group">
+                                {{ form.project.label }}
+                                {{ form.project(class_="form-control") }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.panelname.label }}
+                                {{ form.panelname(class_="form-control") }}
+                            </div>
+
+                            {% endif %}
+
+                            <br>
+                            <ul class="list-unstyled list-inline pull-right">
+                                <li>
+                                    <button type="button" class="btn btn-primary next-step">Next <i
+                                            class="fa fa-chevron-right"></i></button>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-2"></div>
+                    </div>
+                    <div id="select_genes" class="tab-pane fade">
+                        <div class="row top-buffer bttm-buffer">
+                            <div class="col-md-2"></div>
+                            <div class="col-md-8">
+                                <center><h2>Add Genes</h2></center>
+                                <center><h4>Type the gene name into the box and click add<br/>or upload a text file
+                                    containing the list of genes</h4></center>
+                            </div>
+                            <div class="col-md-2"></div>
+                        </div>
+
+                        <div id="loading"></div>
+                        <div id="genemessage"></div>
+
+                        <div class="row top-buffer bttm-buffer">
+                            <div class="col-md-2"></div>
+                            <div class="col-md-8">
+                                {{ form.genes.label }}
+                                <div class="input-group">
+                                    {{ form.genes(class="form-control ui-autocomplete-input") }}
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-primary" type="button" id="add">Add</button>
+                                    </span>
+                                </div>
+                                <br/>
+                                {{ form.gene_list.label }}
+                                <div class="input-group">
+                                    {{ form.gene_list(class="btn btn-default btn-file") }}
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-primary" type="button" id="upload">Upload</button>
+                                    </span>
+                                </div>
+                                <br/>
+                                <ul class="list-unstyled list-inline pull-right">
+                                    <li>
+                                        <button type="button" class="btn btn-default prev-step"><i
+                                                class="fa fa-chevron-left"></i> Back
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button type="button" class="btn btn-primary next-step">Next <i
+                                                class="fa fa-chevron-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-2"></div>
+                        </div>
+                    </div>
+                    <div id="select_tx" class="tab-pane fade">
+                        <div class="row top-buffer bttm-buffer">
+                            <div class="col-md-2"></div>
+                            <div class="col-md-8">
+                                <table id="tx_table" class="table table-striped">
+                                    <thead>
+                                    <tr>
+                                        <th>Gene</th>
+                                        <th>Transcripts (Current PrefTx is selected and highlighted, upcoming PrefTx
+                                            indicated by *)
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                </table>
+                                <div>
+                                    <ul class="list-unstyled list-inline pull-right">
+                                        <li>
+                                            <button type="button" class="btn btn-default prev-step"><i
+                                                    class="fa fa-chevron-left"></i> Back
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="btn btn-primary next-step">Next <i
+                                                    class="fa fa-chevron-right"></i></button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-2"></div>
+                        </div>
+                    </div>
+                    <div id="select_regions" class="tab-pane fade">
+
+                        <div class="row top-buffer bttm-buffer">
+                            <div class="col-md-2"></div>
+                            <div class="col-md-8">
+                                <center><h3>Choose the regions</h3></center>
+                                <center><p>Click a gene name to edit the regions included in the panel</p>
+                                </center>
+                            </div>
+                            <div class="col-md-2"></div>
+                        </div>
+
+                        <div>
+
+                            <div class="form-group centerdiv">
+                                <h3 id="genelist" value="{{ panel }}">
+                                    <button name="genebutton" type="button" class="btn btn-md btn-danger btn-custom"
+                                            data-name="Custom" data-id="Custom">
+                                        <span class='glyphicon glyphicon-pencil'></span> Custom Regions
+                                    </button>
+                                    {{ genelist | safe }}
+                                </h3>
+
+                            </div>
+                            <br/>
+                        </div>
+                        <div id="regions" class="form-group"></div>
+                        <br/>
+                        <div>
+                            <ul class="list-unstyled list-inline pull-right">
+                                <li>
+                                    <button type="button" class="btn btn-default prev-step"><i
+                                            class="fa fa-chevron-left"></i> Back
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button" class="btn btn-primary next-step">Next <i
+                                            class="fa fa-chevron-right"></i></button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div id="submit_vp" class="tab-pane fade">
+                        <div id="complete_message" class="alert alert-danger"><strong>Oopsie Daisy!</strong> You haven't
+                            added any regions to this panel yet...
+                        </div>
+                        <div id="make_live" hidden>
+                            <div class="col-md-2"></div>
+                            <div class="col-md-8">
+                                <center>
+                                    <tr>{{ form.make_live.label }}</tr>
+                                    {% for subfield in form.make_live %}
+                                    <tr>
+                                        <td>{{ subfield }}</td>
+                                        <td>{{ subfield.label }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </center>
+                            </div>
+                            <div class="col-md-2"></div>
+                        </div>
+                        <ul class="list-unstyled list-inline pull-right">
+                            <li>
+                                <button type="button" class="btn btn-default prev-step"><i
+                                        class="fa fa-chevron-left"></i> Back
+                                </button>
+                            </li>
+                            <li>
+                                <button id="cancel" type="button" class="btn btn-danger"><i id="cancel_logo"
+                                                                                            class="fa fa-remove"></i>
+                                    Cancel
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </form>
+</div>
 
 {% endblock %}
+

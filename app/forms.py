@@ -10,13 +10,6 @@ class UserForm(Form):
     submit = SubmitField("Send")
 
 
-class Search(Form):
-    categories = [("Genes",'Gene'), ("Transcripts",'Transcript'), ("Panels",'Panel'), ("VPanels",'Virtual Panel'), ("Projects",'Project'), ("Users",'User')]
-    search_term = TextField("Search term")
-    tables = SelectField("Type", choices=categories)
-    submit = SubmitField("Search")
-
-
 class PrefTxCreate(Form):
     gene = RadioField(u'Genes',choices=[],coerce=int)
     project_id = TextField("Project ID")

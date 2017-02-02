@@ -48,6 +48,7 @@ from app.mod_projects.views import projects
 from app.mod_panels.views import panels
 from app.mod_admin.views import admin
 from app.mod_api.views import api_blueprint
+from app.mod_search.views import search
 
 
 #from app.views import *
@@ -57,4 +58,5 @@ app.register_blueprint(admin,url_prefix='/admin')
 app.register_blueprint(api_blueprint,url_prefix='/api')
 app.register_blueprint(projects,url_prefix='/projects')
 app.register_blueprint(panels,url_prefix='/panels')
+app.register_blueprint(search,url_prefix='/search')
 

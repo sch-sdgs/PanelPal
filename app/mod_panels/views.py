@@ -6,9 +6,9 @@ from flask.ext.login import login_required, current_user
 from app.main import s
 from app.views import LockCol,LinkColConditional, LabelCol, LinkColLive, NumberCol
 from flask_table import Table, Col, LinkCol
-from forms import ViewPanel, CreatePanel, CreateVirtualPanelProcess, AddGene, RemoveGene
+from forms import ViewPanel, CreatePanel, CreatePanelProcess, CreateVirtualPanelProcess, EditVirtualPanelProcess, AddGene, RemoveGene
 from queries import *
-
+from app.mod_projects.queries import get_preftx_by_gene_id, get_upcoming_preftx_by_gene_id, get_tx_by_gene_id, add_preftxs_to_panel
 
 panels = Blueprint('panels', __name__, template_folder='templates')
 
@@ -27,8 +27,8 @@ class ItemTablePanels(Table):
 class ItemTableVPanels(Table):
     vp_name = Col('Name')
     current_version = Col('Stable Version')
-    view_panel = LinkCol('View Panel', 'panels.view_virtual_panel', url_kwargs=dict(id='id'))
-    edit = LinkColConditional('Edit Panel', 'panels.edit_panel_page', url_kwargs=dict(id='id'))
+    view_panel = LinkCol('View Panel', 'panels.view_vpanel', url_kwargs=dict(id='id'))
+    edit = LinkColConditional('Edit Panel', 'panels.edit_virtual_panel_process', url_kwargs=dict(id='id'))
     locked = LockCol('Locked')
     status = LabelCol('Status')
     make_live = LinkColLive('Make Live', 'panels.make_virtualpanel_live', url_kwargs=dict(id='id'))
@@ -61,7 +61,7 @@ class ItemTablePanel(Table):
     number = Col('Exon')
     accession = Col('Accession')
     genename = Col('Gene')
-    delete = LinkCol('Delete', 'delete_region', url_kwargs=dict(id='id'))
+    delete = LinkCol('Delete', 'panels.delete_region', url_kwargs=dict(id='id'))
 
     def sort_url(self, col_key, reverse=False):
         if reverse:
@@ -69,6 +69,21 @@ class ItemTablePanel(Table):
         else:
             direction = 'asc'
         return url_for('edit_panel_page', sort=col_key, direction=direction)
+
+def isgene(s, gene):
+    """
+    checks if a gene is in refflad
+
+    :param s: db session
+    :param gene: gene name
+    :return: true or false
+    """
+    test = s.query(Genes).filter_by(name=gene).first()
+    if test is None:
+        return False
+    else:
+        return True
+
 
 def check_panel_status(s, id):
     """
@@ -225,68 +240,6 @@ def view_panel():
     else:
         return redirect(url_for('panels.view_panels'))
 
-
-@panels.route('/vpanel', methods=['GET', 'POST'])
-@login_required
-def view_vpanel():
-    id = request.args.get('id')
-    try:
-        version = request.form["versions"]
-    except KeyError:
-        version = None
-    if id:
-        status = check_virtualpanel_status(s, id)
-        if not status:
-            message = "This panel has changes which cannot be viewed here as they have not been made live yet, if you have permission you can view these by editing the panel"
-        else:
-            message = None
-        panel_details = get_vpanel_details_by_id(s, id)
-        for i in panel_details:
-            if not version:
-                version = i.current_version
-            panel_name = i.name
-            project_id = i.project_id
-        panel = get_vpanel_by_id(s, id)
-        result = []
-        rows = list(panel)
-        if len(rows) != 0:
-            bed = ''
-            for i in rows:
-                row = dict(zip(i.keys(), i))
-                # status = check_panel_status(s, row["panelid"])
-                # row["status"] = status
-                result.append(row)
-                panel_name = row["name"]
-                current_version = row["current_version"]
-            table = ItemTablePanelView(result, classes=['table', 'table-striped'])
-        else:
-            table = ""
-            message = "This Panel has no regions yet & may also have chnages that have not been made live yet"
-            bed = 'disabled'
-            current_version = version
-        print 'version'
-        print current_version
-
-        if check_user_has_permission(s, current_user.id, project_id):
-            edit = ''
-        else:
-            edit = 'disabled'
-
-        form = ViewPanel()
-        v_list = range (1, current_version+1)
-        choices = []
-        for i in v_list:
-            choices.append((i,i))
-        form.versions.choices = choices
-        form.versions.default = current_version
-        form.process()
-        return render_template('panel_view.html', panel=table, panel_name=panel_name, edit=edit, bed=bed,
-                                version=version, panel_id=id, message=message, url= url_for('panels.view_vpanel'),
-                                scope='Virtual', form=form)
-
-    else:
-        return redirect(url_for('panels.view_vpanels'))
-
 @panels.route('/create', methods=['GET', 'POST'])
 @login_required
 def create_panel():
@@ -311,7 +264,7 @@ def create_panel():
             if test_panel is not None:
                 return render_template('panel_create.html', form=form, message="Panel Name Exists")
             else:
-                id = create_panel_query(s, project, panelname)
+                id = create_panel_query(s, project, panelname, current_user.id)
 
                 for gene in genes:
                     add_genes_to_panel(s, id, gene)
@@ -322,6 +275,249 @@ def create_panel():
     elif request.method == 'GET':
         return render_template('panel_create.html', form=form)
 
+@panels.route('/panels/wizard', methods=['GET', 'POST'])
+@login_required
+def create_panel_process():
+    """
+
+    :return:
+    """
+    form = CreatePanelProcess()
+    if request.method == "POST":
+        pass
+    elif request.method == "GET":
+        print('get wizard')
+        return render_template('panel_createprocess.html', form=form, panel_id="main", url=url_for('panels.create_panel_process'))
+
+@panels.route('/panels/add',  methods=['POST'])
+@login_required
+def add_panel():
+    """
+
+    :return:
+    """
+    panel_name = request.json['panel_name']
+    project_id = request.json['project_id']
+    panel_id = create_panel_query(s, project_id, panel_name, current_user.id)
+    return jsonify(panel_id)
+
+@panels.route('/panels/remove',  methods=['POST'])
+@login_required
+def remove_panel():
+    """
+
+    :return:
+    """
+    panel_name = request.json['panel_name']
+    remove_panel_query(s, panel_name)
+    return jsonify('complete')
+
+@panels.route('/panels/upload', methods=['POST'])
+@login_required
+def upload_multiple():
+    """
+
+    :return:
+    """
+    gene_list = request.json['gene_list'].replace('\r','').split('\n')
+    project_id = request.json['project_id']
+    all_message = ''
+    html = ''
+    added_list = []
+    button_list = ''
+
+    for gene in gene_list:
+        if gene == "":
+            continue
+        dct = create_panel_get_tx(gene, project_id)
+        print(dct["message"])
+        if dct["message"] == "added":
+            added_list.append(gene)
+        else:
+            all_message += dct["message"]
+        try:
+            print(dct["html"])
+            html += dct["html"]
+        except KeyError:
+            pass
+        try:
+            print(dct["button_list"])
+            button_list += dct["button_list"]
+        except KeyError:
+            pass
+
+    added_message = "<div class =\"alert alert-success\" name=\"message-fade\"><strong>FYI</strong> "
+
+    for g in added_list:
+        if added_list.index(g) == len(added_list) -1:
+            string = "and " + g
+            added_message += string
+        else:
+            string = g + ", "
+            added_message += string
+
+    added_message += " have been added</div>"
+    all_message += added_message
+    return jsonify({'message':all_message, 'html':html, 'button_list':button_list})
+
+
+@panels.route('/panels/preftx', methods=['POST'])
+@login_required
+def create_panel_get_tx(gene_name=None, project_id=None):
+    """
+
+    :return:
+    """
+    json=False
+    print(gene_name)
+    if not gene_name:
+        gene_name = request.json['gene_name']
+        project_id = request.json['project_id']
+        json=True
+    exists = isgene(s, gene_name)
+
+    if exists:
+        gene_id = get_gene_id_from_name(s, gene_name)
+        preftx_id = get_preftx_by_gene_id
+        upcoming_preftx = get_upcoming_preftx_by_gene_id(s, project_id, gene_id)
+        all_tx = get_tx_by_gene_id(s, gene_id)
+        html = """<tr>
+                    <td>
+                        <label for=\"""" + gene_name + "\">" + gene_name + """</label>
+                    </td>
+                    <td>
+                        <div class=\"form-group\">
+                        <select class=\"form-control\" name=\"""" + gene_name + "\" id=\"" + gene_name + "\">"
+
+        gene_button = "<button name=\"genebutton\" type=\"button\" class=\"btn btn-success btn-md btngene\" data-name=\"" + \
+                      gene_name + "\" data-id=\"" + str(gene_id) + "\"><span class='glyphicon glyphicon-ok'></span> " + \
+                      gene_name + "</button> "
+
+        for tx in all_tx:
+            print(tx)
+            if upcoming_preftx == tx.id:
+
+                html = """<tr>
+                    <td>
+                        <label for=\"""" + gene_name + "\">" + gene_name + """</label>
+                    </td>
+                    <td>
+                        <div class=\"form-group\">
+                        <select class=\"form-control\" name=\"""" + gene_name + "\" id=\"" + gene_name + "\">" +\
+                        "<option value=\"" + str(tx.id) + "\" class=\"red\">" + tx.accession + " - This Is a Change Not Made Live Yet</option>" + \
+                            """</select>
+                                 </div>
+                                    </td>
+                            </tr>"""
+                print(html)
+
+
+                success_message = "<div class =\"alert alert-success\" name=\"message-fade\"><strong>FYI</strong> " + gene_name + " was added</div>"
+                if json:
+                    return jsonify({'html':html, 'button_list':gene_button, 'message':success_message})
+                else:
+                    return {'html': html, 'button_list': gene_button, 'message': "added"}
+            else:
+                html += "<option value=\"" + str(tx.id) + "\""
+
+                if preftx_id == tx.id:
+                    html +=  " class=\"bolden\" selected"
+                else:
+                    html += " class=\"\""
+
+            html += ">" + tx.accession + "</option>"
+        html += """</select>
+                    </div>
+                </td>
+            </tr>"""
+
+        print(html)
+        success_message = "<div class =\"alert alert-success\" name=\"message-fade\"><strong>FYI</strong> " + gene_name + " was added</div>"
+
+        if json:
+            return jsonify({'html': html, 'button_list': gene_button, 'message': success_message})
+        else:
+            return {'html': html, 'button_list': gene_button, 'message': "added"}
+    else:
+        fail_message = "<div class =\"alert alert-danger\" name=\"" + gene_name + "\" id=\"message-fail\"><strong>Oh Crumbs!</strong> " + gene_name + " didn't match anything in the database</div>"
+        if json:
+            return jsonify({'message': fail_message})
+        else:
+            return {'message': fail_message}
+
+@panels.route('/panels/custom/create', methods=['POST'])
+@login_required
+def create_panel_custom_regions():
+    """
+    Creates a custom region from ajax query and adds region to versions table for specified panel
+
+    :return:
+    """
+    panel_id = request.json["panel_id"]
+    chrom = request.json["chrom"]
+    start = request.json["start"]
+    end = request.json["end"]
+    name = request.json["name"]
+    regions = select_region_by_location(s, chrom, start, end)#if region already exists, return current entry
+    if regions:
+        for i in regions:
+            v_id = add_region_to_panel(s, i.id, panel_id)
+            region = i
+            continue
+    else:
+        region, v_id = create_custom_region(s, panel_id, chrom, start, end, name)
+
+    row = """<tr>
+                        <td><label for=\"""" + v_id + "\">" + v_id + "</label></td>" + \
+          "<td>" + region.chrom + "</td>" + \
+          "<td>" + str(region.start) + "</td>" + \
+          "<td>" + str(region.end) + "</td>" + \
+          "<td style=\"word-wrap: break-word\">" + region.name + "</td>" + \
+          """<td><div class=\"material-switch pull-right\">
+                  <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
+                                <label for=\"""" + v_id + """\" class=\"label-success label-region\" ></label>
+                            </div></td>
+                    </tr>"""
+
+    return jsonify(row)
+
+@panels.route('/panels/add_regions', methods=['POST'])
+@login_required
+def add_panel_regions():
+    version_ids = request.json['ids']
+    print(version_ids)
+    panel_id = request.json['panel_id']
+    tx_id = request.json['pref_tx_id']
+    project_id = request.json['project_id']
+    gene_name = request.json['gene_name']
+
+    add_preftxs_to_panel(s, project_id, [{"gene":gene_name, "tx_id":tx_id},])
+
+    for i in version_ids:
+        add_region_to_panel(s, i, panel_id)
+    s.commit()
+    return jsonify("complete")
+
+@panels.route('/panels/remove_regions', methods=['POST'])
+@login_required
+def remove_panel_regions():
+    """
+
+    :return:
+    """
+    version_ids = request.json['ids']
+    if type(version_ids) is str:
+        version_ids = version_ids.split(',')
+    print(version_ids)
+    panel_id = request.json['panel_id']
+
+    for i in version_ids:
+        print(i)
+        remove_version_from_panel(s, int(panel_id), int(i))
+
+    panel = get_panel_by_id(s, panel_id)#check if there are still regions in the panel
+    length = len(list(panel))
+    return jsonify(length)
 
 @panels.route('/live', methods=['GET', 'POST'])
 @login_required
@@ -501,8 +697,6 @@ def add_gene():
 # VIRTUAL PANELS
 ################
 
-
-
 @panels.route('/virtualpanels', methods=['GET','POST'])
 @login_required
 def view_virtual_panels(id=None):
@@ -545,6 +739,66 @@ def view_virtual_panels(id=None):
     return render_template('panels.html', panels=table, project_name=panel_name,
                            message='Virtual Panels are locked if their parent panel is being edited')
 
+@panels.route('/vpanel', methods=['GET', 'POST'])
+@login_required
+def view_vpanel():
+    id = request.args.get('id')
+    try:
+        version = request.form["versions"]
+    except KeyError:
+        version = None
+    if id:
+        status = check_virtualpanel_status(s, id)
+        if not status:
+            message = "This panel has changes which cannot be viewed here as they have not been made live yet, if you have permission you can view these by editing the panel"
+        else:
+            message = None
+        panel_details = get_vpanel_details_by_id(s, id)
+        for i in panel_details:
+            if not version:
+                version = i.current_version
+            panel_name = i.name
+            project_id = i.project_id
+        panel = get_vpanel_by_id(s, id)
+        result = []
+        rows = list(panel)
+        if len(rows) != 0:
+            bed = ''
+            for i in rows:
+                row = dict(zip(i.keys(), i))
+                # status = check_panel_status(s, row["panelid"])
+                # row["status"] = status
+                result.append(row)
+                panel_name = row["name"]
+                current_version = row["current_version"]
+            table = ItemTablePanelView(result, classes=['table', 'table-striped'])
+        else:
+            table = ""
+            message = "This Panel has no regions yet & may also have chnages that have not been made live yet"
+            bed = 'disabled'
+            current_version = version
+        print 'version'
+        print current_version
+
+        if check_user_has_permission(s, current_user.id, project_id):
+            edit = ''
+        else:
+            edit = 'disabled'
+
+        form = ViewPanel()
+        v_list = range (1, current_version+1)
+        choices = []
+        for i in v_list:
+            choices.append((i,i))
+        form.versions.choices = choices
+        form.versions.default = current_version
+        form.process()
+        return render_template('panel_view.html', panel=table, panel_name=panel_name, edit=edit, bed=bed,
+                                version=version, panel_id=id, message=message, url= url_for('panels.view_vpanel'),
+                                scope='Virtual', form=form)
+
+    else:
+        return redirect(url_for('panels.view_vpanels'))
 
 @panels.route('/virtualpanels/wizard', methods=['GET', 'POST'])
 @login_required
@@ -562,9 +816,71 @@ def create_virtual_panel_process():
             make_vp_panel_live(s, vp_id, 1)
         panel_id = get_panel_by_vp_id(s, vp_id)
         unlock_panel_query(s, panel_id)
-        return redirect(url_for('view_virtual_panels'))
+        return redirect(url_for('panels.view_virtual_panels'))
     elif request.method == "GET":
-        return render_template('virtualpanels_createprocess.html', form=form, tab=1)
+        url = url_for('panels.create_virtual_panel_process')
+        return render_template('virtualpanels_createprocess.html', form=form, url=url, vp_id="main")
+
+@panels.route('/virtualpanels/edit', methods=['GET', 'POST'])
+@login_required
+def edit_virtual_panel_process():
+    """
+
+    :return:
+    """
+    form = EditVirtualPanelProcess()
+
+    vp_id = request.args.get('id')
+    panel_id = get_panel_by_vp_id(s, vp_id)
+    if request.method == "POST":
+        if make_live == "True":
+            make_vp_panel_live(s, vp_id, 1)
+        unlock_panel_query(s, panel_id)
+        return redirect(url_for('panels.view_virtual_panels'))
+    elif request.method == "GET":
+        lock_panel(s, current_user.id, panel_id)
+        panel_info = get_panel_details_by_id(s,panel_id)
+        panel_name = ""
+        for i in panel_info:
+            panel_name = i.name
+        form.panel.choices = [(panel_id, panel_name)]
+
+        panel_version = get_current_version(s, panel_id)
+        panel_genes = get_genes_by_panelid(s, panel_id, panel_version)
+        vp_info = get_vpanel_details_by_id(s, vp_id)
+        print(vp_info)
+        vp_version = vp_info.current_version
+        vp_name = vp_info.name
+        form.vpanelname.data = vp_name
+        vp_genes = get_genes_by_vpanelid(s, vp_id, vp_version)
+        gene_html = ""
+        genelist = ""
+        vp_list = []
+        for i in vp_genes:
+            vp_list.append(i.id)
+
+        for i in panel_genes:
+            if i.id in vp_list:
+                line = "<li class=\"list-group-item\">" + \
+                       i.name + \
+                       "<div class=\"material-switch pull-right\"><input type=\"checkbox\" name=\"" + str(i.id) + \
+                       "\" id=\"" + i.name + "\" disabled=\"disabled\" checked=\"checked\"><label for=\"" + i.name + \
+                       "\" class=\"label-added label-gene\" disabled=\"disabled\"></label></div></li>"
+                button = "<button name=\"genebutton\" type=\"button\" class=\"btn btn-success btn-md btngene\" data-name=\"" +\
+                         i.name + "\" data-id=\"" + str(i.id) + "\"><span class='glyphicon glyphicon-ok'></span> " + \
+                         i.name + "</button> "
+                genelist += button
+
+            else:
+                line = "<li class=\"list-group-item\">" + \
+                       i.name + \
+                       "<div class=\"material-switch pull-right\"><input type=\"checkbox\" name=\"" + str(i.id) +\
+                       "\" id=\"" + i.name + "\"><label for=\"" + i.name +\
+                       "\" class=\"label-success label-gene\"></label></div></li>"
+            gene_html += line
+
+        url = url_for('panels.edit_virtual_panel_process')
+        return render_template('virtualpanels_createprocess.html', form=form, genes=gene_html, genelist=genelist, vp_id = vp_id, panel_name=vp_name, current_version=vp_version, url=url)
 
 @panels.route('/virtualpanels/add',  methods=['POST'])
 @login_required
@@ -615,17 +931,83 @@ def select_vp_genes():
     print(html)
     return jsonify(html)
 
-@panels.route('/virtualpanels/getregions', methods=['POST'])
-def select_vp_regions():
+@panels.route('/virtualpanels/custom', methods=['POST'])
+@login_required
+def get_custom_regions():
     """
 
     :return:
     """
-    print(request.json)
-    gene_id = request.json['gene_id']
-    gene_name = request.json['gene_name']
-    panel_id = request.json['panel_id']
-    regions = get_regions_by_geneid(s, gene_id, panel_id)
+    panel_id = request.json["panel_id"]
+    vpanel_id = request.json["vpanel_id"]
+    current_regions = []
+
+    regions = get_custom_regions_query(s, panel_id)
+    html = """<h3 name=\"Custom\">Custom Regions</h3><ul class=\"list-unstyled list-inline pull-right\">
+                        <li>
+                            <button type=\"button\" class=\"btn btn-success\" id=\"add-regions\" name=\"Custom\" disabled=\"disabled\">Add Regions</button>
+                        </li>
+                    </ul>
+
+                <table class=\"table table-striped\">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Chrom</th>
+                            <th>Region Start</th>
+                            <th>Region End</th>
+                            <th>Names</th>
+                            <th>Select All <div class="material-switch pull-right">
+                                                <input type="checkbox" id="checkAll">
+                                                <label for="checkAll" class="label-success label-selectall"></label>
+                                            </div>
+                            </th>
+                        </tr>
+                    </thead>"""
+    for i in regions:
+        if not vpanel_id:
+            current_regions.append(i.id)
+        print(i.name)
+        v_id = str(i.version_id)
+        row = """<tr>
+                        <td><label for=\"""" + v_id + "\">" + v_id + "</label></td>" + \
+              "<td>" + i.chrom + "</td>" + \
+              "<td>" + str(i.region_start) + "</td>" + \
+              "<td>" + str(i.region_end) + "</td>" + \
+              "<td style=\"word-wrap: break-word\">" + i.name.replace(',', '\n') + "</td>" + \
+              """<td><div class=\"material-switch pull-right\">
+                      <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
+                                <label for=\"""" + v_id + """\" class=\"label-success label-region\" ></label>
+                            </div></td>
+                    </tr>"""
+        html += row
+
+    if vpanel_id:
+        version_ids = get_current_custom_regions(s, vpanel_id)
+        for i in version_ids:
+            current_regions.append(i[0])
+
+    html += "</table>"
+    return jsonify({'html':html, 'ids':current_regions})
+
+@panels.route('/virtualpanels/getregions', methods=['POST'])
+def select_vp_regions(gene_id=None, gene_name=None, panel_id=None):
+    """
+
+    :return:
+    """
+    json = False
+    if not gene_id:
+        json = True
+        print(request.json)
+        gene_id = request.json['gene_id']
+        gene_name = request.json['gene_name']
+        panel_id = request.json['panel_id']
+    if panel_id:
+        regions = get_panel_regions_by_geneid(s, gene_id, panel_id)
+    else:
+        print("gene regions")
+        regions = get_regions_by_geneid(s, gene_id)
     html = "<h3 name=\"" + gene_id + "\">" + gene_name + """</h3><ul class=\"list-unstyled list-inline pull-right\">
                     <li>
                         <button type=\"button\" class=\"btn btn-success\" id=\"add-regions\" name=\"""" + gene_name + """\" disabled=\"disabled\">Add Regions</button>
@@ -652,7 +1034,11 @@ def select_vp_regions():
                 </thead>"""
     for i in regions:
         print(i.name)
-        v_id = str(i.version_id)
+        if panel_id:
+            v_id = str(i.version_id)
+        else:
+            v_id = str(i.region_id)
+
         row = """<tr>
                     <td><label for=\"""" +  v_id + "\">" + v_id + "</label></td>" +\
                     "<td>" + i.chrom + "</td>" + \
@@ -668,23 +1054,72 @@ def select_vp_regions():
 
     html += "</table>"
 
-    return jsonify(html)
+    if json:
+        return jsonify(html)
+    else:
+        return html
+
+@panels.route('/virtualpanels/editregions', methods=['POST'])
+def edit_vp_regions():
+    """
+
+    :return:
+    """
+    print(request.json)
+    gene_id = request.json['gene_id']
+    gene_name = request.json['gene_name']
+    panel_id = request.json['panel_id']
+    vpanel_id = request.json['vpanel_id']
+
+    if vpanel_id:
+        print("virtual")
+        html = select_vp_regions(gene_id, gene_name, panel_id)
+        regions = get_vprelationships(s, vpanel_id, gene_id)
+    else:
+        print("panel")
+        html = select_vp_regions(gene_id, gene_name)
+        regions = get_versions(s, panel_id, gene_id)
+    version_ids = []
+    for i in regions:
+        print(i[0])
+        version_ids.append(i[0])
+    print(version_ids)
+    dict = {'html':html,'ids':version_ids}
+
+    return jsonify(dict)
 
 @panels.route('/virtualpanels/add_regions', methods=['POST'])
 @login_required
 def add_vp_regions():
     version_ids = request.json['ids']
+    print(version_ids)
     vpanel_id = request.json['vp_id']
+    print(vpanel_id)
     for i in version_ids:
-        rel_id = add_version_to_vp(s, vpanel_id, i)
+        add_version_to_vp(s, vpanel_id, i)
     return jsonify("complete")
 
-@panels.route('/virtualpanels/view', methods=['GET', 'POST'])
-def view_virtual_panel():
+@panels.route('/virtualpanels/remove_regions', methods=['POST'])
+@login_required
+def remove_vp_regions():
     """
 
     :return:
     """
+    version_ids = request.json['ids']
+    if type(version_ids) is str:
+        version_ids = version_ids.split(',')
+    print(version_ids)
+    vpanel_id = request.json['vp_id']
+    print(vpanel_id)
+
+    for i in version_ids:
+        print(i)
+        remove_version_from_vp(s, int(vpanel_id), int(i))
+
+    panel = get_vpanel_by_id(s, vpanel_id)
+    length = len(list(panel))
+    return jsonify(length)
 
 @panels.route('/virtualpanels/live', methods=['GET', 'POST'])
 def make_virtualpanel_live():
@@ -694,7 +1129,7 @@ def make_virtualpanel_live():
     :return: redirection to view panels
     """
     panelid = request.args.get('id')
-    current_version = get_current_vp_version(s, panelid)
+    current_version = get_current_version_vp(s, panelid)
     new_version = current_version + 1
     make_vp_panel_live(s, panelid, new_version)
 

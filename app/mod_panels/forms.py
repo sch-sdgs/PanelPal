@@ -2,8 +2,8 @@ from app.queries import *
 from flask.ext.login import current_user
 from flask.ext.wtf import Form
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
-from wtforms.fields import TextField, SubmitField, HiddenField, RadioField, SelectField
-from wtforms.validators import Required
+from wtforms.fields import TextField, SubmitField, HiddenField, RadioField, SelectField, FileField
+from wtforms.validators import Required, regexp
 
 from app import models
 from app.main import s
@@ -44,8 +44,23 @@ class CreatePanel(Form):
     genes = TextField("Genes")
     submit = SubmitField("Create Panel")
 
+class CreatePanelProcess(Form):
+    project = QuerySelectField(query_factory=projects, get_label='name', allow_blank=True, blank_text=u'-- please choose a project -- ')
+    panelname = TextField("Panel Name", [Required("Enter a Panel Name")])
+    make_live = RadioField(label='Do you want to make this panel live?', choices=[(True,"Yes"), (False,"No")], default=False)
+    genes = TextField("Genes")
+    gene_list = FileField('Gene List', [regexp('^.+\.txt$')])
+    submitname = SubmitField("Complete Panel")
+
 class CreateVirtualPanelProcess(Form):
     panel = QuerySelectField(query_factory=panels_unlocked, get_label='name', allow_blank=True, blank_text=u'-- please choose a panel -- ')
     vpanelname = TextField("Virtual Panel Name", [Required("Enter a Virtual Panel Name")])
     make_live = RadioField(label='Do you want to make this panel live?', choices=[(True,"Yes"), (False,"No")], default=False)
     submitname = SubmitField("Complete Panel")
+
+class EditVirtualPanelProcess(Form):
+    panel = SelectField()
+    vpanelname = TextField("Virtual Panel Name")
+    make_live = RadioField(label='Do you want to make this panel live?', choices=[(True, "Yes"), (False, "No")],
+                           default=False)
+    submitname = SubmitField("Complete Edit")

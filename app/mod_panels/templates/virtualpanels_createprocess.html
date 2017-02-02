@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="form-vpgenes">
-    <form id="main" name="main" action="{{ url_for('panels.create_virtual_panel_process') }}" method="POST">
+    <form id="main" name="{{ vp_id }}" action="{{ url }}" method="POST">
 
         <center><h2>Virtual Panel Wizard</h2></center>
         <div class="row">
@@ -21,24 +21,43 @@
                             </p>
                         </div>
                         <div class="process-step col-sm-3">
+                            {% if genes %}
+                                <span id="glyphicon-list-alt" class="glyphicon glyphicon-new glyphicon-list-alt"
+                                      data-toggle="tab"
+                                      href="#select_genes"></span>
+                            {% else %}
+
                                 <span id="glyphicon-list-alt" class="glyphicon glyphicon-new glyphicon-list-alt"
                                       data-toggle="tab"
                                       href="#initialise"></span>
+                            {% endif %}
                             <p>
                                 <small>Genes</small>
                             </p>
                         </div>
                         <div class="process-step col-sm-3">
+                            {% if genes %}
+                                <span id="glyphicon-th-large" class="glyphicon glyphicon-new glyphicon-th-large"
+                                      data-toggle="tab"
+                                      href="#select_regions"></span>
+                            {% else %}
                                 <span id="glyphicon-th-large" class="glyphicon glyphicon-new glyphicon-th-large"
                                       data-toggle="tab"
                                       href="#initialise"></span>
+                            {% endif %}
                             <p>
                                 <small>Regions</small>
                             </p>
                         </div>
                         <div class="process-step col-sm-3">
+                            {% if genes %}
+                                <span id="glyphicon-ok" class="glyphicon glyphicon-new glyphicon-ok" data-toggle="tab"
+                                      href="#submit_vp"></span>
+
+                            {% else %}
                                 <span id="glyphicon-ok" class="glyphicon glyphicon-new glyphicon-ok" data-toggle="tab"
                                       href="#initialise"></span>
+                            {% endif %}
                             <p>
                                 <small>Success</small>
                             </p>
@@ -50,6 +69,22 @@
                     <div id="initialise" class="tab-pane fade active in">
                         <div class="col-md-2"></div>
                         <div class="col-md-8">
+                        {% if genes %}
+
+                        <br>
+                            <div class="form-group">
+                                {{ form.panel.label }}
+                                {{ form.panel(class_="form-control", disabled="disabled") }}
+                            </div>
+                            <div><p>N.B. Panels that are locked will not appear in the list.</p></div>
+                            <div class="form-group">
+                                {{ form.vpanelname.label }}
+                                {{ form.vpanelname(class_="form-control", disabled="disabled") }}
+                            </div>
+
+                        {% else %}
+
+
                             <br>
                             <div id="message">
                                 {% if message %}
@@ -67,6 +102,9 @@
                                 {{ form.vpanelname.label }}
                                 {{ form.vpanelname(class_="form-control") }}
                             </div>
+
+                            {% endif %}
+
                             <br>
                             <ul class="list-unstyled list-inline pull-right">
                                 <li>
@@ -92,7 +130,7 @@
                             <div class="col-md-2"></div>
                             <div class="col-md-8">
                                 <ul class="list-group" id="geneselector">
-
+                                    {{ genes | safe }}
                                 </ul>
                                 <ul class="list-unstyled list-inline pull-right">
                                     <li>
@@ -126,7 +164,8 @@
 
                             <div class="form-group centerdiv">
                                 <h3 id="genelist" value="{{ panel }}">
-
+                                    <button name="genebutton" type="button" class="btn btn-danger btn-custom btn-md" data-name="Custom" data-id="Custom">
+                                        <span class='glyphicon glyphicon-pencil'></span> Custom Regions</button> {{ genelist | safe }}
                                 </h3>
 
                             </div>
