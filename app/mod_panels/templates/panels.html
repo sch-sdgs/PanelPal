@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>{{ project_name }} Panels</h2>
+        </div>
+    </div>
+    {% if message %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="alert alert-info"><strong>Please Note:</strong> {{ message }}</div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="row">
+        <div class="col-md-12">
+            {{ panels }}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<form action="{{ url }}?id={{ panel_id }}" method="POST">
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <!--<h2>Viewing Live {{ scope }} Panel | <strong>{{ panel_name }} (v{{ version }})</strong></h2>-->
+            <h2><strong>{{ panel_name }} (v{{ version }})</strong></h2>
+           {{ form.versions(class_="inline form-inline form-control") }}
+                {{ form.submit(class_="btn btn-primary") }}
+        </div>
+        <div class="col-md-4">
+
+            <div class="btn-group" role="group" aria-label="...">
+                <a href="{{url_for('panels.download_as_bed')}}?database=panel" class="btn btn-default {{ bed }}" role="button"><span
+                        class="glyphicon glyphicon-download"></span> Download as .bed</a>
+                <a href="{{url_for('panels.edit_panel_page')}}?panelid={{ panel_id }}" class="btn btn-primary {{ edit }}"
+                   role="button"><span
+                        class="glyphicon glyphicon-edit"></span> Edit Panel</a>
+            </div>
+
+
+        </div>
+    </div>
+    {% if message %}<br>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="alert alert-danger"><strong>Just so you know...</strong> {{ message }}</div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            {{ panel }}
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}

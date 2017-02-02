@@ -251,6 +251,16 @@ right connector from last child*/
 }
 
 
+.logs{
+    font-family: Consolas,monaco,monospace;
+    /*max-width: 1000px;*/
+    max-height: 1000px;
+      padding: 10px 35px 35px;
+      margin: 0 auto;
+      background-color: #f6f6f6;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
 .bolden{font-weight: bold;
 font-style: oblique}
 
@@ -334,3 +344,8 @@ input[type=checkbox].permissions_checkbox {
  input[type=checkbox].permissions_checkbox:checked:after {
    content: "\2714";
  }
+
+ .inline{
+    display:inline-block;
+     width: 80px;
+}
