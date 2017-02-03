@@ -102,7 +102,7 @@ class VPRelationships(db.Model):
         self.vpanel_id = vpanel_id
 
     def __repr__(self):
-        return '<name %r>' % (self.name)
+        return '<id %r>' % (self.id)
 
 
 class VirtualPanels(db.Model):

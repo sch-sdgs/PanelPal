@@ -514,10 +514,10 @@ class Users(Database):
         #print models.Users.query.all()
         pass
 
-    def add_user(self,user):
+    def add_user(self,user, admin):
         pp = self.panelpal_conn.cursor()
         try:
-            pp.execute("INSERT OR IGNORE INTO users(username,admin) VALUES (?,?)", (user,1))
+            pp.execute("INSERT OR IGNORE INTO users(username,admin) VALUES (?,?)", (user,admin))
             self.panelpal_conn.commit()
             return pp.lastrowid
         except self.panelpal_conn.Error as e:

@@ -95,7 +95,7 @@ def main():
     if args.users is not None:
         users = args.users.split(',')
         for user in users:
-            complete = u.add_user(user)
+            complete = u.add_user(user, 1)
             if complete == -1:
                 print user + " not added to database"
 

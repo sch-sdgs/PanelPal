@@ -286,10 +286,13 @@ def get_vprelationships(s, vp_id, gene_id):
         join(Exons).\
         join(Tx).\
         filter(and_(Tx.gene_id == gene_id, VPRelationships.vpanel_id == vp_id,
-                    or_(
-                        and_(VPRelationships.intro == current_version, VPRelationships.last != current_version + 1),
-                        VPRelationships.intro == current_version + 1),
-                    or_(VPRelationships.last >= current_version, VPRelationships.last == None))).\
+                    or_(VPRelationships.intro == current_version + 1,
+                        and_(VPRelationships.intro <= current_version,
+                             or_(VPRelationships.last != current_version, VPRelationships.last == None)
+                             )
+                        )
+                    )
+               ).\
         group_by(VPRelationships.id).\
         values(VPRelationships.version_id)
     return versions
@@ -309,8 +312,13 @@ def get_versions(s, panel_id, gene_id):
         join(Exons).\
         join(Tx).\
         filter(and_(Tx.gene_id == gene_id, Versions.panel_id == panel_id,
-                    or_(and_(Versions.last != current_version + 1,Versions.intro <= current_version), Versions.intro == current_version +1),
-                    or_( Versions.last >= current_version, Versions.last == None))).\
+                    or_(Versions.intro == current_version + 1,
+                        and_(Versions.intro <= current_version,
+                            or_(Versions.last != current_version, Versions.last == None)
+                             )
+                        )
+                    )
+               ).\
         group_by(Versions.id).\
         values(Regions.id)
     print(str(versions))
@@ -546,20 +554,22 @@ def remove_version_from_panel(s, panel_id, version_id):
     :param version_id:
     :return:
     """
-    version = s.query(Versions).filter_by(id=version_id).all()
+    version = s.query(Versions).filter(Versions.region_id == version_id, Versions.panel_id == panel_id).all()
     current_version = get_current_version(s, panel_id)
     for v in version:
-        if v.intro > current_version:
-            s.query(Versions).filter_by(id=v.id).delete()
-        else:
-            vp_relationships = s.query(VPRelationships).filter_by(version_id=v.id).all()
-            for r in vp_relationships:
-                if v.intro > current_version:
-                    s.query(VPRelationships).filter_by(id=r.id).delete()
-                else:
+        if v.last == None:
+            print('no last')
+            if v.intro > current_version:
+                s.query(Versions).filter_by(id=v.id).delete()
+            else:
+                vp_relationships = s.query(VPRelationships).filter_by(version_id=v.id).all()
+                for r in vp_relationships:
                     vp_version = get_current_version_vp(s, r.vpanel_id)
-                    s.query(VPRelationships).filter_by(id=r.id).update({VPRelationships.last: vp_version})
-            s.query(Versions).filter_by(id=v.id).update({Versions.last: current_version})
+                    if r.intro > vp_version:
+                        s.query(VPRelationships).filter_by(id=r.id).delete()
+                    else:
+                        s.query(VPRelationships).filter_by(id=r.id).update({VPRelationships.last: vp_version})
+                s.query(Versions).filter_by(id=v.id).update({Versions.last: current_version})
     s.commit()
     return True
 
