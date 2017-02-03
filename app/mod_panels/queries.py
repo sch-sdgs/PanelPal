@@ -9,11 +9,19 @@ from app.models import *
 def check_if_locked_by_user(s, username, panel_id):
     user_id = get_user_id_by_username(s, username)
     locked = s.query(Panels).filter(or_(and_(Panels.id == panel_id, Panels.locked == user_id),
-                                        and_(Panels.locked == None, Panels.id == panel_id))).count()
-    if locked == 0:
-        return False
-    else:
-        return True
+                                        and_(Panels.locked == None, Panels.id == panel_id))).values(Panels.locked)
+    #locked = s.query(Panels).filter(and_(Panels.locked == None, Panels.id == panel_id)).count()
+    print locked
+    for i in locked:
+        return i.locked
+
+def check_if_locked_by_user_vpanel(s, username, panel_id):
+    user_id = get_user_id_by_username(s, username)
+    locked = s.query(Panels).filter(or_(and_(Panels.id == panel_id, Panels.locked == user_id),
+                                        and_(Panels.locked == None, Panels.id == panel_id))).values(Panels.locked)
+    # locked = s.query(Panels).filter(and_(Panels.locked == None, Panels.id == panel_id)).values(Panels.locked)
+    for i in locked:
+        return i.locked
 
 def check_panel_status_query(s, id):
     """
@@ -231,7 +239,6 @@ def get_custom_regions_query(s, panelid):
                         (Regions.chrom == 'chr19',19),(Regions.chrom == 'chr20',20),(Regions.chrom == 'chr21',21),
                         (Regions.chrom == 'chr22',22),(Regions.chrom == 'chrX',23),(Regions.chrom == 'chrY',24)))
     current_version = get_current_version(s, panelid)
-    print(current_version)
     custom_regions = s.query(Versions, Regions).join(Regions).\
         filter(and_(Versions.panel_id == panelid,
                     or_(
@@ -442,6 +449,7 @@ def get_virtual_panels_simple(s):
         values(VirtualPanels.current_version, \
                VirtualPanels.name.label('vp_name'), \
                VirtualPanels.id,
+               Panels.name.label('panel_name'),
                Panels.id.label('panelid'),
                Panels.locked,
                Panels.project_id.label('projectid'))
@@ -568,8 +576,6 @@ def remove_version_from_vp(s, vp_id, version_id):
     vp_relationship = s.query(VPRelationships).filter(and_(VPRelationships.vpanel_id == vp_id, VPRelationships.version_id == version_id)).all()
     current_version = get_current_version_vp(s, vp_id)
     for r in vp_relationship:
-        print(r.id)
-        print(r.intro)
         if r.intro > current_version:
             s.query(VPRelationships).filter_by(id=r.id).delete()
             s.commit()
@@ -642,5 +648,26 @@ def get_regions_by_panelid(s, panelid, version):
                     WHERE panels.id = :panel_id AND versions.intro <= :version AND (versions.last >= :version OR versions.last IS NULL)
                     GROUP BY regions.id ORDER BY chrom,region_start""")
     values = {'panel_id':panelid, 'version':version}
+    regions = s.execute(sql, values)
+    return regions
+
+def get_regions_by_vpanelid(s, vpanelid, version):
+    sql = text("""SELECT versions.id AS version_id,
+                regions.chrom, virtual_panels.current_version, virtual_panels.name AS panel_name, genes.name AS gene_name,
+                CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5 END AS region_start,
+                CASE WHEN (versions.extension_3 IS NULL) THEN regions."end" ELSE regions."end" + versions.extension_3 END AS region_end,
+                CASE WHEN regions.name IS NULL THEN group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) ELSE regions.name END AS name
+                FROM virtual_panels
+                JOIN VP_relationships on virtual_panels.id = VP_relationships.vpanel_id
+                JOIN versions on VP_relationships.version_id = versions.id
+                JOIN regions ON regions.id = versions.region_id
+                JOIN exons ON regions.id = exons.region_id
+                JOIN tx ON tx.id = exons.tx_id
+                JOIN genes ON genes.id = tx.gene_id
+                WHERE virtual_panels.id = :vpanel_id AND VP_relationships.intro <= :version AND (VP_relationships.last >= :version OR VP_relationships.last IS NULL)
+                GROUP BY regions.id ORDER BY chrom,region_start""")
+
+
+    values = {'vpanel_id': vpanelid, 'version': version}
     regions = s.execute(sql, values)
     return regions
