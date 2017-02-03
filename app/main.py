@@ -4,4 +4,4 @@ from flask_bootstrap import Bootstrap
 Bootstrap(app)
 
 if __name__ == "__main__":
-    app.run(debug=True, host='10.182.131.21', port=5010)
+    app.run(debug=True, host='0.0.0.0', port=80)
