@@ -3,7 +3,7 @@ from flask import Blueprint
 from flask import render_template, request, url_for, jsonify, redirect, Response, Markup
 from flask.ext.login import login_required, current_user
 from pybedtools import BedTool
-from app.main import s
+from app.panel_pal import s
 from app.views import LockCol, LinkColConditional, LabelCol, LinkColLive, NumberCol
 from flask_table import Table, Col, LinkCol
 from forms import ViewPanel, CreatePanel, CreatePanelProcess, EditPanelProcess, CreateVirtualPanelProcess, EditVirtualPanelProcess, AddGene, RemoveGene

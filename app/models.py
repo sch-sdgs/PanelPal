@@ -1,4 +1,4 @@
-from app.main import db
+from app.panel_pal import db
 from sqlalchemy.orm import relationship
 
 class Users(db.Model):

@@ -1,4 +1,4 @@
-from app.main import message
+from app.panel_pal import message
 from app.models import *
 
 

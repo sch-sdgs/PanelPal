@@ -5,7 +5,7 @@ from flask import render_template, request, url_for, jsonify, redirect, Response
 from flask.ext.login import login_required, current_user
 from forms import *
 
-from app.main import s
+from app.panel_pal import s
 from app.views import LockCol,LinkColConditional, LabelCol, LinkColLive, NumberCol
 from flask_table import Table, Col, LinkCol
 from queries import *

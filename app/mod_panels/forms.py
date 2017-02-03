@@ -6,7 +6,7 @@ from wtforms.fields import TextField, SubmitField, HiddenField, RadioField, Sele
 from wtforms.validators import Required, regexp
 
 from app import models
-from app.main import s
+from app.panel_pal import s
 
 
 def projects():

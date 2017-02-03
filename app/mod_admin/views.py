@@ -6,7 +6,7 @@ from flask import Blueprint
 from flask import render_template, request, url_for, redirect
 from flask.ext.login import login_required, current_user
 
-from app.main import s
+from app.panel_pal import s
 from app.mod_projects.queries import get_all_projects, get_projects_by_user, remove_user_project_rel_no_id, add_user_project_rel
 from app.views import admin_required
 from flask_table import Table, Col, LinkCol

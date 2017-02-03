@@ -1,7 +1,7 @@
 from sqlalchemy import and_, or_, desc, text, exc
 
 from models import *
-from main import message
+from panel_pal import message
 
 
 def check_user_has_permission(s, username, project_id):
