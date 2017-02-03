@@ -148,6 +148,7 @@ def get_genes_by_projectid_new(s, projectid):
         join(PrefTx). \
         join(Projects). \
         filter(Projects.id==projectid). \
+        order_by(Genes.name).\
         values(Tx.id.label("txid"), \
                Projects.name.label("projectname"), \
                Projects.id.label("projectid"), \
@@ -303,7 +304,7 @@ def get_all_by_project_id(s,project_id):
 def get_tx_by_gene_id(s, gene_id):
     tx = s.query(Genes,Tx).\
         join(Tx).\
-        filter(Genes.id==gene_id).values(Tx.id,Tx.accession,Genes.id.label("geneid"))
+        filter(Genes.id==gene_id).order_by(Genes.name).values(Tx.id,Tx.accession,Genes.id.label("geneid"))
     return tx
 
 
@@ -326,4 +327,21 @@ def get_all_locked(s):
     :return: sql alchemy generator object
     """
     locked = s.query(Panels,Users).join(Users).filter(Panels.locked != None).values(Panels.name,Users.username,Panels.id.label("id"))
+    return locked
+
+
+
+def get_all_locked_by_username(s,username):
+    """
+    gets all locked panels
+    :param s: database session
+    :return: sql alchemy generator object
+    """
+    # print username
+    # user_id = get_user_by_username(s,username)
+    # print user_id
+    locked = s.query(Panels,Users).\
+        join(Users).\
+        filter(Users.username == username).\
+        values(Panels.name,Users.username,Panels.id.label("id"))
     return locked

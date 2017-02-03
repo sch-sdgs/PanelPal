@@ -752,9 +752,9 @@
         }
 
         $(document).on('click', '#upload', function (request) {
-            console.log($('#gene_list'));
-            console.log(($('#gene_list'))[0].files);
-            var file = ($('#gene_list'))[0].files[0];
+            console.log($('#my-file-selector'));
+            console.log(($('#my-file-selector'))[0].files);
+            var file = ($('#my-file-selector'))[0].files[0];
             console.log(file);
             if(file)
             {
@@ -1040,8 +1040,9 @@
                        aria-expanded="false">Panels <span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <li><a href="{{ url_for('panels.view_panels') }}">View Panels</a></li>
+                        <li><a href="{{ url_for('panels.create_panel_process') }}">Create Panel</a></li>
                         <li role="separator" class="divider"></li>
-                        <li><a href="/panels/create">Create Panel</a></li>
+                        <li><a href="{{ url_for('panels.manage_locked') }}">Manage Locked Panels</a></li>
                         <!--<li><a href="#">Create Panel From Panel App</a></li>-->
                         <!--<li role="separator" class="divider"></li>-->
                         <!--<li><a href="#">Export Panel</a></li>-->

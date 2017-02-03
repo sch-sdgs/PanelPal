@@ -156,12 +156,23 @@
                                 </div>
                                 <br/>
                                 {{ form.gene_list.label }}
-                                <div class="input-group">
-                                    {{ form.gene_list(class="btn btn-default btn-file") }}
-                                    <span class="input-group-btn">
+
+                                <form class="form-inline center-block">
+                                    <div class="input-group">
+                                    <label id="browsebutton" class="btn btn-primary input-group-addon"
+                                           for="my-file-selector">
+                                        Browse...
+                                        {{ form.gene_list(id="my-file-selector") }}
+                                    </label>
+                                    <input type="text" class="form-control" readonly>
+                                        <span class="input-group-btn">
                                         <button class="btn btn-primary" type="button" id="upload">Upload</button>
-                                    </span>
-                                </div>
+                                            </span>
+                                        </div>
+
+                                </form>
+
+
                                 <br/>
                                 <ul class="list-unstyled list-inline pull-right">
                                     <li>
@@ -341,6 +352,31 @@
 
     </form>
 </div>
+
+
+<script>
+
+    $(document).on('change', '#browsebutton :file', function () {
+        var input = $(this),
+                numFiles = input.get(0).files ? input.get(0).files.length : 1,
+                label = input.val().replace(/\\/g, '/').replace(/.*\//, '');
+        input.trigger('fileselect', [numFiles, label]);
+    });
+
+    $(document).ready(function () {
+        $('#browsebutton :file').on('fileselect', function (event, numFiles, label) {
+            var input = $(this).parents('.input-group').find(':text'),
+                    log = numFiles > 1 ? numFiles + ' files selected' : label;
+
+            if (input.length) {
+                input.val(log);
+            } else {
+                if (log) alert(log);
+            }
+
+        });
+    });
+</script>
 
 {% endblock %}
 

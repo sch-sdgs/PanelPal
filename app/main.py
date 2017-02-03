@@ -7,6 +7,8 @@ import itertools
 from functools import wraps
 from flask_login import current_user
 
+
+
 app = Flask(__name__)
 app.config.from_object('config')
 app.secret_key = 'development key'

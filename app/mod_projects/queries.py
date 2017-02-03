@@ -52,37 +52,52 @@ def add_preftxs_to_panel(s, project_id, tx_ids):
     print preftx_id
     print "current_version:" + str(current_version)
     for i in tx_ids:
+
         tx_id = i["tx_id"]
+        print tx_id
         gene = i["gene"]
         gene_id = get_gene_id_from_name(s,gene)
         #get current preftx for that gene, if different then do the next bit
         stored_preftx = get_preftx_by_gene_id(s,project_id,gene_id)
         #todo this is not working
-        try:
-            stored_id = int(stored_preftx)
-        except TypeError:
-            stored_id = 0
-        if stored_id != int(tx_id):
+        if stored_preftx != int(tx_id):
             print "hello hello"
             print preftx_id
-            if preftx_id != 0:
+            print "-->" + str(tx_id)
+            if int(tx_id) != 0:
+                #add new record to db
                 preftx = PrefTxVersions(s, pref_tx_id=preftx_id, tx_id=tx_id, intro=current_version + 1, last=None)
                 s.add(preftx)
-                if stored_id != 0:
-                    s.query(PrefTxVersions).filter(and_(PrefTxVersions.tx_id == stored_preftx, PrefTxVersions.project_id == project_id)).update({PrefTxVersions.last: current_version})
-                s.flush()
-    s.commit()
+                s.commit()
+                #update old record with last
+                s.query(PrefTxVersions).filter(and_(PrefTxVersions.tx_id == stored_preftx)).update(
+                    {PrefTxVersions.last: current_version}, synchronize_session='fetch')
+                s.commit()
+
+
 
     return True
 
-def get_upcoming_preftx_by_gene_id(s, project_id, gene_id):
-    preftx = s.query(PrefTx,PrefTxVersions,Tx,Genes).\
-        join(PrefTxVersions).\
-        join(Tx).\
-        join(Genes).\
-        filter(and_(PrefTx.project_id == project_id,Genes.id == gene_id,or_(PrefTxVersions.last == PrefTx.current_version, PrefTxVersions.last == None), \
-                    PrefTxVersions.intro > PrefTx.current_version)).values(PrefTxVersions.tx_id)
+def get_upcoming_preftx_by_gene_id(s, pref_tx_id, gene_id):
+    # preftx = s.query(PrefTx,PrefTxVersions,Tx,Genes).\
+    #     join(PrefTxVersions).\
+    #     join(Tx).\
+    #     join(Genes).\
+    #     filter(and_(PrefTx.project_id == project_id,Genes.id == gene_id,
+    #                 or_(PrefTxVersions.last == PrefTx.current_version,
+    #                     PrefTx.current_version > PrefTxVersions.last), \
+    #                     PrefTxVersions.intro > PrefTx.current_version)).\
+    #     values(PrefTxVersions.tx_id)
+
+    preftx = s.query(PrefTx, PrefTxVersions, Tx, Genes). \
+            join(PrefTxVersions).\
+            join(Tx).\
+            join(Genes).\
+            filter(and_(PrefTx.id == pref_tx_id,Genes.id == gene_id,PrefTxVersions.intro > PrefTx.current_version)).\
+            values(PrefTxVersions.tx_id,PrefTxVersions.intro,PrefTx.current_version)
     for i in preftx:
+        print i.intro
+        print i.current_version
         return i.tx_id
 
 def get_all_projects(s):
@@ -175,13 +190,14 @@ def get_preftx_by_project_id(s, id):
     """
 
     preftx = s.query(Genes, Tx, PrefTxVersions, PrefTx, Projects). \
-        filter(and_(PrefTx.project_id == id, \
+        filter(and_(PrefTx.project_id == id,PrefTxVersions.intro <= PrefTx.current_version), \
                     or_(PrefTxVersions.last >= PrefTx.current_version, PrefTxVersions.last == None), \
-                    PrefTxVersions.intro <= PrefTx.current_version)). \
+                    ). \
         join(Tx). \
         join(PrefTxVersions). \
         join(PrefTx). \
         join(Projects). \
+        order_by(Genes.name). \
         values(Projects.id, \
                Projects.name.label("projectname"), \
                Genes.name.label("genename"), \

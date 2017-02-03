@@ -49,7 +49,7 @@ class CreatePanelProcess(Form):
     panelname = TextField("Panel Name", [Required("Enter a Panel Name")])
     make_live = RadioField(label='Do you want to make this panel live?', choices=[(True,"Yes"), (False,"No")], default=False)
     genes = TextField("Genes")
-    gene_list = FileField('Gene List', [regexp('^.+\.txt$')])
+    gene_list = FileField('', [regexp('^.+\.txt$')])
     submitname = SubmitField("Complete Panel")
 
 class EditPanelProcess(Form):
