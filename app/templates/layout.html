@@ -566,15 +566,32 @@
                     return false;
                 }
             });
-            console.log(sessionStorage.getItem('current_ids'));
+
             if (sessionStorage.getItem('current_ids') && $('#vpanelname').length) {
                 var vpanel_id = $('#main').attr('name');
                 var ids = sessionStorage.getItem('current_ids');
+                $('.label-gene').each(function (i, obj) {
+                    if ($(obj).attr('for') == geneName)
+                    {
+                        $(obj).trigger('click');
+                    }
+                })
                 remove_vp_regions(vpanel_id, ids)
             }
             else if (sessionStorage.getItem('current_ids') && $('#panelname').length) {
                 var panel_id = $('#main').attr('name');
                 var ids = sessionStorage.getItem('current_ids');
+
+                $('[name="genebutton"]').each(function (i, obj) {
+                    if ($(obj).attr('data-name') == geneName)
+                    {
+                        console.log('found');
+                        $(obj).remove()
+                    }
+                });
+                var row = $('#'+geneName).parent().parent().parent();
+                console.log($(row[0]));
+                $(row[0]).remove();
                 remove_panel_regions(panel_id, ids)
             }
             else {
@@ -608,6 +625,7 @@
                     }
 
                     $('#regions').children().remove();
+                    region_added()
                 },
                 error: function (response) {
                     console.log($(response));
@@ -619,7 +637,7 @@
 
         function remove_panel_regions(panel_id, ids) {
             var dict = {
-                "vp_id": panel_id,
+                "panel_id": panel_id,
                 "ids": ids
             };
             var data = JSON.stringify(dict);
@@ -641,6 +659,7 @@
                     }
 
                     $('#regions').children().remove();
+                    region_added()
                 },
                 error: function (response) {
                     console.log($(response));

@@ -661,7 +661,7 @@ def remove_panel_regions():
 
     :return:
     """
-    version_ids = request.json['ids']
+    version_ids = request.json['ids'].replace('[', '').replace(']', '').split(',')
     if type(version_ids) is str:
         version_ids = version_ids.split(',')
     panel_id = request.json['panel_id']
@@ -1287,11 +1287,9 @@ def remove_vp_regions():
 
     :return:
     """
-    version_ids = request.json['ids']
-    if type(version_ids) is str:
-        version_ids = version_ids.split(',')
+    version_ids = request.json['ids'].replace('[', '').replace(']', '').split(',')
     vpanel_id = request.json['vp_id']
-
+    print(version_ids)
     for i in version_ids:
         remove_version_from_vp(s, int(vpanel_id), int(i))
 
