@@ -302,8 +302,8 @@ def get_versions(s, panel_id, gene_id):
         join(Exons).\
         join(Tx).\
         filter(and_(Tx.gene_id == gene_id, Versions.panel_id == panel_id,
-                    Versions.intro <= current_version,
-                    or_(Versions.last != current_version + 1, Versions.last >= current_version, Versions.last == None))).\
+                    or_(and_(Versions.last != current_version + 1,Versions.intro <= current_version), Versions.intro == current_version +1),
+                    or_( Versions.last >= current_version, Versions.last == None))).\
         group_by(Versions.id).\
         values(Regions.id)
     print(str(versions))
