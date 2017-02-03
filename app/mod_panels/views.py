@@ -8,7 +8,7 @@ from app.views import LockCol, LinkColConditional, LabelCol, LinkColLive, Number
 from flask_table import Table, Col, LinkCol
 from forms import ViewPanel, CreatePanel, CreatePanelProcess, EditPanelProcess, CreateVirtualPanelProcess, EditVirtualPanelProcess, AddGene, RemoveGene
 from queries import *
-from app.mod_projects.queries import get_preftx_by_gene_id, get_upcoming_preftx_by_gene_id, get_tx_by_gene_id, add_preftxs_to_panel, make_preftx_live, get_preftx_by_project_id, get_current_preftx_version
+from app.mod_projects.queries import get_preftx_by_gene_id, get_upcoming_preftx_by_gene_id, get_tx_by_gene_id, add_preftxs_to_panel, make_preftx_live, get_preftx_by_project_id, get_current_preftx_version, get_preftx_id_by_project_id
 import json
 import time
 
@@ -349,15 +349,14 @@ def create_panel_process():
         make_live = request.form['make_live']
         panel_id = request.args.get('id')
         project_id = get_project_id_by_panel_id(s, panel_id)
-        result = get_preftx_by_project_id(s, project_id)
-        preftx_id = 0
-        for i in result:
-            preftx_id = i.preftx_id
+        print "TEST"
+        preftx_id = get_preftx_id_by_project_id(s, project_id)
+        print preftx_id
         version = get_current_preftx_version(s, preftx_id)
-        make_preftx_live(s, preftx_id, version+1,current_user.id)
         if make_live == "True":
-            make_panel_live(s, panel_id, 1)
-        return redirect(url_for('panels.view_panels') + "id=" + panel_id)
+            make_preftx_live(s, preftx_id, version + 1, current_user.id)
+            make_panel_live(s, panel_id, 1, current_user.id)
+        return redirect(url_for('panels.view_panel') + "?id=" + panel_id)
     elif request.method == "GET":
         return render_template('panel_createprocess.html', form=form, panel_id="main",
                                url=url_for('panels.create_panel_process'))
@@ -373,15 +372,13 @@ def edit_panel_process():
         make_live = request.form['make_live']
         panel_id = request.args.get('id')
         project_id = get_project_id_by_panel_id(s, panel_id)
-        result = get_preftx_by_project_id(s, project_id)
-        preftx_id = 0
-        for i in result:
-            preftx_id = i.preftx_id
+        preftx_id = get_preftx_id_by_project_id(s, project_id)
         version = get_current_preftx_version(s, preftx_id)
-        make_preftx_live(s, preftx_id, version + 1, current_user.id)
+
         if make_live == "True":
-            make_panel_live(s, panel_id, 1)
-        return redirect(url_for('panels.view_panels') + "?id=" + panel_id)
+            make_preftx_live(s, preftx_id, version + 1, current_user.id)
+            make_panel_live(s, panel_id, 1, current_user.id)
+        return redirect(url_for('panels.view_panel') + "?id=" + panel_id)
     elif request.method == "GET":
         print('edit wizard')
         panel_id = request.args.get('id')
@@ -445,7 +442,7 @@ def edit_panel_process():
 
         print(html)
         return render_template('panel_createprocess.html', form=form, genes = html, genelist=buttonlist, panel_id=panel_id,
-                               url=url_for('panels.edit_panel_process'))
+                               url=url_for('panels.edit_panel_process')+"?id="+panel_id)
 
 
 @panels.route('/panels/add', methods=['POST'])
@@ -978,7 +975,7 @@ def create_virtual_panel_process():
             make_vp_panel_live(s, vp_id, 1)
         panel_id = get_panel_by_vp_id(s, vp_id)
         unlock_panel_query(s, panel_id)
-        return redirect(url_for('panels.view_virtual_panels') + "id=" + vp_id)
+        return redirect(url_for('panels.view_vpanel') + "?id=" + vp_id)
     elif request.method == "GET":
         url = url_for('panels.create_virtual_panel_process')
         return render_template('virtualpanels_createprocess.html', form=form, url=url, vp_id="main")
@@ -999,7 +996,7 @@ def edit_virtual_panel_process():
         if make_live == "True":
             make_vp_panel_live(s, vp_id, 1)
         unlock_panel_query(s, panel_id)
-        return redirect(url_for('panels.view_virtual_panels') + "id=" + vp_id)
+        return redirect(url_for('panels.view_vpanel') + "?id=" + vp_id)
     elif request.method == "GET":
         lock_panel(s, current_user.id, panel_id)
         panel_info = get_panel_details_by_id(s, panel_id)
