@@ -445,7 +445,7 @@ def edit_panel_process():
 
         print(html)
         return render_template('panel_createprocess.html', form=form, genes = html, genelist=buttonlist, panel_id=panel_id,
-                               url=url_for('panels.edit_panel_process'))
+                               url=url_for('panels.edit_panel_process') + "?id=" + panel_id)
 
 
 @panels.route('/panels/add', methods=['POST'])
@@ -1218,7 +1218,7 @@ def select_vp_regions(gene_id=None, gene_name=None, panel_id=None, virtual=True,
         row = """<tr>
                     <td><label for=\"""" +  v_id + "\">" + v_id + "</label></td>" +\
                     "<td>" + i.chrom + "</td>" + coord +\
-                    "<td style=\"word-wrap: break-word\">" + i.name.replace(',', '\n') + "</td>" + \
+                    "<td>" + i.name.replace(',', '\n') + "</td>" + \
                     """<td><div class=\"material-switch pull-right\">
                             <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
                             <label for=\"""" + v_id + """\" class=\"label-success label-region\" ></label>

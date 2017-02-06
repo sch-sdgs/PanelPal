@@ -375,7 +375,7 @@ def get_regions_by_geneid(s, geneid):
                     JOIN exons ON regions.id = exons.region_id
                     JOIN tx ON tx.id = exons.tx_id
                     JOIN genes ON genes.id = tx.gene_id
-                    WHERE genes.id = 837
+                    WHERE genes.id = :gene_id
                     GROUP BY regions.id ORDER BY region_start""")
 
     values = {'gene_id': geneid}

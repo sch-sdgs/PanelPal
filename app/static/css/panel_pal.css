@@ -29,9 +29,6 @@ table{
     /*word-wrap: break-word;*/
 /*}*/
 
-td{
-    word-wrap: break-word;
-}
 
 h3
 {
@@ -386,9 +383,6 @@ input[type=checkbox].permissions_checkbox {
     border-color: transparent;
 }
 
-.dataTable>td{
-    word-wrap: break-word;
-}
 .top-buffer { margin-top:30px; }
 .vertical { vertical-align: middle;}
 .no-margin-heading { margin-top: 0px}
