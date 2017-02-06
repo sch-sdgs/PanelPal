@@ -3,7 +3,7 @@ from flask import Blueprint
 from flask import render_template, request, url_for, jsonify, redirect, flash
 from flask.ext.login import login_required, current_user
 from collections import OrderedDict
-from app.main import s
+from app.panel_pal import s
 from app.views import row2dict,LinkColPrefTx,LinkColConditional
 from flask_table import Table, Col, LinkCol
 from forms import ProjectForm, EditPermissions

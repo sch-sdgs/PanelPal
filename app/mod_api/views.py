@@ -1,4 +1,4 @@
-from app.main import app,s
+from app.panel_pal import app,s
 from queries import get_panel_api, get_exonic_api, get_vpanel_api, get_preftx_api
 from flask import request, Blueprint
 from flask_restful_swagger import swagger

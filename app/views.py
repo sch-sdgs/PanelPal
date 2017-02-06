@@ -1,7 +1,7 @@
 from flask import Blueprint
 from flask import render_template, request, url_for, jsonify, redirect
 from flask_login import login_required, login_user, logout_user, current_user
-from app.main import s,db, app
+from app.panel_pal import s,db, app
 from functools import wraps
 from app.forms import Login
 from app.queries import *

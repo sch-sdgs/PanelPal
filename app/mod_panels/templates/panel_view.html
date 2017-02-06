@@ -18,10 +18,20 @@
                     <a href="{{url_for('panels.download_as_bed')}}?name={{ panel_name }}&scope={{ scope }}&id={{ panel_id }}&version={{ version }}&project_id={{ project_id }}"
                        class="btn btn-default {{ bed }}" role="button"><span
                             class="glyphicon glyphicon-download"></span> Download as .bed</a>
-                    <a href="{{url_for('panels.edit_panel_page')}}?panelid={{ panel_id }}"
+
+                    {% if scope == 'Panel' %}
+                    <a href="{{url_for('panels.edit_panel_process')}}?id={{ panel_id }}"
                        class="btn btn-primary {{ edit }}"
                        role="button"><span
                             class="glyphicon glyphicon-edit"></span> Edit Panel</a>
+                    {% endif %}
+                    {% if scope == 'Virtual' %}
+                    <a href="{{url_for('panels.edit_virtual_panel_process')}}?id={{ panel_id }}"
+                       class="btn btn-primary {{ edit }}"
+                       role="button"><span
+                            class="glyphicon glyphicon-edit"></span> Edit Panel</a>
+                    {% endif %}
+
                 </div>
             </form>
 

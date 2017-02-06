@@ -3,7 +3,7 @@ from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.fields import TextField, SubmitField, HiddenField
 from wtforms.validators import Required
 
-from app.main import s
+from app.panel_pal import s
 from app.models import *
 
 
