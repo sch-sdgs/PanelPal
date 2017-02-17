@@ -340,8 +340,10 @@ def get_regions_by_geneid_with_versions(s, geneid, panel_id):
     """
     sql = text("""SELECT regions.id as region_id,
                     regions.chrom,
-                    CASE WHEN (versions.panel_id = :panel_id AND versions.region_id = regions.id AND versions.extension_5 IS NOT NULL) THEN regions.start - versions.extension_5 ELSE regions.start END AS region_start,
-                    CASE WHEN (versions.panel_id = :panel_id AND versions.region_id = regions.id AND versions.extension_3 IS NOT NULL) THEN regions."end" + versions.extension_3 ELSE regions."end" END AS region_end,
+                    regions.start AS region_start,
+                    CASE WHEN (versions.panel_id = :panel_id AND versions.region_id = regions.id AND versions.extension_5 IS NOT NULL) THEN versions.extension_5 ELSE 0 END AS region_start,
+                    regions.end AS region_end,
+                    CASE WHEN (versions.panel_id = :panel_id AND versions.region_id = regions.id AND versions.extension_3 IS NOT NULL) THEN versions.extension_3 ELSE 0 END AS region_end,
                     group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) AS name
                     FROM versions
                     JOIN regions ON versions.region_id = regions.id
@@ -352,9 +354,78 @@ def get_regions_by_geneid_with_versions(s, geneid, panel_id):
                     GROUP BY regions.id ORDER BY region_start""")
 
     values = {'panel_id': panel_id, 'gene_id': geneid}
-    print('starting')
     regions = s.execute(sql, values)
-    print('returning')
+    return regions
+
+def get_regions_by_geneid_with_versions_no_utr(s, geneid, panel_id):
+    """
+
+    :param s:
+    :param geneid:
+    :param panel_id:
+    :return:
+    """
+    sql = text("CREATE TEMP TABLE _cds AS SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end FROM tx JOIN exons on tx.id = exons.tx_id JOIN regions ON exons.region_id = regions.id WHERE tx.gene_id = 35948 GROUP BY regions.id;")
+    values = {'gene_id': geneid}
+    s.execute(sql, values)
+
+    sql = text("""SELECT regions.id as region_id,
+                regions.chrom,
+                regions.start AS region_start,
+                CASE WHEN (versions.panel_id = :panel_id AND versions.region_id = regions.id AND versions.extension_5 IS NOT NULL) THEN versions.extension_5
+                    WHEN (regions.start < (SELECT cds_start FROM _cds WHERE _cds.id = regions.id)) THEN regions.start - (SELECT cds_start FROM _cds WHERE _cds.id = regions.id)
+                    ELSE 0 END AS ext_5,
+                regions.end AS region_end,
+                CASE WHEN (versions.panel_id = :panel_id AND versions.region_id = regions.id AND versions.extension_3 IS NOT NULL) THEN versions.extension_3
+                    WHEN (regions.end > (SELECT cds_end FROM _cds WHERE _cds.id = regions.id)) THEN (SELECT cds_end FROM _cds WHERE _cds.id = regions.id) - regions.end
+                    ELSE 0 END AS ext_3,
+                group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) AS name
+                FROM versions
+                JOIN regions ON versions.region_id = regions.id
+                JOIN exons ON regions.id = exons.region_id
+                JOIN tx ON tx.id = exons.tx_id
+                JOIN genes ON genes.id = tx.gene_id
+                WHERE genes.id = 35948
+                GROUP BY regions.id ORDER BY region_start;""")
+    values = {'panel_id': panel_id, 'gene_id': geneid}
+    regions = s.execute(sql, values)
+
+    sql = text("DROP TABLE _cds;")
+    s.execute(sql)
+
+    return regions
+
+
+def get_regions_by_gene_no_utr(s, geneid):
+    """
+
+    :param s:
+    :param geneid:
+    :return:
+    """
+    s.begin_nested()
+    sql = text("CREATE TEMP TABLE _cds AS SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end FROM tx JOIN exons on tx.id = exons.tx_id JOIN regions ON exons.region_id = regions.id WHERE tx.gene_id = :gene_id GROUP BY regions.id;")
+    values = {'gene_id':geneid}
+    s.execute(sql, values)
+
+    sql = text("""SELECT regions.id as region_id,
+                    regions.chrom,
+                    regions.start AS region_start,
+                    CASE WHEN (regions.start < (SELECT cds_start FROM _cds WHERE _cds.id = regions.id)) THEN regions.start - (SELECT cds_start FROM _cds WHERE _cds.id = regions.id) ELSE 0 END AS ext_5,
+                    regions."end" AS region_end,
+                    CASE WHEN (regions.end > (SELECT cds_end FROM _cds WHERE _cds.id = regions.id)) THEN (SELECT cds_end FROM _cds WHERE _cds.id = regions.id) - regions.end ELSE 0 END AS ext_3,
+                    group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) AS name
+                    FROM regions
+                    JOIN exons ON regions.id = exons.region_id
+                    JOIN tx ON tx.id = exons.tx_id
+                    JOIN genes ON genes.id = tx.gene_id
+                    WHERE genes.id = :gene_id
+                    AND regions.end > (SELECT cds_start FROM _cds WHERE _cds.id = region_id)
+                    AND regions.start < (SELECT tx.cds_end FROM _cds WHERE _cds.id = region_id)
+                    GROUP BY regions.id ORDER BY region_start;""")
+    values = {'gene_id': geneid}
+    regions = s.execute(sql, values)
+
     return regions
 
 def get_regions_by_geneid(s, geneid):
@@ -369,7 +440,9 @@ def get_regions_by_geneid(s, geneid):
     sql = text("""SELECT regions.id as region_id,
                     regions.chrom,
                     regions.start AS region_start,
+                    0 AS ext_5,
                     regions."end" AS region_end,
+                    0 as ext_3,
                     group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) AS name
                     FROM regions
                     JOIN exons ON regions.id = exons.region_id
@@ -379,9 +452,7 @@ def get_regions_by_geneid(s, geneid):
                     GROUP BY regions.id ORDER BY region_start""")
 
     values = {'gene_id': geneid}
-    print('starting')
     regions = s.execute(sql, values)
-    print('returning')
     return regions
 
 def get_panel_regions_by_geneid(s, geneid, panelid):
@@ -400,7 +471,8 @@ def get_panel_regions_by_geneid(s, geneid, panelid):
                     CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5 END AS region_start,
                     CASE WHEN (versions.extension_3 IS NULL) THEN regions."end" ELSE regions."end" + versions.extension_3 END AS region_end,
                     group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) AS name
-                    FROM panels, versions
+                    FROM panels
+                    JOIN versions ON versions.panel_id = panels.id
                     JOIN regions ON regions.id = versions.region_id
                     JOIN exons ON regions.id = exons.region_id
                     JOIN tx ON tx.id = exons.tx_id
@@ -650,7 +722,8 @@ def get_regions_by_panelid(s, panelid, version):
                     CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5 END AS region_start,
                     CASE WHEN (versions.extension_3 IS NULL) THEN regions."end" ELSE regions."end" + versions.extension_3 END AS region_end,
                     CASE WHEN regions.name IS NULL THEN group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) ELSE regions.name END AS name
-                    FROM panels, versions
+                    FROM panels
+                    JOIN versions ON versions.panel_id = panels.id
                     JOIN regions ON regions.id = versions.region_id
                     JOIN exons ON regions.id = exons.region_id
                     JOIN tx ON tx.id = exons.tx_id

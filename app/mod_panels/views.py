@@ -658,7 +658,10 @@ def remove_panel_regions():
 
     :return:
     """
-    version_ids = request.json['ids'].replace('[', '').replace(']', '').split(',')
+    if type(request.json['ids']) is list:
+        version_ids = request.json['ids']
+    else:
+        version_ids = request.json['ids'].replace('[', '').replace(']', '').split(',')
     if type(version_ids) is str:
         version_ids = version_ids.split(',')
     panel_id = request.json['panel_id']
@@ -1142,7 +1145,7 @@ def get_custom_regions():
               "<td>" + i.chrom + "</td>" + \
               "<td>" + str(i.region_start) + "</td>" + \
               "<td>" + str(i.region_end) + "</td>" + \
-              "<td style=\"word-wrap: break-word\">" + i.name.replace(',', '\n') + "</td>" + \
+              "<td>" + i.name.replace(',', '\n') + "</td>" + \
               """<td><div class=\"material-switch pull-right\">
                       <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
                                 <label for=\"""" + v_id + """\" class=\"label-success label-region\" ></label>
@@ -1160,7 +1163,7 @@ def get_custom_regions():
 
 
 @panels.route('/virtualpanels/getregions', methods=['POST'])
-def select_vp_regions(gene_id=None, gene_name=None, panel_id=None, virtual=True, added=False):
+def select_vp_regions(gene_id=None, gene_name=None, panel_id=None, virtual=True, added=False, utr=False):
     """
 
     :return:
@@ -1172,14 +1175,73 @@ def select_vp_regions(gene_id=None, gene_name=None, panel_id=None, virtual=True,
         gene_name = request.json['gene_name']
         panel_id = request.json['panel_id']
         virtual = request.json['virtual']
+        utr = request.json['utr']
     if virtual:
         regions = get_panel_regions_by_geneid(s, gene_id, panel_id)
+        utr_html = ""
     elif added:
-        regions = get_regions_by_geneid(s, gene_id)
+        if not utr:#if utr is false then only coding regions are added
+            regions = get_regions_by_gene_no_utr(s, gene_id)
+            utr_html = """<li>
+                                <div class="btn-group" role="group" aria-label="basic label">
+                                    <p style="text-align: center; vertical-align: middle;">Include UTR </p>
+                                </div>
+
+                                <div class="btn-group btn-group-xs" role="group" aria-label="...">
+                                    <a id="btnOn" href="javascript:;" class="btn btn-default"><span class="glyphicon glyphicon-ok" style="opacity: 0;"></span></a>
+                                    <a id="btnOff" href="javascript:;" class="btn btn-danger active"><span class="glyphicon glyphicon-remove" style="opacity: 1;"></span></a>
+                                </div>
+                                <input type="radio" name="menucolor" value="navbar-default" checked>
+                                <input type="radio" name="menucolor" value="navbar-inverse">
+                        </li>"""
+        else:
+            regions = get_regions_by_geneid(s, gene_id)
+            utr_html = """<li>
+                                <div class="btn-group" role="group" aria-label="basic label">
+                                    <p style="text-align: center; vertical-align: middle;">Include UTR </p>
+                                </div>
+
+                                <div class="btn-group btn-group-xs" role="group" aria-label="...">
+                                    <a id="btnOn" href="javascript:;" class="btn btn-success active"><span class="glyphicon glyphicon-ok" style="opacity: 1;"></span></a>
+                                    <a id="btnOff" href="javascript:;" class="btn btn-default"><span class="glyphicon glyphicon-remove" style="opacity: 0;"></span></a>
+                                </div>
+                                <input type="radio" name="menucolor" value="navbar-default" checked>
+                                <input type="radio" name="menucolor" value="navbar-inverse">
+                        </li>"""
     else:
-        regions = get_regions_by_geneid_with_versions(s, gene_id, panel_id)
-    html = "<h3 name=\"" + gene_id + "\">" + gene_name + """</h3><ul class=\"list-unstyled list-inline pull-right\">
-                    <li>
+        if not utr:
+            regions = get_regions_by_geneid_with_versions_no_utr(s, gene_id, panel_id)
+            utr_html = """<li>
+                                <div class="btn-group" role="group" aria-label="basic label">
+                                    <p style="text-align: center; vertical-align: middle;">Include UTR </p>
+                                </div>
+
+                                <div class="btn-group btn-group-xs" role="group" aria-label="...">
+                                    <a id="btnOn" href="javascript:;" class="btn btn-default"><span class="glyphicon glyphicon-ok" style="opacity: 0;"></span></a>
+                                    <a id="btnOff" href="javascript:;" class="btn btn-danger active"><span class="glyphicon glyphicon-remove" style="opacity: 1;"></span></a>
+                                </div>
+                                <input type="radio" name="menucolor" value="navbar-default" checked>
+                                <input type="radio" name="menucolor" value="navbar-inverse">
+                        </li>"""
+        else:
+            regions = get_regions_by_geneid_with_versions(s, gene_id, panel_id)
+            utr_html = """<li>
+                            <div class="row">
+                                <div class="btn-group" role="group" aria-label="basic label">
+                                    <p style="text-align: center; vertical-align: middle;">Include UTR </p>
+                                </div>
+
+                                <div class="btn-group btn-group-xs" role="group" aria-label="...">
+                                    <a id="btnOn" href="javascript:;" class="btn btn-success active"><span class="glyphicon glyphicon-ok" style="opacity: 1;"></span></a>
+                                    <a id="btnOff" href="javascript:;" class="btn btn-default"><span class="glyphicon glyphicon-remove" style="opacity: 0;"></span></a>
+                                </div>
+                                <input type="radio" name="menucolor" value="navbar-default" checked>
+                                <input type="radio" name="menucolor" value="navbar-inverse">
+                            </div>
+                        </li>"""
+    html = "<h3 name=\"" + gene_id + "\">" + gene_name + "</h3><ul class=\"list-unstyled list-inline pull-right\">" + \
+                    utr_html + \
+                    """<li>
                         <button type=\"button\" class=\"btn btn-success\" id=\"add-regions\" name=\"""" + gene_name + """\" disabled=\"disabled\">Add Regions</button>
                     </li>
                     <li>
@@ -1187,7 +1249,7 @@ def select_vp_regions(gene_id=None, gene_name=None, panel_id=None, virtual=True,
                     </li>
                 </ul>
 
-            <table class=\"table table-striped\">
+            <table class=\"table table-striped\" id=\"region-table\">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -1209,8 +1271,8 @@ def select_vp_regions(gene_id=None, gene_name=None, panel_id=None, virtual=True,
                     "<td>" + str(i.region_end) + "</td>"
         else:
             v_id = str(i.region_id)
-            coord = "<td><input class=\"form-control\" id=\""+ str(i.region_start) +"\" name=\"region_start\" type=\"text\" value=\"" + str(i.region_start) + "\"></td>" + \
-                    "<td><input class=\"form-control\" id=\"" + str(i.region_end) + "\" name=\"region_end\" type=\"text\" value=\"" + str(i.region_end) +"\"></td>"
+            coord = "<td><input class=\"form-control\" id=\""+ str(i.region_start) +"\" name=\"region_start\" type=\"text\" value=\"" + str(i.region_start - i.ext_5) + "\"></td>" + \
+                    "<td><input class=\"form-control\" id=\"" + str(i.region_end) + "\" name=\"region_end\" type=\"text\" value=\"" + str(i.region_end + i.ext_3) +"\"></td>"
 
         row = """<tr>
                     <td><label for=\"""" +  v_id + "\">" + v_id + "</label></td>" +\
@@ -1241,6 +1303,7 @@ def edit_vp_regions():
     gene_name = request.json['gene_name']
     panel_id = request.json['panel_id']
     vpanel_id = request.json['vpanel_id']
+    utr = request.json['include_utr']
 
     if vpanel_id:
         html = select_vp_regions(gene_id, gene_name, panel_id)
@@ -1255,10 +1318,15 @@ def edit_vp_regions():
     print(version_ids)
 
     if not vpanel_id and len(version_ids) > 0:
-        print('no versions')
-        html = select_vp_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, virtual=False)
+        if not utr:
+            html = select_vp_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, virtual=False)
+        else:
+            html = select_vp_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, virtual=False, utr=True)
     elif not vpanel_id:
-        html = select_vp_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, virtual=False, added=True)
+        if not utr:
+            html = select_vp_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, virtual=False, added=True)
+        else:
+            html = select_vp_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, virtual=False, added=True, utr=True)
 
     if len(version_ids) >0:
         html = html.replace("Add Regions", "Edit Regions")
