@@ -22,7 +22,7 @@
                             </p>
                         </div>
                         <div class="process-step col-sm-2">
-                            {% if genes %}
+                            {% if panel_id != "main" %}
                             <span id="glyphicon-list-alt" class="glyphicon glyphicon-new glyphicon-list-alt"
                                   data-toggle="tab"
                                   href="#select_genes"></span>
@@ -37,7 +37,7 @@
                             </p>
                         </div>
                         <div class="process-step col-sm-2">
-                            {% if genes %}
+                            {% if panel_id != "main" %}
                             <span id="glyphicon-transfer" class="glyphicon glyphicon-new glyphicon-transfer"
                                   data-toggle="tab"
                                   href="#select_tx"></span>
@@ -52,7 +52,7 @@
                             </p>
                         </div>
                         <div class="process-step col-sm-2">
-                            {% if genes %}
+                            {% if panel_id != "main" %}
                             <span id="glyphicon-th-large" class="glyphicon glyphicon-new glyphicon-th-large"
                                   data-toggle="tab"
                                   href="#select_regions"></span>
@@ -66,7 +66,7 @@
                             </p>
                         </div>
                         <div class="process-step col-sm-2">
-                            {% if genes %}
+                            {% if panel_id != "main" %}
                             <span id="glyphicon-ok" class="glyphicon glyphicon-new glyphicon-ok" data-toggle="tab"
                                   href="#submit_vp"></span>
 
@@ -86,7 +86,7 @@
                     <div id="initialise" class="tab-pane fade active in">
                         <div class="col-md-2"></div>
                         <div class="col-md-8">
-                            {% if genes %}
+                            {% if panel_id != "main" %}
 
                             <br>
                             <div class="form-group">

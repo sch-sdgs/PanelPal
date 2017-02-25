@@ -46,9 +46,18 @@ def get_preftx_by_gene_id(s, project_id, gene_id):
 
 @message
 def add_preftxs_to_panel(s, project_id, tx_ids):
+    print(project_id)
     query = get_preftx_current_version(s, project_id)
-    current_version = query[0]
-    preftx_id = query[1]
+    print(query)
+    try:
+        current_version = query[0]
+        preftx_id = query[1]
+    except TypeError: #if no row in pref_tx
+        ptx = PrefTx(project_id, 1)
+        s.add(ptx)
+        s.commit()
+        current_version = 1
+        preftx_id = ptx.id
     print preftx_id
     print "current_version:" + str(current_version)
     for i in tx_ids:
