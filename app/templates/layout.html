@@ -241,7 +241,7 @@
     <script>
         $(document).on('change', '#panel', function (e) {
             $('#geneselector').children().remove();
-            $('#loading').append("<div class=\"col-md-5\"></div><div class=\"loader col-md-2\"></div><div class=\"col-md-5\"></div>");
+            $('#loading').append("<br/><center><div class=\"row\"><div class=\"col-md-5\"></div><div class=\"col-md-2\"><div class=\"loader\"></div></div><div class=\"col-md-5\"></div></div></center>");
 
             var panel_id = $('#panel').val();
             var dict = {
@@ -269,6 +269,165 @@
     </script>
 
     <script>
+        $(document).on('focusin', '[name="region_start"]', function(){
+            var row = $(event.target).parent().parent();
+            var td = $(row).children().eq(5);
+            var div = $(td).children().eq(0);
+            var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+            if ($.inArray(parseInt(region_id), JSON.parse(sessionStorage.getItem("current_ids"))) > -1) {
+                var current = sessionStorage.getItem(region_id);
+                var dict = {};
+                var arr = {"value":$(event.target).val(), "html":$(div).prop('outerHTML')};
+                if(current == null)
+                {
+                    dict["start"] = arr;
+                }
+                else
+                {
+                    dict = JSON.parse(current);
+                    dict["start"] = arr;
+                }
+                sessionStorage.setItem(region_id, JSON.stringify(dict));
+                $($(td).children()).remove();
+                var html = '<ul class="list-unstyled list-inline pull-right"><li><button type="button" class="btn btn-small btn-success" name="update" data-name="region_start"><span class="glyphicon glyphicon-floppy-disk"></span></button></li><li><button type="button" class="btn btn-small btn-danger" name="undo"><span class="glyphicon glyphicon-remove" name="undo"></span></button></li></ul>';
+                $(td).append(html);
+            }
+        });
+
+        $(document).on('focusout', '[name="region_start"]', function(){
+            var row = $(event.target).parent().parent();
+            var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+            var td = $(row).children().eq(5);
+            var store = JSON.parse(sessionStorage.getItem(region_id));
+            if ("end" in store) {}
+            else if ($(event.target).val() == store["start"]["value"]) {
+                $($(td).children()).remove();
+                $(td).append(store["start"]["html"]);
+                $(td).children().eq(0).children().eq(0).prop('checked', true);
+            }
+        });
+
+        $(document).on('focusin', '[name="region_end"]', function(){
+            var row = $(event.target).parent().parent();
+            var td = $(row).children().eq(5);
+            var div = $(td).children().eq(0);
+            var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+            if ($.inArray(parseInt(region_id), JSON.parse(sessionStorage.getItem("current_ids"))) > -1) {
+                var current = sessionStorage.getItem(region_id);
+                var dict = {};
+                var arr = {"value":$(event.target).val(), "html":$(div).prop('outerHTML')};
+                if(current == null)
+                {
+                    dict["end"] = arr;
+                }
+                else
+                {
+                    dict = JSON.parse(current);
+                    dict["end"] = arr;
+                }
+                sessionStorage.setItem(region_id, JSON.stringify(dict));
+                $($(td).children()).remove();
+                var html = '<ul class="list-unstyled list-inline pull-right"><li><button type="button" class="btn btn-small btn-success" name="update" data-name="region_start"><span class="glyphicon glyphicon-floppy-disk"></span></button></li><li><button type="button" class="btn btn-small btn-danger" name="undo"><span class="glyphicon glyphicon-remove" name="undo"></span></button></li></ul>';
+                $(td).append(html);
+            }
+        });
+
+        $(document).on('focusout', '[name="region_end"]', function(){
+            var row = $(event.target).parent().parent();
+            var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+            var td = $(row).children().eq(5);
+            var store = JSON.parse(sessionStorage.getItem(region_id));
+            if ("start" in store) {}
+            else if ($(event.target).val() == store["end"]["value"]) {
+                $($(td).children()).remove();
+                $(td).append(store["end"]["html"]);
+                $(td).children().eq(0).children().eq(0).prop('checked', true);
+            }
+        });
+
+        $(document).on('click', '.glyphicon-floppy-disk', function(){
+            var row = $(event.target).parent().parent().parent().parent().parent();
+            var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+
+            var store = JSON.parse(sessionStorage.getItem(region_id));
+
+            var ext_3 = null;
+            var ext_5 = null;
+            if ("start" in store)
+            {
+                var new_val = $(row).children().eq(2).children().eq(0).val();
+                var no_ext = $(row).children().eq(2).children().eq(0).attr('id');
+                ext_5 = no_ext - new_val
+            }
+
+            if("end" in store)
+            {
+                var new_val = $(row).children().eq(3).children().eq(0).val();
+                var no_ext = $(row).children().eq(3).children().eq(0).attr('id');
+                ext_3 = new_val - no_ext
+            }
+
+            $(event.target).removeClass('glyphicon-floppy-disk').addClass('glyphicon-refresh glyphicon-refresh-animate');
+
+            var dict = {
+                "region_id":region_id,
+                "panel_id":$('#main').attr('name'),
+                "ext_3":ext_3,
+                "ext_5":ext_5
+            };
+            console.log(dict);
+            var data = JSON.stringify(dict);
+            console.log('sending request');
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('panels.update_ext') }}",
+                data: data,
+                dataType: "json",
+                contentType: "application/json",
+                success: function (response) {
+                    console.log(response);
+                    var td = $(row).children().eq(5);
+                    $($(td).children()).remove();
+                    var html;
+                    if ("start" in store)
+                    {
+                        html = store["start"]["html"]
+                    }
+                    else
+                    {
+                        html = store["end"]["html"]
+                    }
+                    $(td).append(html);
+                    $(td).children().eq(0).children().eq(0).prop('checked', true);
+                },
+                error: function (response) {
+                    console.log($(response).responseText);
+                    console.log('Error');
+                }
+
+            });
+        });
+
+        $(document).on('click','#undo', function(){
+            var row = $(event.target).parent().parent();
+            var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+            var store = JSON.parse(sessionStorage.getItem(region_id));
+            if("start" in store)
+            {
+                $(row).children().eq(2).children().eq(0).val(store["start"]["value"]);
+            }
+
+            if("end" in store)
+            {
+                $(row).children().eq(3).children().eq(0).val(store["start"]["value"]);
+            }
+
+            var td = $(row).children().eq(5);
+            $($(td).children()).remove();
+            $(td).append(store["html"]);
+            $(td).children().eq(0).children().eq(0).prop('checked', true);
+        });
+
         $(document).on('click', '.label-gene', function () {
             var target = $(event.target);
             var gene_switch;
@@ -311,6 +470,52 @@
     </script>
 
     <script>
+        $(document).on('click', '[id^="btnO"]', function (){
+            console.log('clicked');
+            var notchecked = $('input[type="radio"][name="menucolor"]').not(':checked');
+            console.log(notchecked);
+            //$('.navbar.'+notchecked.val()).toggleClass('navbar-default navbar-inverse');
+            console.log($(notchecked).prop('checked'));
+            notchecked.prop("checked", true);
+            console.log($(notchecked).prop('checked'));
+            $(this).parent().find('a').each(function() {
+                if($(this).attr('id') == 'btnOn'){
+                    $(this).toggleClass('active btn-success btn-default');
+                } else {
+                    $(this).toggleClass('active btn-danger btn-default');
+                }
+
+            });
+            doChange(notchecked);
+        });
+
+        $(document).on('change', 'input[type="radio"][name="menucolor"]', function(){
+             doChange(this);
+        });
+
+        function doChange(object){
+            console.log('doing change');
+            console.log($('#btnOn .glyphicon-ok').attr('style'));
+            if($(object).val() == "navbar-default"){
+                $('#btnOn').removeClass('active');
+                $('#btnOn .glyphicon-ok').attr('style','opacity: 0;');
+                $('#btnOff .glyphicon-remove').attr('style','opacity: 1;');
+                $('#btnOff').focus();
+
+            }
+            if($(object).val() == "navbar-inverse"){
+                $('#btnOff').removeClass('active');
+                $('#btnOff .glyphicon-remove').attr('style','opacity: 0;');
+                $('#btnOn .glyphicon-ok').attr('style','opacity: 1;');
+                $('#btnOn').focus();
+            }
+            console.log($('#btnOn .glyphicon-ok').attr('style'));
+            console.log('changed');
+            $('#region-table').remove();
+            $('#regions').append("<br/><center><div class=\"row\"><div class=\"col-md-5\"></div><div class=\"col-md-2\"><div class=\"loader\"></div></div><div class=\"col-md-5\"></div></div></center>");
+            get_regions($('.btn-warning'), $('.btn-warning'));
+        }
+
         $(document).on('click', '#create-regions', function () {
             $('#add-custom-region').removeAttr('style');
         });
@@ -379,7 +584,7 @@
                         {
                             $(obj).trigger('click');
                         }
-                    })
+                    });
                     region_added()
                 },
                 error: function (response) {
@@ -396,12 +601,17 @@
             var gene_name = $(element).attr('data-name');
             var panel_id = '';
             var vpanel_id = '';
+            var include_utr = null;
             if ($('#panel').length) {
                 panel_id = $('#panel').val();
                 vpanel_id = $('#main').attr('name');
             }
             else {
                 panel_id = $('#main').attr('name');
+                if ($('#btnOn').hasClass('active'))
+                {
+                    include_utr = true;
+                }
                 vpanel_id = null;
             }
 
@@ -409,7 +619,8 @@
                 "panel_id": panel_id,
                 "gene_id": gene_id,
                 "gene_name": gene_name,
-                "vpanel_id": vpanel_id
+                "vpanel_id": vpanel_id,
+                "include_utr": include_utr
             };
             var data = JSON.stringify(dict);
 
@@ -451,7 +662,7 @@
 
         $(document).on('click', '[name="genebutton"]', function (request) {
             $('#regions').children().remove();
-
+            $('#regions').append("<br/><center><div class=\"row\"><div class=\"col-md-5\"></div><div class=\"col-md-2\"><div class=\"loader\"></div></div><div class=\"col-md-5\"></div></div></center>");
             var element = $(request.currentTarget);
             $('.btn-warning').each(function (i, obj) {
                 if ($(obj.firstElementChild).hasClass('glyphicon-ok')) {
@@ -486,6 +697,7 @@
             if ($(obj).attr('checked') == 'checked') {
                 $(obj).removeAttr('checked');
                 if ($(".label-selectall").attr('checked') == 'checked') {
+                    $(".label-selectall").removeAttr('checked');
                     $(".label-selectall").attr('uncheck-all', 'false');
                     $(".label-selectall").trigger('click')
                 }
@@ -505,6 +717,7 @@
             if (count == $('.label-region').length && $(".label-selectall").attr('checked') != 'checked') {
                 console.log('selected');
                 $(".label-selectall").attr('uncheck-all', 'false');
+                $(".label-selectall").attr('checked', 'checked');
                 $(".label-selectall").trigger('click')
             }
         });
@@ -516,7 +729,6 @@
 
             if ($(".label-selectall").attr('uncheck-all') == 'false')//if one
             {
-                $(".label-selectall").removeAttr('checked');
                 $(".label-selectall").removeAttr('uncheck-all')
             }
             else if ($(".label-selectall").attr('checked') == 'checked') //if select all has been clicked off
@@ -575,7 +787,7 @@
                     {
                         $(obj).trigger('click');
                     }
-                })
+                });
                 remove_vp_regions(vpanel_id, ids)
             }
             else if (sessionStorage.getItem('current_ids') && $('#panelname').length) {
@@ -658,6 +870,14 @@
                         $('#make_live').attr('hidden', 'hidden')
                     }
 
+                    $('[name="genebutton"]').each(function (i, obj) {
+                        if ($(obj).attr('data-name') == gene_name && $(obj).hasClass('btn-warning')) {
+
+                            $(obj).children('.glyphicon-pencil').removeClass('glyphicon-pencil').addClass('glyphicon-ok').blur();
+                            $(obj).removeClass('btn-warning').addClass('btn-success').blur();
+                        }
+                    });
+
                     $('#regions').children().remove();
                     region_added()
                 },
@@ -715,7 +935,7 @@
             console.log(pref_tx_id);
 
             var id_ext = [];
-            console.log(ids)
+            console.log(ids);
             for (var id in ids){
                 //this gets the second parent of the switch (tr)
                 var row = $('[for="'+ids[id]+'"]').parent().parent();
@@ -770,7 +990,9 @@
             });
         }
 
-        $(document).on('click', '#upload', function (request) {
+        $(document).on('click', '#upload', function () {
+            $('#upload').empty();
+            $('#upload').append("<span class=\"glyphicon glyphicon-refresh glyphicon-refresh-animate\"></span>");
             console.log($('#my-file-selector'));
             console.log(($('#my-file-selector'))[0].files);
             var file = ($('#my-file-selector'))[0].files[0];
@@ -805,6 +1027,8 @@
                             $('#genemessage').append(response['message']);
                             $('#tx_table').append(response['html']);
                             $('#genelist').append(response['button_list']);
+                            $('#upload').empty();
+                            $('#upload').append('Upload');
                         },
                         error: function (response) {
                             console.log($(response));
@@ -854,13 +1078,24 @@
 
                 console.log(to_add);
                 console.log(to_remove);
+                if($('#vpanelname').length) {
+                    if (to_add.length > 0) {
+                        add_regions(vpanel_id, to_add, geneName)
+                    }
 
-                if (to_add.length > 0) {
-                    add_regions(vpanel_id, to_add, geneName)
+                    if (to_remove.length > 0) {
+                        remove_vp_regions(vpanel_id, to_remove)
+                    }
                 }
+                else
+                {
+                    if (to_add.length > 0) {
+                        add_panel_regions(vpanel_id, to_add, geneName)
+                    }
 
-                if (to_remove.length > 0) {
-                    remove_regions(vpanel_id, to_remove)
+                    if (to_remove.length > 0) {
+                        remove_panel_regions(vpanel_id, to_remove)
+                    }
                 }
             }
 
@@ -913,6 +1148,8 @@
                             $('#genemessage').append(response['message']);
                             $('#tx_table').append(response['html']);
                             $('#genelist').append(response['button_list']);
+                            $('#add').empty();
+                            $('#add').append('Add');
                         },
                         error: function (response) {
                             console.log($(response));
@@ -924,9 +1161,9 @@
             }
 
             $("#add").click(function () {
-
+                $('#add').empty();
+                $('#add').append("<span class=\"glyphicon glyphicon-refresh glyphicon-refresh-animate\"></span>");
                 add_panel_gene()
-
             });
         });
     </script>
