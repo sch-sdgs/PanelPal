@@ -171,7 +171,7 @@ def download_as_bed():
 
     bed_tool = BedTool(bed, from_string=True)
     bed_sorted = bed_tool.sort()
-    bed_sorted_merged = bed_sorted.merge(nms=True)
+    bed_sorted_merged = bed_sorted.merge(c=4)
 
     result = []
     for i in bed_sorted_merged:

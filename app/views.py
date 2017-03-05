@@ -60,36 +60,9 @@ def admin_required(f):
 def load_user(user_id):
     return User(user_id)
 
-# def message(f):
-#     @wraps(f)
-#     def decorated_function(*args,**kwargs):
-#         method = f.__name__
-#         result=[]
-#         if current_user.is_authenticated:
-#             formatter = logging.Formatter('%(levelname)s|' + current_user.id + '|%(asctime)s|%(message)s')
-#             handler.setFormatter(formatter)
-#             app.logger.addHandler(handler)
-#         else:
-#             formatter = logging.Formatter('%(levelname)s|' +'anon' + '|%(asctime)s|%(message)s')
-#             handler.setFormatter(formatter)
-#             app.logger.addHandler(handler)
-#         for i in request.args:
-#             arg = request.args.get(i)
-#             result.append(i)
-#             result.append(arg)
-#         for i in request.form:
-#             arg = request.form[i]
-#             result.append(i)
-#             result.append(arg)
-#         app.logger.info(method+"|"+"|".join(result))
-#         return f(*args, **kwargs)
-#     return decorated_function
-
-
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
-
 
 @app.errorhandler(500)
 def internal_server_error(e):

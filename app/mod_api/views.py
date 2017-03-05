@@ -226,35 +226,62 @@ class APIPreferredTx(Resource):
         resp.headers['content-type'] = 'application/json'
         return resp
 
-# class Exonic(Resource):
-#     @swagger.operation(
-#         notes='Gets a JSON of regions in a virtual panel and adjusts for "exnoic" - equivalent to the exon file',
-#         responseClass='x',
-#         nickname='small',
-#         parameters=[
-#         ],
-#         responseMessages=[
-#             {
-#                 "code": 201,
-#                 "message": "Created. The URL of the created blueprint should be in the Location header"
-#             },
-#             {
-#                 "code": 405,
-#                 "message": "Invalid input"
-#             }
-#         ]
-#     )
-#     def get(self, name, version):
-#         result = get_exonic_api(s, name, version)
-#         result_json = region_result_to_json(result.panel,scope="exonic")
-#         result_json["details"]["panel"] = name
-#         result_json["details"]["version"] = int(result.current_version)
-#         resp = output_json(result_json, 200)
-#         resp.headers['content-type'] = 'application/json'
-#         return resp
+class Test(Resource):
+    @swagger.operation(
+        notes='Gets a JSON of all preftx',
+        responseClass='x',
+        nickname='preftx',
+        parameters=[
+        ],
+        responseMessages=[
+            {
+                "code": 201,
+                "message": "Created. The URL of the created blueprint should be in the Location header"
+            },
+            {
+                "code": 405,
+                "message": "Invalid input"
+            }
+        ]
+    )
+    def get(self):
+        result_json = {}
+        result_json["test"] = "pass"
+        resp = output_json(result_json, 200)
+        resp.headers['content-type'] = 'application/json'
+        return resp
+
+class Exonic(Resource):
+    @swagger.operation(
+        notes='Gets a JSON of regions in a virtual panel and adjusts for "exnoic" - equivalent to the exon file',
+        responseClass='x',
+        nickname='small',
+        parameters=[
+        ],
+        responseMessages=[
+            {
+                "code": 201,
+                "message": "Created. The URL of the created blueprint should be in the Location header"
+            },
+            {
+                "code": 405,
+                "message": "Invalid input"
+            }
+        ]
+    )
+    def get(self, name, version):
+        # result = get_exonic_api(s, name, version)
+        # result_json = region_result_to_json(result.panel,scope="exonic")
+        # result_json["details"]["panel"] = name
+        # result_json["details"]["version"] = int(result.current_version)
+        # resp = output_json(result_json, 200)
+        # resp.headers['content-type'] = 'application/json'
+        # return resp
+        pass
 
 
+api.add_resource(Test, '/test', )
 api.add_resource(APIPanels, '/panel/<string:name>/<string:version>', )
 api.add_resource(APIVirtualPanels, '/virtualpanel/<string:name>/<string:version>', )
 api.add_resource(APIPreferredTx, '/preftx/<string:name>/<string:version>', )
-# api.add_resource(Exonic, '/api/exonic/<string:name>/<string:version>', )
+api.add_resource(Exonic, '/api/exonic/<string:name>/<string:version>', )

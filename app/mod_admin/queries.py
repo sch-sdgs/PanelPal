@@ -61,3 +61,15 @@ def check_if_admin(s,username):
             return True
         else:
             return False
+
+#TODO ?mod_admin queries
+def get_users(s):
+    """
+    gets all users
+    :param s: database session
+    :return: sql alchemy generator object
+    """
+    users = s.query(Users).order_by(Users.username).values(Users.id,Users.username,Users.admin)
+    return users
+
+
