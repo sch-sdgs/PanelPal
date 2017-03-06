@@ -56,7 +56,7 @@ def main():
     parser = argparse.ArgumentParser(description='creates db tables required for PanelPal program')
     parser.add_argument('--db')
     parser.add_argument('--projects', default="CTD,IEM,Haems,HeredCancer,DevDel,NGD,Research")
-    parser.add_argument('--studies', default="CTD,IEM,Haems_Bleeding,Haems_BMF,Haems_TruSight,HeredCancer_TruSight,HeredCancer_SureSelect,DevDel,NGD,NGD_Motor,NGD_Movement")
+    parser.add_argument('--studies')
     parser.add_argument('--users', default='dnamdp,cytng,gencph,genes,dnanhc')
     args = parser.parse_args()
 
@@ -95,7 +95,7 @@ def main():
     if args.users is not None:
         users = args.users.split(',')
         for user in users:
-            complete = u.add_user(user)
+            complete = u.add_user(user, 1)
             if complete == -1:
                 print user + " not added to database"
 

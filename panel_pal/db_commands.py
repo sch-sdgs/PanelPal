@@ -4,7 +4,7 @@ from enum import Enum
 import os
 from pybedtools import BedTool
 import os
-#from app import models
+from app.mod_panels import queries as q
 
 
 class Database():
@@ -414,6 +414,18 @@ class Panels(Database):
         merged_bed = self.check_bed(bed, True)
         return merged_bed
 
+    def export_compare(self, bedfile, panel_name, version):
+        if os.path.exists(bedfile):
+            original_bed = BedTool(bedfile)
+        else:
+            print(bedfile + " DOES NOT EXIST!")
+            exit(1)
+        pp = self.panelpal_conn.cursor()
+        panel_id = q.get_panel_id_by_name(pp, panel_name)
+
+        print(panel_name)
+
+
 
     def get_panel_by_project(self,project):
         pass
@@ -514,10 +526,10 @@ class Users(Database):
         #print models.Users.query.all()
         pass
 
-    def add_user(self,user):
+    def add_user(self,user, admin):
         pp = self.panelpal_conn.cursor()
         try:
-            pp.execute("INSERT OR IGNORE INTO users(username,admin) VALUES (?,?)", (user,1))
+            pp.execute("INSERT OR IGNORE INTO users(username,admin) VALUES (?,?)", (user,admin))
             self.panelpal_conn.commit()
             return pp.lastrowid
         except self.panelpal_conn.Error as e:

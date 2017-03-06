@@ -1,4 +1,4 @@
-from app.main import db
+from app.panel_pal import db
 from sqlalchemy.orm import relationship
 
 class Users(db.Model):
@@ -96,13 +96,13 @@ class VPRelationships(db.Model):
     vpanel_id = db.Column(db.Integer, db.ForeignKey('virtual_panels.id'))
 
     def __init__(self, version_id, vpanel_id, intro, last):
-        self.into = intro
+        self.intro = intro
         self.last = last
         self.version_id = version_id
         self.vpanel_id = vpanel_id
 
     def __repr__(self):
-        return '<name %r>' % (self.name)
+        return '<id %r>' % (self.id)
 
 
 class VirtualPanels(db.Model):
@@ -129,7 +129,7 @@ class Versions(db.Model):
 
     panel_id = db.Column(db.Integer, db.ForeignKey('panels.id'))
     region_id = db.Column(db.Integer, db.ForeignKey('regions.id'))
-    vrelationship = db.relationship('VPRelationships', backref='z', lazy='dynamic')
+    vprelationship = db.relationship('VPRelationships', backref='z', lazy='dynamic')
 
     def __init__(self, intro, last, panel_id, region_id, comment, extension_3, extension_5):
         self.intro = intro
@@ -199,7 +199,7 @@ class Exons(db.Model):
 
 class Regions(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    chrom = db.Column(db.String(4), primary_key=True)
+    chrom = db.Column(db.String(5))
     start = db.Column(db.Integer)
     end = db.Column(db.Integer)
     name = db.Column(db.String(50))

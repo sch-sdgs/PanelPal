@@ -13,8 +13,17 @@ COPY ./app /app
 
 WORKDIR /tmp/PanelPal
 
-RUN pip install .
+RUN python setup.py install
+
+WORKDIR /app
+
+ADD resources/bedtools-2.25.0.tar.gz /tmp/
+WORKDIR /tmp/bedtools2
+RUN make
+ENV PATH $PATH:/tmp/bedtools2/bin
 
 WORKDIR /app
 
 ENV MESSAGE "PanelPal is running..."
+
+

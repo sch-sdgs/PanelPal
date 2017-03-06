@@ -1,10 +1,7 @@
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+#!flask/bin/python
+from app.panel_pal import app
+from flask_bootstrap import Bootstrap
+Bootstrap(app)
 
-app = Flask(__name__)
-app.config.from_object('config')
-db = SQLAlchemy(app)
-s = db.session
-
-from app.views import *
-
+if __name__ == "__main__":
+    app.run(debug=True, host='0.0.0.0', port=80)

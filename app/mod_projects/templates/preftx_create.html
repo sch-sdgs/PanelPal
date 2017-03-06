@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>{{ project_name }} Preferred Transcripts</h2>
+
+<form action="{{ url_for('projects.create_preftx') }}" method="POST" class="form">
+    <input type="hidden" name="project_id" value="{{ project_id }}">
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Gene</th>
+            <th>Transcripts (Current PrefTx is selected and highlighted, upcoming PrefTx indicated by *)</th>
+        </tr>
+        </thead>
+        {% for gene in genes %}
+        <tr>
+            <td><label for="{{ gene }}">{{ gene }}</label></td>
+            <td>
+                <div class="form-group">
+                    <select class="form-control" name="{{ gene }}" id="{{ gene }}">
+                        {% for tx in genes[gene] %}
+                        {% if tx[2] == "selected" %}
+                        <option value="{{ tx[0] }}" class="bolden" selected>{{ tx[1] }}</option>
+                        {% else %}
+                        <option value="{{ tx[0] }}" class="{{ tx[3] }}">{{ tx[1] }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    <div class="form-group">
+        <input class="btn btn-primary" type="submit" value="Save Preferred Transcripts">
+    </div>
+
+</form>
+{% endblock %}

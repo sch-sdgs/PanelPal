@@ -13,3 +13,5 @@ Flask-Table
 Jinja2
 Flask-WTF
 suds
+pybedtools
+raven[flask]
