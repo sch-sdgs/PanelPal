@@ -687,6 +687,7 @@ def unlock_panel():
 @login_required
 def edit_panel_page(panel_id=None):
     id = request.args.get('panelid')
+
     lock_panel(s, current_user.id, id)
     if id is None:
         id = panel_id
@@ -695,10 +696,13 @@ def edit_panel_page(panel_id=None):
         Panels.name,
         Panels.locked)
     print panel_info
+
     for i in panel_info:
-        version = i.current_version
-        name = i.name
+            version = i.current_version
+            name = i.name
+
     panel = get_panel_edit(s, id=id, version=version)
+
     form = RemoveGene(panelId=id)
     print "PANEL ID" + str(id)
     add_form = AddGene(panelIdAdd=id)
