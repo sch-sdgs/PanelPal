@@ -147,19 +147,34 @@ def add_region_to_panel(s, regionid, panelid, ext_3=None, ext_5=None):
     :return: the id in the versions table
     """
     current = get_current_version(s, panelid)
-    print(ext_3)
-    print(ext_5)
     version = Versions(intro=int(current) + 1, last=None, panel_id=panelid, region_id=regionid, comment=None,
                        extension_3=ext_3, extension_5=ext_5)
     s.add(version)
-    print(version.extension_5)
     # s.commit()
-    return version.id
+    return version
+
+def add_genes_to_panel_with_ext(s, panel_id, gene_id):
+    """
+    Gets all region for gene with extensions to remove UTR and adds to versions table
+
+    :param s:
+    :param panel_id:
+    :param gene_id:
+    :return:
+    """
+    regions = get_regions_by_gene_no_utr(s, gene_id)
+    for r in regions:
+        add_region_to_panel(s, r.region_id, panel_id, ext_3=r.ext_3, ext_5=r.ext_5)
+    s.commit()
+
+    return True
+
 
 @message
 def add_genes_to_panel(s, panelid, gene):
     """
     given a gene and a panelid this query gets all the regions for the gene and calls add_region_to_panel to add them
+
     :param s: db session
     :param panelid: the panel id
     :param gene: the gene
@@ -432,7 +447,6 @@ def get_regions_by_gene_no_utr(s, geneid):
     :param geneid:
     :return:
     """
-    s.begin_nested()
     sql = text("CREATE TEMP TABLE _cds AS SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end FROM tx JOIN exons on tx.id = exons.tx_id JOIN regions ON exons.region_id = regions.id WHERE tx.gene_id = :gene_id GROUP BY regions.id;")
     values = {'gene_id':geneid}
     s.execute(sql, values)

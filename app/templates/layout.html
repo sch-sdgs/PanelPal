@@ -464,6 +464,13 @@
                     $(event.target).attr('checked', 'checked');
                     var geneId = $("#" + geneName).attr('name');
                     $('#genelist').append("<button name=\"genebutton\" type=\"button\" class=\"btn btn-danger btn-md btngene\" data-name=\"" + geneName + "\" data-id=\"" + geneId + "\"><span class='glyphicon glyphicon-pencil'></span> " + geneName + "</button> ")
+                    if(count_genes() == 0){
+                        $('#add-all').attr('disabled', 'disabled')
+                    }
+                    else if($('#add-all').attr('disabled') == 'disabled')
+                    {
+                        $('#add-all').removeAttr('disabled')
+                    }
                 }
             }
         });
@@ -595,6 +602,18 @@
             });
             }
         });
+
+        function count_genes(){
+            var not_added = 0;
+            $('.btngene').each(function(i, obj){
+                if ($(obj).children().eq(0).hasClass('glyphicon-pencil')) {
+                    not_added += 1
+                }
+            });
+            return not_added
+        }
+
+
 
         function get_regions(element, target) {
             var gene_id = $(element).attr('data-id');
@@ -788,7 +807,12 @@
                         $(obj).trigger('click');
                     }
                 });
-                remove_vp_regions(vpanel_id, ids)
+                if(JSON.parse(sessionStorage.getItem("current_ids")).length > 0) {
+                    remove_vp_regions(vpanel_id, ids)
+                }
+                else {
+                    $('#regions').children().remove();
+                }
             }
             else if (sessionStorage.getItem('current_ids') && $('#panelname').length) {
                 var panel_id = $('#main').attr('name');
@@ -804,7 +828,12 @@
                 var row = $('#'+geneName).parent().parent().parent();
                 console.log($(row[0]));
                 $(row[0]).remove();
-                remove_panel_regions(panel_id, ids)
+                if(JSON.parse(sessionStorage.getItem("current_ids")).length > 0) {
+                    remove_panel_regions(panel_id, ids)
+                }
+                else {
+                    $('#regions').children().remove();
+                }
             }
             else {
                 $('#regions').children().remove();
@@ -878,6 +907,14 @@
                         }
                     });
 
+                    if(count_genes() == 0){
+                        $('#add-all').attr('disabled', 'disabled')
+                    }
+                    else if($('#add-all').attr('disabled') == 'disabled')
+                    {
+                        $('#add-all').removeAttr('disabled')
+                    }
+
                     $('#regions').children().remove();
                     region_added()
                 },
@@ -888,6 +925,73 @@
 
             });
         }
+
+        $(document).ready(function () {
+            $("#dialog").dialog({autoOpen: false});
+        })
+
+        $(document).on('click', '#add-all', function () {
+            var gene_list = [];
+            $( "#dialog" ).dialog( "open" );
+            $('#progressbar').progressbar({value:0, classes:{"ui-progressbar-complete":"progress-bar progress-bar-striped active"}});
+            $('.btngene').each(function(i, obj){
+               if ($(obj).children().eq(0).hasClass('glyphicon-pencil')) {
+                   gene_list.push($(obj).attr('data-id'))
+               }
+            });
+
+            var total = $(gene_list).length;
+            var complete = 0;
+            var progress = 0.0;
+
+            $.each(gene_list, function (i) {
+                var dict = {
+                "gene_id":gene_list[i],
+                "panel_id":$('#main').attr('name')
+                };
+                var data = JSON.stringify(dict);
+                $.ajax({
+                    type: "POST",
+                    url: "{{url_for('panels.add_all_regions')}}",
+                    data: data,
+                    dataType: "json",
+                    contentType: "application/json",
+                    success: function (response) {
+                        var gene = response["genes"];
+                        $('.btngene').each(function(i,obj){
+                            if($(obj).attr('data-id') == gene){
+                                $(obj).removeClass('btn-danger').addClass('btn-success');
+                                $(obj).children().eq(0).removeClass('glyphicon-pencil').addClass('glyphicon-ok');
+                            }
+                        });
+
+                        complete += 1;
+                        progress = complete/total*100;
+                        $( "#progressbar" ).progressbar( "option", "value", progress );
+                        if(i == total -1)
+                        {
+                            $('#dialog').dialog("destroy");
+                        }
+                        if(!$('#cancel').hasClass('btn-success'))
+                        {
+                            region_added()
+                        }
+
+                        if(count_genes() == 0){
+                            $('#add-all').attr('disabled', 'disabled')
+                        }
+                        else if($('#add-all').attr('disabled') == 'disabled')
+                        {
+                            $('#add-all').removeAttr('disabled')
+                        }
+                    },
+                    error: function (response) {
+                        console.log($(response));
+                        console.log('Error');
+                    }
+                })
+            });
+        });
 
         function add_regions(vpanel_id, ids, geneName) {
             var dict = {
@@ -981,6 +1085,14 @@
                         console.log('region added');
                         region_added();
                     }
+
+                    if(count_genes() == 0){
+                        $('#add-all').attr('disabled', 'disabled')
+                    }
+                    else if($('#add-all').attr('disabled') == 'disabled')
+                    {
+                        $('#add-all').removeAttr('disabled')
+                    }
                 },
                 error: function (response) {
                     console.log($(response));
@@ -1001,16 +1113,38 @@
             {
                 var reader = new FileReader();
                 var project_id = $('#project').val();
+                var exists = "";
                 reader.readAsText(file, "UTF-8");
                 reader.onload = function(evt){
+                    var gene_list = [];
+                    var current_list = [];
+                    $('[name="genebutton"]').each(function (j, obj) {
+                        current_list.push($(obj).attr('data-name'))
+                    });
+                    var lst = evt.target.result.split('\n');
+                    $.each(lst, function (i) {
+                        console.log(lst[i]);
+                        if ($.inArray(lst[i].replace('\r',''), current_list) < 0) {
+                            gene_list.push(lst[i].replace(/\r/g,''))
+                        }
+                        else {
+                            console.log('exists');
+                            if(exists == "") {
+                                exists += lst[i].replace(/\r/g,'')
+                            }
+                            else {
+                                exists += ', ' + lst[i].replace(/\r/g,'')
+                            }
+                        }
+                    });
+                    console.log(gene_list);
+                    console.log(exists);
                     var dict = {
                         "project_id": project_id,
-                        "gene_list": evt.target.result
+                        "gene_list": gene_list
                     };
 
                     var data = JSON.stringify(dict);
-
-
                     $.ajax({
                         type: "POST",
                         url: "{{ url_for('panels.upload_multiple') }}",
@@ -1021,12 +1155,23 @@
                             $('[name="message-fade"]').each(function(i, obj){
                                 $(obj).remove()
                             });
-                            $('[name="message-fail"]').each(function(i, obj){
+                            $('#message-fail').each(function(i, obj){
                                 $(obj).remove()
                             });
+                            if(exists != "") {
+                                var message = "<div class =\"alert alert-warning\" id=\"message-fail\"><strong>Silly Sausage!</strong> " + exists + " have already been added</div>";
+                                $('#genemessage').append(message);
+                            }
                             $('#genemessage').append(response['message']);
                             $('#tx_table').append(response['html']);
                             $('#genelist').append(response['button_list']);
+                            if(count_genes() == 0){
+                                $('#add-all').attr('disabled', 'disabled')
+                            }
+                            else if($('#add-all').attr('disabled') == 'disabled')
+                            {
+                                $('#add-all').removeAttr('disabled')
+                            }
                             $('#upload').empty();
                             $('#upload').append('Upload');
                         },
@@ -1120,7 +1265,9 @@
 
                 if($('#'+gene_name).length)
                 {
-                    var fail_message = "<div class =\"alert alert-danger\" id=\"message-fail\"><strong>Oh Crumbs!</strong> " + gene_name + " has already been added</div>"
+                    var fail_message = "<strong>Oh Crumbs!</strong> " + gene_name + " has already been added"
+                    alert(fail_message);
+                    return
                 }
 
                 if (gene_name.length != 0) {
@@ -1148,6 +1295,13 @@
                             $('#genemessage').append(response['message']);
                             $('#tx_table').append(response['html']);
                             $('#genelist').append(response['button_list']);
+                            if(count_genes() == 0){
+                                $('#add-all').attr('disabled', 'disabled')
+                            }
+                            else if($('#add-all').attr('disabled') == 'disabled')
+                            {
+                                $('#add-all').removeAttr('disabled')
+                            }
                             $('#add').empty();
                             $('#add').append('Add');
                         },

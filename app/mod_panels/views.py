@@ -477,7 +477,7 @@ def upload_multiple():
 
     :return:
     """
-    gene_list = request.json['gene_list'].replace('\r', '').split('\n')
+    gene_list = request.json['gene_list']
     project_id = request.json['project_id']
     all_message = ''
     html = ''
@@ -511,8 +511,9 @@ def upload_multiple():
             string = g + ", "
             added_message += string
 
-    added_message += " have been added</div>"
-    all_message += added_message
+    if added_message != "<div class =\"alert alert-success\" name=\"message-fade\"><strong>FYI</strong> ":
+        added_message += " have been added</div>"
+        all_message += added_message
     return jsonify({'message': all_message, 'html': html, 'button_list': button_list})
 
 
@@ -614,6 +615,7 @@ def create_panel_custom_regions():
     if regions:
         for i in regions:
             add_region_to_panel(s, i.id, panel_id)
+            s.commit()
             continue
     else:
         print('create')
@@ -621,6 +623,16 @@ def create_panel_custom_regions():
 
     return jsonify("complete")
 
+@panels.route('/panels/add-all-regions', methods=['POST'])
+@login_required
+def add_all_regions():
+    gene_id = request.json['gene_id']
+    panel_id = request.json['panel_id']
+    complete = []
+    add_genes_to_panel_with_ext(s, panel_id, gene_id)
+    complete.append(gene_id)
+    print(complete)
+    return jsonify({"genes":complete})
 
 @panels.route('/panels/add_regions', methods=['POST'])
 @login_required
@@ -644,8 +656,8 @@ def add_panel_regions():
             ext_3 = None
         else:
             ext_3 = i["ext_3"]
-        print(ext_3)
-        print(ext_5)
+        print(type(ext_3))
+        print(type(ext_5))
         add_region_to_panel(s, i["id"], panel_id, ext_3=ext_3, ext_5=ext_5)
     s.commit()
     return jsonify("complete")

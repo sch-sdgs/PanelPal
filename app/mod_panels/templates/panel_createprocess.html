@@ -243,7 +243,14 @@
                                             <span class='glyphicon glyphicon-pencil'></span> Custom Regions
                                         </button>
                                         {{ genelist | safe }}
-                                    </h3>
+                                    </h3><h3 id="add_all_head"><button id="add-all" type="button" class="btn btn-danger btn-md btn-custom"
+                                                data-name="add-all" data-id="add-all">
+                                            <span class='glyphicon glyphicon-plus'></span> Add all
+                                        </button></h3>
+                                    <div id="dialog" title="Uploading all genes">Progress:
+                                        <br/>
+                                        <div id="progressbar"></div>
+                                    </div>
 
                                 </div>
                                 <br/>
