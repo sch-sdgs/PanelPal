@@ -722,16 +722,15 @@ def update_ext():
     version_id = version[0]
     intro = version[1]
 
-    if e3:
+    if e3 is not None:
         ext_3 = e3
     else:
         ext_3 = version[3]
-
-    if e5:
+    print(e5)
+    if e5 is not None:
         ext_5 = e5
     else:
         ext_5 = version[4]
-
     if int(intro) > int(current_version):
         update_ext_query(s, version_id, ext_3=ext_3, ext_5=ext_5)
     else:
@@ -1384,14 +1383,14 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
                 remove_active = "btn-danger active"
         elif not utr:
             regions = get_regions_by_geneid_with_versions_no_utr(s, gene_id, panel_id)
-            changed_regions = get_altered_region_ids(s, gene_id, panel_id)
+            changed_regions = get_altered_region_ids_exclude(s, gene_id, panel_id)
             ok_opac = "0"
             ok_active = "btn-default"
             remove_opac = "1"
             remove_active = "btn-danger active"
         else:
             regions = get_regions_by_geneid_with_versions(s, gene_id, panel_id)
-            changed_regions = get_altered_region_ids(s, gene_id, panel_id)
+            changed_regions = get_altered_region_ids_include(s, gene_id, panel_id)
             ok_opac = "1"
             ok_active = "btn-success active"
             remove_opac = "0"
@@ -1444,14 +1443,26 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
                 start_style = "style=\"color:red;\" "
                 end = str(i.region_end + i.ext_3)
                 end_style = ""
+                end_column = """<ul class="list-unstyled list-inline pull-right" name="edit_region">
+                                                <li>
+                                                    <button type="button" class="btn btn-small btn-success" name="update" data-name="region_start">
+                                                        <span class="glyphicon glyphicon-floppy-disk"></span>
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button type="button" class="btn btn-small btn-danger" name="undo">
+                                                        <span class="glyphicon glyphicon-remove" name="undo"></span>
+                                                    </button>
+                                                </li>
+                                            </ul>"""
             else:
                 start = str(i.region_start - i.ext_5)
                 start_style = ""
                 end = str(changed_regions[i.region_id]['coord'])
                 end_style = "style=\"color:red;\" "
-            end_column = """<ul class="list-unstyled list-inline pull-right">
+                end_column = """<ul class="list-unstyled list-inline pull-right" name="edit_region">
                                 <li>
-                                    <button type="button" class="btn btn-small btn-success" name="update" data-name="region_start">
+                                    <button type="button" class="btn btn-small btn-success" name="update" data-name="region_end">
                                         <span class="glyphicon glyphicon-floppy-disk"></span>
                                     </button>
                                 </li>
@@ -1480,11 +1491,7 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
                     <td><label for=\"""" + v_id + "\">" + v_id + "</label></td>" + \
               "<td>" + i.chrom + "</td>" + coord + \
               "<td>" + i.name.replace(',', '\n') + "</td>" + \
-              """<td><div class=\"material-switch pull-right\">
-                      <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
-                            <label for=\"""" + v_id + """\" class=\"label-success label-region\" ></label>
-                        </div></td>
-                </tr>"""
+              "<td>" + end_column + "</td></tr>"
         html += row
 
     html += "</table>"

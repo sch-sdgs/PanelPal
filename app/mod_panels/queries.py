@@ -393,7 +393,7 @@ def check_if_utr(s, geneid, panelid):
     else:
         return True
 
-def get_altered_region_ids(s, geneid, panelid):
+def get_altered_region_ids_exclude(s, geneid, panelid):
     """
 
     :param s:
@@ -401,10 +401,58 @@ def get_altered_region_ids(s, geneid, panelid):
     :param panelid:
     :return:
     """
-    sql = text("DROP TABLE IF EXISTS _cds;")
-    s.execute(sql)
+    sql = text("""CREATE TEMP TABLE _cds_alt AS
+        SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end
+        FROM tx
+        JOIN exons on tx.id = exons.tx_id
+        JOIN regions ON exons.region_id = regions.id
+        WHERE tx.gene_id = :gene_id
+        GROUP BY regions.id;""")
+    values = {'gene_id':geneid}
+    s.execute(sql, values)
 
-    sql = text("""CREATE TEMP TABLE _cds AS
+
+    sql = text("""SELECT DISTINCT regions.id as region_id,
+                    regions.start, regions.end,
+                    CASE WHEN (versions.extension_5 != (regions.start - (SELECT cds_start FROM _cds_alt WHERE _cds_alt.id = regions.id)))
+                            THEN 'True'
+                        WHEN (versions.extension_5 IS NULL AND regions.start < (SELECT cds_start FROM _cds_alt WHERE _cds_alt.id = regions.id))
+                            THEN 'True'
+                        ELSE 'False' END AS include_start,
+                    CASE WHEN (versions.extension_3 != ((SELECT cds_end FROM _cds_alt WHERE _cds_alt.id = regions.id) - regions.end))
+                            THEN 'True'
+                        WHEN (versions.extension_3 IS NULL AND regions.end > (SELECT cds_end FROM _cds_alt WHERE _cds_alt.id = regions.id))
+                            THEN 'True'
+                        ELSE 'False' END AS include_end
+                    FROM versions
+                    JOIN regions ON versions.region_id = regions.id
+                    JOIN exons ON regions.id = exons.region_id
+                    JOIN tx ON tx.id = exons.tx_id
+                    JOIN genes ON genes.id = tx.gene_id
+                    WHERE genes.id = :gene_id
+                    AND versions.panel_id = :panel_id
+                    AND (include_start == 'True' OR include_end == 'True')""")
+    values = {'gene_id':geneid, 'panel_id':panelid}
+    regions = s.execute(sql, values)
+
+    results = {}
+    for r in regions:
+        if r.include_start == 'True':
+            results[r.region_id] = {'coord':r.start, 'position':'start'}
+        else:
+            results[r.region_id] = {'coord':r.end, 'position':'end'}
+
+    return results
+
+def get_altered_region_ids_include(s, geneid, panelid):
+    """
+
+    :param s:
+    :param geneid:
+    :param panelid:
+    :return:
+    """
+    sql = text("""CREATE TEMP TABLE _cds_alt AS
         SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end
         FROM tx
         JOIN exons on tx.id = exons.tx_id
@@ -417,10 +465,10 @@ def get_altered_region_ids(s, geneid, panelid):
 
     sql = text("""SELECT DISTINCT regions.id as region_id,
         regions.start, regions.end,
-        CASE WHEN (versions.extension_5 == (regions.start - (SELECT cds_start FROM _cds WHERE _cds.id = regions.id)))
+        CASE WHEN (versions.extension_5 == (regions.start - (SELECT cds_start FROM _cds_alt WHERE _cds_alt.id = regions.id)))
                     THEN 'True'
                     ELSE 'False' END AS include_start,
-        CASE WHEN (versions.extension_3 == ((SELECT cds_end FROM _cds WHERE _cds.id = regions.id) - regions.end))
+        CASE WHEN (versions.extension_3 == ((SELECT cds_end FROM _cds_alt WHERE _cds_alt.id = regions.id) - regions.end))
                     THEN 'True'
                     ELSE 'False' END AS include_end
         FROM versions
@@ -436,7 +484,6 @@ def get_altered_region_ids(s, geneid, panelid):
 
     results = {}
     for r in regions:
-        print(type(r.include_start))
         if r.include_start == 'True':
             results[r.region_id] = {'coord':r.start, 'position':'start'}
         else:
@@ -509,9 +556,6 @@ def get_regions_by_geneid_with_versions_no_utr(s, geneid, panel_id):
     :param panel_id:
     :return:
     """
-    sql = text("DROP TABLE IF EXISTS _cds;")
-    s.execute(sql)
-
     sql = text(
         """CREATE TEMP TABLE _cds AS
             SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end
@@ -527,10 +571,7 @@ def get_regions_by_geneid_with_versions_no_utr(s, geneid, panel_id):
     values = {'panel_id': panel_id, 'gene_id': geneid, 'current_version': current_version,
               'new_version': current_version + 1}
 
-    sql = text("DROP TABLE IF EXISTS _versions;")
-    s.execute(sql)
-
-    sql = text("""CREATE TEMP TABLE _versions AS SELECT regions.id as r_id,
+    sql = text("""CREATE TEMP TABLE _versions_no_utr AS SELECT regions.id as r_id,
                     regions.chrom as chrom,
                     regions.start AS region_start,
                     CASE WHEN (versions.panel_id = :panel_id AND versions.region_id = regions.id AND versions.extension_5 IS NOT NULL) THEN versions.extension_5
@@ -572,10 +613,10 @@ def get_regions_by_geneid_with_versions_no_utr(s, geneid, panel_id):
                     WHERE genes.id = :gene_id
                     AND regions.end > (SELECT cds_start FROM _cds WHERE _cds.id = region_id)
                     AND regions.start < (SELECT tx.cds_end FROM _cds WHERE _cds.id = region_id)
-                    AND NOT EXISTS (SELECT * FROM _versions WHERE r_id = region_id)
+                    AND NOT EXISTS (SELECT * FROM _versions_no_utr WHERE r_id = region_id)
                     GROUP BY regions.id
                     UNION
-                    SELECT r_id AS region_id, chrom, region_start, ext_5, region_end, ext_3, name FROM _versions ORDER BY region_start;""")
+                    SELECT r_id AS region_id, chrom, region_start, ext_5, region_end, ext_3, name FROM _versions_no_utr ORDER BY region_start;""")
     regions = s.execute(sql, values)
 
     return regions
@@ -589,24 +630,24 @@ def get_regions_by_gene_no_utr(s, geneid):
     :return:
     """
     sql = text(
-        "CREATE TEMP TABLE _cds AS SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end FROM tx JOIN exons on tx.id = exons.tx_id JOIN regions ON exons.region_id = regions.id WHERE tx.gene_id = :gene_id GROUP BY regions.id;")
+        "CREATE TEMP TABLE _cds_gene AS SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end FROM tx JOIN exons on tx.id = exons.tx_id JOIN regions ON exons.region_id = regions.id WHERE tx.gene_id = :gene_id GROUP BY regions.id;")
     values = {'gene_id': geneid}
     s.execute(sql, values)
 
     sql = text("""SELECT regions.id as region_id,
                     regions.chrom,
                     regions.start AS region_start,
-                    CASE WHEN (regions.start < (SELECT cds_start FROM _cds WHERE _cds.id = regions.id)) THEN regions.start - (SELECT cds_start FROM _cds WHERE _cds.id = regions.id) ELSE 0 END AS ext_5,
+                    CASE WHEN (regions.start < (SELECT cds_start FROM _cds_gene WHERE _cds_gene.id = regions.id)) THEN regions.start - (SELECT cds_start FROM _cds_gene WHERE _cds_gene.id = regions.id) ELSE 0 END AS ext_5,
                     regions."end" AS region_end,
-                    CASE WHEN (regions.end > (SELECT cds_end FROM _cds WHERE _cds.id = regions.id)) THEN (SELECT cds_end FROM _cds WHERE _cds.id = regions.id) - regions.end ELSE 0 END AS ext_3,
+                    CASE WHEN (regions.end > (SELECT cds_end FROM _cds_gene WHERE _cds_gene.id = regions.id)) THEN (SELECT cds_end FROM _cds_gene WHERE _cds_gene.id = regions.id) - regions.end ELSE 0 END AS ext_3,
                     group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) AS name
                     FROM regions
                     JOIN exons ON regions.id = exons.region_id
                     JOIN tx ON tx.id = exons.tx_id
                     JOIN genes ON genes.id = tx.gene_id
                     WHERE genes.id = :gene_id
-                    AND regions.end > (SELECT cds_start FROM _cds WHERE _cds.id = region_id)
-                    AND regions.start < (SELECT tx.cds_end FROM _cds WHERE _cds.id = region_id)
+                    AND regions.end > (SELECT cds_start FROM _cds_gene WHERE _cds_gene.id = region_id)
+                    AND regions.start < (SELECT tx.cds_end FROM _cds_gene WHERE _cds_gene.id = region_id)
                     GROUP BY regions.id ORDER BY region_start;""")
     values = {'gene_id': geneid}
     regions = s.execute(sql, values)

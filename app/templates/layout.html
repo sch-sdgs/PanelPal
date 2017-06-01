@@ -293,6 +293,7 @@
             var td = $(row).children().eq(5);
             var div = $(td).children().eq(0);
             var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+            console.log($(div).prop('outerHTML'));
             if ($.inArray(parseInt(region_id), JSON.parse(sessionStorage.getItem("current_ids"))) > -1) {
                 var current = sessionStorage.getItem(region_id);
                 var dict = {};
@@ -369,7 +370,7 @@
             var region_id = $(row).children().eq(0).children().eq(0).attr('for');
 
             var store = JSON.parse(sessionStorage.getItem(region_id));
-
+            console.log(store);
             var ext_3 = null;
             var ext_5 = null;
             if ("start" in store) {
@@ -511,23 +512,19 @@
         });
 
         function doChange(object) {
-            console.log('doing change');
-            console.log($('#btnOn .glyphicon-ok').attr('style'));
-            if ($(object).val() == "navbar-default") {
-                $('#btnOn').removeClass('active');
-                $('#btnOn .glyphicon-ok').attr('style', 'opacity: 0;');
-                $('#btnOff .glyphicon-remove').attr('style', 'opacity: 1;');
-                $('#btnOff').focus();
-
-            }
-            if ($(object).val() == "navbar-inverse") {
+            if ($('#btnOn .glyphicon-ok').attr('style') == 'opacity: 0;') {
                 $('#btnOff').removeClass('active');
                 $('#btnOff .glyphicon-remove').attr('style', 'opacity: 0;');
                 $('#btnOn .glyphicon-ok').attr('style', 'opacity: 1;');
                 $('#btnOn').focus();
             }
-            console.log($('#btnOn .glyphicon-ok').attr('style'));
-            console.log('changed');
+            else {
+                $('#btnOn').removeClass('active');
+                $('#btnOn .glyphicon-ok').attr('style', 'opacity: 0;');
+                $('#btnOff .glyphicon-remove').attr('style', 'opacity: 1;');
+                $('#btnOff').focus();
+            }
+
             $('#region-table').remove();
             $('#regions').append("<br/><center><div class=\"row\"><div class=\"col-md-5\"></div><div class=\"col-md-2\"><div class=\"loader\"></div></div><div class=\"col-md-5\"></div></div></center>");
             get_regions($('.btn-warning'), $('.btn-warning'));
@@ -729,6 +726,7 @@
         }
 
         $(document).on('click', ".label-region", function (request) {
+
             var obj = $(request.currentTarget);
             if ($(obj).attr('checked') == 'checked') {
                 $(obj).removeAttr('checked');
@@ -743,6 +741,7 @@
             }
 
             var count = count_ids().length;
+
             if (count > 0) {
                 $('#add-regions').removeAttr('disabled');
             }
@@ -1387,31 +1386,36 @@
     </script>
 
     <!--<script type="text/javascript">-->
-        <!--$(document).ready(function () {-->
-            <!--$('#panel').DataTable({-->
-                <!--"pageLength": 10,-->
-                <!--"data": "{{ table|safe }}",-->
-                <!--"columns": [{"title": "Chr"},-->
-                    <!--{"title": "Start"},-->
-                    <!--{"title": "End"},-->
-                    <!--{"title": "Gene"},-->
-                    <!--{"title": "Region Name"}-->
-                <!--]-->
-            <!--});-->
-        <!--});-->
+    <!--$(document).ready(function () {-->
+    <!--$('#panel').DataTable({-->
+    <!--"pageLength": 10,-->
+    <!--"data": "{{ table|safe }}",-->
+    <!--"columns": [{"title": "Chr"},-->
+    <!--{"title": "Start"},-->
+    <!--{"title": "End"},-->
+    <!--{"title": "Gene"},-->
+    <!--{"title": "Region Name"}-->
+    <!--]-->
+    <!--});-->
+    <!--});-->
 
     <!--</script>-->
 
-        {% if table != None %}
+    {% if table != None %}
     <script type="text/javascript">
-//        var dataSet = "{{ table|safe }}"
-         $(document).ready(function() {
-        $('#panel').DataTable({
-            "pageLength": 10,
-            data: {{ table|safe }},
-             columns: [ { title: "Chr" },{ title: "Start" },{ title: "End" },{ title: "Gene" },{ title: "Region Name" } ]
+        //        var dataSet = "{{ table|safe }}"
+        $(document).ready(function () {
+            $('#panel').DataTable({
+                "pageLength": 10,
+                data: {
+            {
+                table | safe
+            }
+        },
+            columns: [{title: "Chr"}, {title: "Start"}, {title: "End"}, {title: "Gene"}, {title: "Region Name"}]
+        })
+            ;
         });
-        } );
     </script>
     {% endif %}
 
