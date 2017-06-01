@@ -2,24 +2,34 @@
 <html>
 <head>
     <title>PanelPal</title>
-    <link rel="shortcut icon" href="/favicon.ico}" type="image/x-icon">
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
-    <script src="https://code.jquery.com/ui/1.12.0/jquery-ui.js"></script>
-    <script src="https://cdn.datatables.net/1.10.13/js/jquery.dataTables.min.js"></script>
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/jquery-1.12.4.js"></script>
+    <script src="/static/js/jquery-ui.js"></script>
+    <script src="/static/js/jquery.dataTables.min.js"></script>
     <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
-    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
 
-    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.0/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="/static/css/jquery-ui.css">
     <link rel="stylesheet" href="/static/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/css/panel_pal.css">
-    <script type="text/javascript" language="javascript" src="https://cdn.datatables.net/1.10.13/js/dataTables.bootstrap.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.13/css/dataTables.bootstrap.min.css">
+    <script type="text/javascript" language="javascript" src="/static/js/dataTables.bootstrap.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/css/dataTables.bootstrap.min.css">
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
 
+    <!--<link rel="stylesheet" href="/static/css/font-awesome.min.css">-->
+
     <script>
+        /**
+         * Created by cytng on 23/05/2017.
+         */
+
+        /**
+         * When a region is added to the panel the final window message is changed
+         */
         function region_added() {
             $('#complete_message').removeClass('alert-danger').addClass('alert-success');
             $('#complete_message').html('<strong>Congratulations!</strong> You have completed your panel');
@@ -29,9 +39,14 @@
             $('#cancel_logo').removeClass('fa-remove').addClass('fa-check');
             $('#make_live').removeAttr('hidden')
         }
-    </script>
 
-    <script>
+        /**
+         * When create is cancelled the panel or virtual panel is removed from the database.
+         * If vp_name is none, it uses the panel name.
+         *
+         * @param vp_name: the name of the virtual panel
+         * @param panel_name: the name of the panel
+         */
         function remove_panel(vp_name, panel_name) {
             var dict = {};
             var url = "";
@@ -70,6 +85,10 @@
             })
         }
 
+        /**
+         * When cancel is clicked, js checks if in create or edit wizard and executes appropriate function.
+         * Edit is redirected to view panel and create removes the panel from the database.
+         */
         $(document).on('click', '#cancel', function () {
             var vp_name = $('#vpanelname').val();
             var panel_name = $('#panelname').val();
@@ -78,16 +97,21 @@
             }
             else if (window.location.pathname.indexOf("edit") >= 0) {
                 if ($('#vpanelname').length) {
-                    window.location.replace("{{ url_for('panels.view_virtual_panels') }}?id="+$('#main').attr('name'));
+                    window.location.replace("{{ url_for('panels.view_virtual_panels') }}?id=" + $('#main').attr('name'));
                 }
                 else {
-                    window.location.replace("{{ url_for('panels.view_panels') }}?id="+$('#main').attr('name'));
+                    window.location.replace("{{ url_for('panels.view_panels') }}?id=" + $('#main').attr('name'));
                 }
             }
         });
-    </script>
 
-    <script>
+        /**
+         * Method to add a panel or virtual panel to the database and unlock the other wizard tabs.
+         * Method determines if panel or virtual panel needs to be added.
+         *
+         * @param changeTab: indicates that back or next have been clicked. If none, tab page clicked is selected (e)
+         * @param e: Tab page that has been clicked
+         */
         function add_panel(changeTab, e) {
             var dict = {};
             var url = "";
@@ -115,7 +139,7 @@
                 url = "{{url_for('panels.add_panel')}}";
                 redirect = "{{url_for('panels.create_panel_process') }}?id=";
             }
-
+            console.log(url)
             var data = JSON.stringify(dict);
             var complete = false;
             $.when($.ajax({
@@ -175,6 +199,7 @@
                     }
                 },
                 error: function (response) {
+                    console.log(response);
                     console.log($(response).responseText);
                     console.log('Error');
                     return false;
@@ -197,9 +222,7 @@
                 $(this).addClass('glyphicon-new-selected').removeClass('glyphicon-new').blur();
             }
         });
-    </script>
 
-    <script>
         function change_tab(tabChange) {
             var activeTab = $('.tab-pane.active');
             if (tabChange == 'next') {
@@ -236,9 +259,7 @@
                 change_tab(tab)
             }
         });
-    </script>
 
-    <script>
         $(document).on('change', '#panel', function (e) {
             $('#geneselector').children().remove();
             $('#loading').append("<br/><center><div class=\"row\"><div class=\"col-md-5\"></div><div class=\"col-md-2\"><div class=\"loader\"></div></div><div class=\"col-md-5\"></div></div></center>");
@@ -266,10 +287,8 @@
 
             });
         });
-    </script>
 
-    <script>
-        $(document).on('focusin', '[name="region_start"]', function(){
+        $(document).on('focusin', '[name="region_start"]', function () {
             var row = $(event.target).parent().parent();
             var td = $(row).children().eq(5);
             var div = $(td).children().eq(0);
@@ -277,13 +296,11 @@
             if ($.inArray(parseInt(region_id), JSON.parse(sessionStorage.getItem("current_ids"))) > -1) {
                 var current = sessionStorage.getItem(region_id);
                 var dict = {};
-                var arr = {"value":$(event.target).val(), "html":$(div).prop('outerHTML')};
-                if(current == null)
-                {
+                var arr = {"value": $(event.target).val(), "html": $(div).prop('outerHTML')};
+                if (current == null) {
                     dict["start"] = arr;
                 }
-                else
-                {
+                else {
                     dict = JSON.parse(current);
                     dict["start"] = arr;
                 }
@@ -294,12 +311,15 @@
             }
         });
 
-        $(document).on('focusout', '[name="region_start"]', function(){
+        $(document).on('focusout', '[name="region_start"]', function () {
             var row = $(event.target).parent().parent();
             var region_id = $(row).children().eq(0).children().eq(0).attr('for');
             var td = $(row).children().eq(5);
             var store = JSON.parse(sessionStorage.getItem(region_id));
-            if ("end" in store) {}
+            if (store == null) {
+            }
+            else if ("end" in store) {
+            }
             else if ($(event.target).val() == store["start"]["value"]) {
                 $($(td).children()).remove();
                 $(td).append(store["start"]["html"]);
@@ -307,7 +327,7 @@
             }
         });
 
-        $(document).on('focusin', '[name="region_end"]', function(){
+        $(document).on('focusin', '[name="region_end"]', function () {
             var row = $(event.target).parent().parent();
             var td = $(row).children().eq(5);
             var div = $(td).children().eq(0);
@@ -315,13 +335,11 @@
             if ($.inArray(parseInt(region_id), JSON.parse(sessionStorage.getItem("current_ids"))) > -1) {
                 var current = sessionStorage.getItem(region_id);
                 var dict = {};
-                var arr = {"value":$(event.target).val(), "html":$(div).prop('outerHTML')};
-                if(current == null)
-                {
+                var arr = {"value": $(event.target).val(), "html": $(div).prop('outerHTML')};
+                if (current == null) {
                     dict["end"] = arr;
                 }
-                else
-                {
+                else {
                     dict = JSON.parse(current);
                     dict["end"] = arr;
                 }
@@ -332,12 +350,13 @@
             }
         });
 
-        $(document).on('focusout', '[name="region_end"]', function(){
+        $(document).on('focusout', '[name="region_end"]', function () {
             var row = $(event.target).parent().parent();
             var region_id = $(row).children().eq(0).children().eq(0).attr('for');
             var td = $(row).children().eq(5);
             var store = JSON.parse(sessionStorage.getItem(region_id));
-            if ("start" in store) {}
+            if ("start" in store) {
+            }
             else if ($(event.target).val() == store["end"]["value"]) {
                 $($(td).children()).remove();
                 $(td).append(store["end"]["html"]);
@@ -345,7 +364,7 @@
             }
         });
 
-        $(document).on('click', '.glyphicon-floppy-disk', function(){
+        $(document).on('click', '.glyphicon-floppy-disk', function () {
             var row = $(event.target).parent().parent().parent().parent().parent();
             var region_id = $(row).children().eq(0).children().eq(0).attr('for');
 
@@ -353,15 +372,13 @@
 
             var ext_3 = null;
             var ext_5 = null;
-            if ("start" in store)
-            {
+            if ("start" in store) {
                 var new_val = $(row).children().eq(2).children().eq(0).val();
                 var no_ext = $(row).children().eq(2).children().eq(0).attr('id');
                 ext_5 = no_ext - new_val
             }
 
-            if("end" in store)
-            {
+            if ("end" in store) {
                 var new_val = $(row).children().eq(3).children().eq(0).val();
                 var no_ext = $(row).children().eq(3).children().eq(0).attr('id');
                 ext_3 = new_val - no_ext
@@ -370,10 +387,10 @@
             $(event.target).removeClass('glyphicon-floppy-disk').addClass('glyphicon-refresh glyphicon-refresh-animate');
 
             var dict = {
-                "region_id":region_id,
-                "panel_id":$('#main').attr('name'),
-                "ext_3":ext_3,
-                "ext_5":ext_5
+                "region_id": region_id,
+                "panel_id": $('#main').attr('name'),
+                "ext_3": ext_3,
+                "ext_5": ext_5
             };
             console.log(dict);
             var data = JSON.stringify(dict);
@@ -389,12 +406,10 @@
                     var td = $(row).children().eq(5);
                     $($(td).children()).remove();
                     var html;
-                    if ("start" in store)
-                    {
+                    if ("start" in store) {
                         html = store["start"]["html"]
                     }
-                    else
-                    {
+                    else {
                         html = store["end"]["html"]
                     }
                     $(td).append(html);
@@ -408,17 +423,15 @@
             });
         });
 
-        $(document).on('click','#undo', function(){
+        $(document).on('click', '#undo', function () {
             var row = $(event.target).parent().parent();
             var region_id = $(row).children().eq(0).children().eq(0).attr('for');
             var store = JSON.parse(sessionStorage.getItem(region_id));
-            if("start" in store)
-            {
+            if ("start" in store) {
                 $(row).children().eq(2).children().eq(0).val(store["start"]["value"]);
             }
 
-            if("end" in store)
-            {
+            if ("end" in store) {
                 $(row).children().eq(3).children().eq(0).val(store["start"]["value"]);
             }
 
@@ -464,20 +477,17 @@
                     $(event.target).attr('checked', 'checked');
                     var geneId = $("#" + geneName).attr('name');
                     $('#genelist').append("<button name=\"genebutton\" type=\"button\" class=\"btn btn-danger btn-md btngene\" data-name=\"" + geneName + "\" data-id=\"" + geneId + "\"><span class='glyphicon glyphicon-pencil'></span> " + geneName + "</button> ")
-                    if(count_genes() == 0){
+                    if (count_genes() == 0) {
                         $('#add-all').attr('disabled', 'disabled')
                     }
-                    else if($('#add-all').attr('disabled') == 'disabled')
-                    {
+                    else if ($('#add-all').attr('disabled') == 'disabled') {
                         $('#add-all').removeAttr('disabled')
                     }
                 }
             }
         });
-    </script>
 
-    <script>
-        $(document).on('click', '[id^="btnO"]', function (){
+        $(document).on('click', '[id^="btnO"]', function () {
             console.log('clicked');
             var notchecked = $('input[type="radio"][name="menucolor"]').not(':checked');
             console.log(notchecked);
@@ -485,8 +495,8 @@
             console.log($(notchecked).prop('checked'));
             notchecked.prop("checked", true);
             console.log($(notchecked).prop('checked'));
-            $(this).parent().find('a').each(function() {
-                if($(this).attr('id') == 'btnOn'){
+            $(this).parent().find('a').each(function () {
+                if ($(this).attr('id') == 'btnOn') {
                     $(this).toggleClass('active btn-success btn-default');
                 } else {
                     $(this).toggleClass('active btn-danger btn-default');
@@ -496,24 +506,24 @@
             doChange(notchecked);
         });
 
-        $(document).on('change', 'input[type="radio"][name="menucolor"]', function(){
-             doChange(this);
+        $(document).on('change', 'input[type="radio"][name="menucolor"]', function () {
+            doChange(this);
         });
 
-        function doChange(object){
+        function doChange(object) {
             console.log('doing change');
             console.log($('#btnOn .glyphicon-ok').attr('style'));
-            if($(object).val() == "navbar-default"){
+            if ($(object).val() == "navbar-default") {
                 $('#btnOn').removeClass('active');
-                $('#btnOn .glyphicon-ok').attr('style','opacity: 0;');
-                $('#btnOff .glyphicon-remove').attr('style','opacity: 1;');
+                $('#btnOn .glyphicon-ok').attr('style', 'opacity: 0;');
+                $('#btnOff .glyphicon-remove').attr('style', 'opacity: 1;');
                 $('#btnOff').focus();
 
             }
-            if($(object).val() == "navbar-inverse"){
+            if ($(object).val() == "navbar-inverse") {
                 $('#btnOff').removeClass('active');
-                $('#btnOff .glyphicon-remove').attr('style','opacity: 0;');
-                $('#btnOn .glyphicon-ok').attr('style','opacity: 1;');
+                $('#btnOff .glyphicon-remove').attr('style', 'opacity: 0;');
+                $('#btnOn .glyphicon-ok').attr('style', 'opacity: 1;');
                 $('#btnOn').focus();
             }
             console.log($('#btnOn .glyphicon-ok').attr('style'));
@@ -536,76 +546,71 @@
             var end = $('#end-pos').val();
             var name = $('#region-name').val();
             var message = '';
-            if(chrom == 0)
-            {
+            if (chrom == 0) {
                 message = "You haven't picked a chromosome"
             }
-            else if(start.length == 0)
-            {
+            else if (start.length == 0) {
                 message = 'The start position is not defined'
             }
-            else if(end.length == 0)
-            {
+            else if (end.length == 0) {
                 message = 'The end position is not defined'
             }
-            else if(name.length == 0)
-            {
+            else if (name.length == 0) {
                 message = 'The region name is not defined'
             }
-            else if (start > end)
-            {
+            else if (start > end) {
                 message = "The start position is greater the end position"
             }
 
-            if (message != '')
-            {
+            if (message != '') {
                 $('#custom-message').append(message);
                 $('#custom-message').removeAttr('style')
             }
-            else
-            {
+            else {
                 console.log($('#main').attr('name'));
                 var dict = {
-                    "panel_id":$('#main').attr('name'),
+                    "panel_id": $('#main').attr('name'),
                     "chrom": chrom,
                     "start": start,
                     "end": end,
                     "name": name
                 };
-            var data = JSON.stringify(dict);
+                var data = JSON.stringify(dict);
 
-            $.ajax({
-                type: "POST",
-                url: "{{ url_for('panels.create_panel_custom_regions') }}",
-                data: data,
-                dataType: "json",
-                contentType: "application/json",
-                success: function (response) {
-                    $('#add-custom-region').attr('style', "display: none;");
-                    $('#chrom').val(0);
-                    $('#start-pos').val('');
-                    $('#end-pos').val('');
-                    $('#region-name').val('');
-                    $('#genebutton').each(function (i, obj) {
-                        if($(obj).attr('data-name') == "Custom")
-                        {
-                            $(obj).trigger('click');
-                        }
-                    });
-                    region_added()
-                },
-                error: function (response) {
-                    console.log($(response).responseText);
-                    console.log('Error');
-                }
+                $.ajax({
+                    type: "POST",
+                    url: "{{ url_for('panels.create_panel_custom_regions') }}",
+                    data: data,
+                    dataType: "json",
+                    contentType: "application/json",
+                    success: function (response) {
+                        $('#add-custom-region').attr('style', "display: none;");
+                        $('#chrom').val(0);
+                        $('#start-pos').val('');
+                        $('#end-pos').val('');
+                        $('#region-name').val('');
+                        console.log($('.btn-custom'));
+                        get_regions($('.btn-custom'), $('.btn-custom'));
 
-            });
+//                        $('#genebutton').each(function (i, obj) {
+//                            if ($(obj).attr('data-name') == "Custom") {
+//                                $(obj).trigger('click');
+//                            }
+//                        });
+                        region_added()
+                    },
+                    error: function (response) {
+                        console.log($(response).responseText);
+                        console.log('Error');
+                    }
+
+                });
             }
         });
 
-        function count_genes(){
+        function count_genes() {
             var not_added = 0;
-            $('.btngene').each(function(i, obj){
+            $('.btngene').each(function (i, obj) {
                 if ($(obj).children().eq(0).hasClass('glyphicon-pencil')) {
                     not_added += 1
                 }
@@ -614,26 +619,29 @@
         }
 
 
-
         function get_regions(element, target) {
             var gene_id = $(element).attr('data-id');
             var gene_name = $(element).attr('data-name');
             var panel_id = '';
             var vpanel_id = '';
-            var include_utr = null;
+            var include_utr = false;
             if ($('#panel').length) {
                 panel_id = $('#panel').val();
                 vpanel_id = $('#main').attr('name');
             }
             else {
                 panel_id = $('#main').attr('name');
-                if ($('#btnOn').hasClass('active'))
-                {
+                if ($('#btnOn').hasClass('active')) {
                     include_utr = true;
+                }
+                else if ($('#regions').children().length == 2 && $(element).children(0).hasClass("glyphicon-ok")) {
+                    include_utr = "added"
                 }
                 vpanel_id = null;
             }
-
+            console.log('length');
+            console.log($('#regions').children().length);
+            console.log(include_utr);
             var dict = {
                 "panel_id": panel_id,
                 "gene_id": gene_id,
@@ -644,7 +652,8 @@
             var data = JSON.stringify(dict);
 
             var url = '';
-            if ($(target).hasClass('btn-custom')) {
+            console.log($(element).hasClass('btn-custom'));
+            if ($(element).hasClass('btn-custom')) {
                 url = "{{url_for('panels.get_custom_regions')}}";
             }
             else {
@@ -670,6 +679,11 @@
                             $(obj).trigger('click')
                         }
                     });
+
+                    $('#add-regions').attr('disabled', 'disabled');
+
+                    console.log('length');
+                    console.log($('#regions').children().length);
                 },
                 error: function (response) {
                     console.log($(response).responseText);
@@ -680,6 +694,9 @@
         }
 
         $(document).on('click', '[name="genebutton"]', function (request) {
+            if ($('#add-custom-region').attr("style") == null) {
+                $('#add-custom-region').attr("style", "display: none;")
+            }
             $('#regions').children().remove();
             $('#regions').append("<br/><center><div class=\"row\"><div class=\"col-md-5\"></div><div class=\"col-md-2\"><div class=\"loader\"></div></div><div class=\"col-md-5\"></div></div></center>");
             var element = $(request.currentTarget);
@@ -692,15 +709,15 @@
                 }
             });
             $(element).removeClass("btn-danger").removeClass("btn-success").addClass("btn-warning").blur();
-
+            console.log($(element));
+            console.log($(request.currentTarget));
+            if ($(element) == $(request.currentTarget)) {
+                console.log("match")
+            }
             get_regions($(element), $(request.currentTarget));
 
         });
 
-
-    </script>
-
-    <script>
         function count_ids() {
             var ids = [];
             $('.label-region').each(function (i, obj) {
@@ -740,9 +757,6 @@
                 $(".label-selectall").trigger('click')
             }
         });
-    </script>
-
-    <script>
 
         $(document).on('click', ".label-selectall", function () {
 
@@ -782,9 +796,7 @@
             }
 
         });
-    </script>
 
-    <script>
         $(document).on('click', "#remove-gene", function () {
             var geneName = $('#remove-gene').attr('name');
             $('.label-gene').each(function (i, obj) {
@@ -802,12 +814,11 @@
                 var vpanel_id = $('#main').attr('name');
                 var ids = sessionStorage.getItem('current_ids');
                 $('.label-gene').each(function (i, obj) {
-                    if ($(obj).attr('for') == geneName)
-                    {
+                    if ($(obj).attr('for') == geneName) {
                         $(obj).trigger('click');
                     }
                 });
-                if(JSON.parse(sessionStorage.getItem("current_ids")).length > 0) {
+                if (JSON.parse(sessionStorage.getItem("current_ids")).length > 0) {
                     remove_vp_regions(vpanel_id, ids)
                 }
                 else {
@@ -819,17 +830,16 @@
                 var ids = sessionStorage.getItem('current_ids');
 
                 $('[name="genebutton"]').each(function (i, obj) {
-                    if ($(obj).attr('data-name') == geneName)
-                    {
+                    if ($(obj).attr('data-name') == geneName) {
                         console.log('found');
                         $(obj).remove()
                     }
                 });
-                var row = $('#'+geneName).parent().parent().parent();
+                var row = $('#' + geneName).parent().parent().parent();
                 console.log($(row[0]));
                 $(row[0]).remove();
-                if(JSON.parse(sessionStorage.getItem("current_ids")).length > 0) {
-                    remove_panel_regions(panel_id, ids)
+                if (JSON.parse(sessionStorage.getItem("current_ids")).length > 0) {
+                    remove_panel_regions(panel_id, ids, geneName)
                 }
                 else {
                     $('#regions').children().remove();
@@ -839,9 +849,7 @@
                 $('#regions').children().remove();
             }
         });
-    </script>
 
-    <script>
         function remove_vp_regions(vpanel_id, ids) {
             var dict = {
                 "vp_id": vpanel_id,
@@ -876,7 +884,7 @@
             });
         }
 
-        function remove_panel_regions(panel_id, ids) {
+        function remove_panel_regions(panel_id, ids, gene_name) {
             var dict = {
                 "panel_id": panel_id,
                 "ids": ids
@@ -889,7 +897,11 @@
                 dataType: "json",
                 contentType: "application/json",
                 success: function (response) {
-                    if (response == 0) {
+                    var count = response;
+                    console.log(count);
+                    console.log(typeof count);
+                    if (count == 0) {
+                        console.log('changing');
                         $('#complete_message').addClass('alert-danger').removeClass('alert-success');
                         $('#complete_message').html("<strong>Oopsie Daisy!</strong> You haven't added any regions to this panel yet...");
                         $('#cancel').addClass('btn-danger').removeClass('btn-success');
@@ -907,16 +919,14 @@
                         }
                     });
 
-                    if(count_genes() == 0){
+                    if (count_genes() == 0) {
                         $('#add-all').attr('disabled', 'disabled')
                     }
-                    else if($('#add-all').attr('disabled') == 'disabled')
-                    {
+                    else if ($('#add-all').attr('disabled') == 'disabled') {
                         $('#add-all').removeAttr('disabled')
                     }
 
                     $('#regions').children().remove();
-                    region_added()
                 },
                 error: function (response) {
                     console.log($(response));
@@ -932,12 +942,15 @@
 
         $(document).on('click', '#add-all', function () {
             var gene_list = [];
-            $( "#dialog" ).dialog( "open" );
-            $('#progressbar').progressbar({value:0, classes:{"ui-progressbar-complete":"progress-bar progress-bar-striped active"}});
-            $('.btngene').each(function(i, obj){
-               if ($(obj).children().eq(0).hasClass('glyphicon-pencil')) {
-                   gene_list.push($(obj).attr('data-id'))
-               }
+            $("#dialog").dialog("open");
+            $('#progressbar').progressbar({
+                value: 0,
+                classes: {"ui-progressbar-complete": "progress-bar progress-bar-striped active"}
+            });
+            $('.btngene').each(function (i, obj) {
+                if ($(obj).children().eq(0).hasClass('glyphicon-pencil')) {
+                    gene_list.push($(obj).attr('data-id'))
+                }
             });
 
             var total = $(gene_list).length;
@@ -946,8 +959,8 @@
 
             $.each(gene_list, function (i) {
                 var dict = {
-                "gene_id":gene_list[i],
-                "panel_id":$('#main').attr('name')
+                    "gene_id": gene_list[i],
+                    "panel_id": $('#main').attr('name')
                 };
                 var data = JSON.stringify(dict);
                 $.ajax({
@@ -958,30 +971,27 @@
                     contentType: "application/json",
                     success: function (response) {
                         var gene = response["genes"];
-                        $('.btngene').each(function(i,obj){
-                            if($(obj).attr('data-id') == gene){
+                        $('.btngene').each(function (i, obj) {
+                            if ($(obj).attr('data-id') == gene) {
                                 $(obj).removeClass('btn-danger').addClass('btn-success');
                                 $(obj).children().eq(0).removeClass('glyphicon-pencil').addClass('glyphicon-ok');
                             }
                         });
 
                         complete += 1;
-                        progress = complete/total*100;
-                        $( "#progressbar" ).progressbar( "option", "value", progress );
-                        if(i == total -1)
-                        {
+                        progress = complete / total * 100;
+                        $("#progressbar").progressbar("option", "value", progress);
+                        if (i == total - 1) {
                             $('#dialog').dialog("destroy");
                         }
-                        if(!$('#cancel').hasClass('btn-success'))
-                        {
+                        if (!$('#cancel').hasClass('btn-success')) {
                             region_added()
                         }
 
-                        if(count_genes() == 0){
+                        if (count_genes() == 0) {
                             $('#add-all').attr('disabled', 'disabled')
                         }
-                        else if($('#add-all').attr('disabled') == 'disabled')
-                        {
+                        else if ($('#add-all').attr('disabled') == 'disabled') {
                             $('#add-all').removeAttr('disabled')
                         }
                     },
@@ -1033,16 +1043,15 @@
             });
         }
 
-        function add_panel_regions(panel_id, ids, gene_name)
-        {
-            var pref_tx_id = $('#'+gene_name).val();
+        function add_panel_regions(panel_id, ids, gene_name) {
+            var pref_tx_id = $('#' + gene_name).val();
             console.log(pref_tx_id);
 
             var id_ext = [];
             console.log(ids);
-            for (var id in ids){
+            for (var id in ids) {
                 //this gets the second parent of the switch (tr)
-                var row = $('[for="'+ids[id]+'"]').parent().parent();
+                var row = $('[for="' + ids[id] + '"]').parent().parent();
                 //this get the third child (index 2) of the row and the child of that row is the text box
                 //id is original start, value is textbox start so difference is the extension
                 var start = $($($($(row[0])).children().eq(2)[0])[0]).children().eq(0).attr('id');
@@ -1051,15 +1060,15 @@
                 var end = $($($($(row[0])).children().eq(3)[0])[0]).children().eq(0).attr('id');
                 var ext_3 = $($($($(row[0])).children().eq(3)[0])[0]).children().eq(0).val() - end;
 
-                id_ext.push({"id":ids[id], "ext_5":ext_5, "ext_3":ext_3})
+                id_ext.push({"id": ids[id], "ext_5": ext_5, "ext_3": ext_3})
             }
 
             var dict = {
                 "panel_id": panel_id,
                 "id_ext": id_ext,
-                "pref_tx_id":pref_tx_id,
-                "project_id":$('#project').val(),
-                "gene_name":gene_name
+                "pref_tx_id": pref_tx_id,
+                "project_id": $('#project').val(),
+                "gene_name": gene_name
             };
             var data = JSON.stringify(dict);
             $.ajax({
@@ -1086,11 +1095,10 @@
                         region_added();
                     }
 
-                    if(count_genes() == 0){
+                    if (count_genes() == 0) {
                         $('#add-all').attr('disabled', 'disabled')
                     }
-                    else if($('#add-all').attr('disabled') == 'disabled')
-                    {
+                    else if ($('#add-all').attr('disabled') == 'disabled') {
                         $('#add-all').removeAttr('disabled')
                     }
                 },
@@ -1103,19 +1111,15 @@
         }
 
         $(document).on('click', '#upload', function () {
-            $('#upload').empty();
-            $('#upload').append("<span class=\"glyphicon glyphicon-refresh glyphicon-refresh-animate\"></span>");
-            console.log($('#my-file-selector'));
-            console.log(($('#my-file-selector'))[0].files);
             var file = ($('#my-file-selector'))[0].files[0];
-            console.log(file);
-            if(file)
-            {
+            if (file) {
+                $('#upload').empty();
+                $('#upload').append("<span class=\"glyphicon glyphicon-refresh glyphicon-refresh-animate\"></span>");
                 var reader = new FileReader();
                 var project_id = $('#project').val();
                 var exists = "";
                 reader.readAsText(file, "UTF-8");
-                reader.onload = function(evt){
+                reader.onload = function (evt) {
                     var gene_list = [];
                     var current_list = [];
                     $('[name="genebutton"]').each(function (j, obj) {
@@ -1124,16 +1128,16 @@
                     var lst = evt.target.result.split('\n');
                     $.each(lst, function (i) {
                         console.log(lst[i]);
-                        if ($.inArray(lst[i].replace('\r',''), current_list) < 0) {
-                            gene_list.push(lst[i].replace(/\r/g,''))
+                        if ($.inArray(lst[i].replace('\r', ''), current_list) < 0) {
+                            gene_list.push(lst[i].replace(/\r/g, ''))
                         }
                         else {
                             console.log('exists');
-                            if(exists == "") {
-                                exists += lst[i].replace(/\r/g,'')
+                            if (exists == "") {
+                                exists += lst[i].replace(/\r/g, '')
                             }
                             else {
-                                exists += ', ' + lst[i].replace(/\r/g,'')
+                                exists += ', ' + lst[i].replace(/\r/g, '')
                             }
                         }
                     });
@@ -1152,24 +1156,23 @@
                         dataType: "json",
                         contentType: "application/json",
                         success: function (response) {
-                            $('[name="message-fade"]').each(function(i, obj){
+                            $('[name="message-fade"]').each(function (i, obj) {
                                 $(obj).remove()
                             });
-                            $('#message-fail').each(function(i, obj){
+                            $('#message-fail').each(function (i, obj) {
                                 $(obj).remove()
                             });
-                            if(exists != "") {
+                            if (exists != "") {
                                 var message = "<div class =\"alert alert-warning\" id=\"message-fail\"><strong>Silly Sausage!</strong> " + exists + " have already been added</div>";
                                 $('#genemessage').append(message);
                             }
                             $('#genemessage').append(response['message']);
                             $('#tx_table').append(response['html']);
                             $('#genelist').append(response['button_list']);
-                            if(count_genes() == 0){
+                            if (count_genes() == 0) {
                                 $('#add-all').attr('disabled', 'disabled')
                             }
-                            else if($('#add-all').attr('disabled') == 'disabled')
-                            {
+                            else if ($('#add-all').attr('disabled') == 'disabled') {
                                 $('#add-all').removeAttr('disabled')
                             }
                             $('#upload').empty();
@@ -1183,7 +1186,7 @@
                     })
 
                 };
-                reader.onerror = function(evt){
+                reader.onerror = function (evt) {
                     console.log('error')
                 }
             }
@@ -1199,11 +1202,10 @@
             if (ids.length == 0) {
             }
             else if ($('#add-regions').text() == "Add Regions") {
-                if($('#vpanelname').length) {
+                if ($('#vpanelname').length) {
                     add_regions(vpanel_id, ids, geneName)
                 }
-                else
-                {
+                else {
                     add_panel_regions(vpanel_id, ids, geneName)
                 }
             }
@@ -1223,7 +1225,7 @@
 
                 console.log(to_add);
                 console.log(to_remove);
-                if($('#vpanelname').length) {
+                if ($('#vpanelname').length) {
                     if (to_add.length > 0) {
                         add_regions(vpanel_id, to_add, geneName)
                     }
@@ -1232,22 +1234,18 @@
                         remove_vp_regions(vpanel_id, to_remove)
                     }
                 }
-                else
-                {
+                else {
                     if (to_add.length > 0) {
                         add_panel_regions(vpanel_id, to_add, geneName)
                     }
 
                     if (to_remove.length > 0) {
-                        remove_panel_regions(vpanel_id, to_remove)
+                        remove_panel_regions(vpanel_id, to_remove, geneName)
                     }
                 }
             }
 
         });
-    </script>
-
-    <script>
 
         $(document).ready(function () {
 
@@ -1263,8 +1261,7 @@
                 var project_id = $('#project').val();
                 var gene_name = $('#genes').val();
 
-                if($('#'+gene_name).length)
-                {
+                if ($('#' + gene_name).length) {
                     var fail_message = "<strong>Oh Crumbs!</strong> " + gene_name + " has already been added"
                     alert(fail_message);
                     return
@@ -1286,24 +1283,24 @@
                         dataType: "json",
                         contentType: "application/json",
                         success: function (response) {
-                            $('[name="message-fade"]').each(function(i, obj){
+                            $('[name="message-fade"]').each(function (i, obj) {
                                 $(obj).remove()
                             });
-                            $('[name="message-fail"]').each(function(i, obj){
+                            $('[name="message-fail"]').each(function (i, obj) {
                                 $(obj).remove()
                             });
                             $('#genemessage').append(response['message']);
                             $('#tx_table').append(response['html']);
                             $('#genelist').append(response['button_list']);
-                            if(count_genes() == 0){
+                            if (count_genes() == 0) {
                                 $('#add-all').attr('disabled', 'disabled')
                             }
-                            else if($('#add-all').attr('disabled') == 'disabled')
-                            {
+                            else if ($('#add-all').attr('disabled') == 'disabled') {
                                 $('#add-all').removeAttr('disabled')
                             }
                             $('#add').empty();
                             $('#add').append('Add');
+                            $('#genes').val('');
                         },
                         error: function (response) {
                             console.log($(response));
@@ -1315,13 +1312,14 @@
             }
 
             $("#add").click(function () {
-                $('#add').empty();
-                $('#add').append("<span class=\"glyphicon glyphicon-refresh glyphicon-refresh-animate\"></span>");
-                add_panel_gene()
+                if ($('#genes').val().length > 0) {
+                    $('#add').empty();
+                    $('#add').append("<span class=\"glyphicon glyphicon-refresh glyphicon-refresh-animate\"></span>");
+                    add_panel_gene()
+                }
             });
         });
-    </script>
-    <script>
+
         $(function () {
             $("#genes").autocomplete({
                 source: function (request, response) {
@@ -1336,9 +1334,8 @@
                     console.log(ui.item.value); // not in your question, but might help later
                 }
             });
-        })
-    </script>
-    <script>
+        });
+
         function get_length() {
             if ($('#tables').val() == "Transcripts") {
                 return 5
@@ -1384,23 +1381,40 @@
                     console.log(ui.item.value); // not in your question, but might help later
                 }
             });
-        })
+        });
+
+
     </script>
-    {% if table != None %}
+
+    <!--<script type="text/javascript">-->
+        <!--$(document).ready(function () {-->
+            <!--$('#panel').DataTable({-->
+                <!--"pageLength": 10,-->
+                <!--"data": "{{ table|safe }}",-->
+                <!--"columns": [{"title": "Chr"},-->
+                    <!--{"title": "Start"},-->
+                    <!--{"title": "End"},-->
+                    <!--{"title": "Gene"},-->
+                    <!--{"title": "Region Name"}-->
+                <!--]-->
+            <!--});-->
+        <!--});-->
+
+    <!--</script>-->
+
+        {% if table != None %}
     <script type="text/javascript">
 //        var dataSet = "{{ table|safe }}"
-
          $(document).ready(function() {
         $('#panel').DataTable({
             "pageLength": 10,
             data: {{ table|safe }},
              columns: [ { title: "Chr" },{ title: "Start" },{ title: "End" },{ title: "Gene" },{ title: "Region Name" } ]
         });
-
         } );
-
     </script>
     {% endif %}
+
     {% if delete == True %}
     <script type="text/javascript">
 
