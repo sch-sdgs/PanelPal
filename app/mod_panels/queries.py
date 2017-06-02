@@ -413,15 +413,26 @@ def get_altered_region_ids_exclude(s, geneid, panelid):
 
 
     sql = text("""SELECT DISTINCT regions.id as region_id,
-                    regions.start, regions.end,
+                    regions.start AS region_start,
+                    CASE WHEN (regions.start < (SELECT cds_start FROM _cds_alt WHERE _cds_alt.id = regions.id))
+                            THEN regions.start - (SELECT cds_start FROM _cds_alt WHERE _cds_alt.id = regions.id)
+                        ELSE 0 END AS ext_5,
+                    regions."end" AS region_end,
+                    CASE WHEN (regions.end > (SELECT cds_end FROM _cds_alt WHERE _cds_alt.id = regions.id))
+                            THEN (SELECT cds_end FROM _cds_alt WHERE _cds_alt.id = regions.id) - regions.end
+                        ELSE 0 END AS ext_3,
                     CASE WHEN (versions.extension_5 != (regions.start - (SELECT cds_start FROM _cds_alt WHERE _cds_alt.id = regions.id)))
                             THEN 'True'
                         WHEN (versions.extension_5 IS NULL AND regions.start < (SELECT cds_start FROM _cds_alt WHERE _cds_alt.id = regions.id))
+                            THEN 'True'
+                        WHEN regions.start > (SELECT cds_end FROM _cds_alt WHERE _cds_alt.id = regions.id)
                             THEN 'True'
                         ELSE 'False' END AS include_start,
                     CASE WHEN (versions.extension_3 != ((SELECT cds_end FROM _cds_alt WHERE _cds_alt.id = regions.id) - regions.end))
                             THEN 'True'
                         WHEN (versions.extension_3 IS NULL AND regions.end > (SELECT cds_end FROM _cds_alt WHERE _cds_alt.id = regions.id))
+                            THEN 'True'
+                        WHEN regions.end < (SELECT cds_start FROM _cds_alt WHERE _cds_alt.id = regions.id)
                             THEN 'True'
                         ELSE 'False' END AS include_end
                     FROM versions
@@ -437,10 +448,15 @@ def get_altered_region_ids_exclude(s, geneid, panelid):
 
     results = {}
     for r in regions:
-        if r.include_start == 'True':
-            results[r.region_id] = {'coord':r.start, 'position':'start'}
+        print('hey')
+        print(r.include_start)
+        print(r.include_end)
+        if r.include_start == 'True' and r.include_end == 'True':
+            results[r.region_id] = {'coord': (r.region_start, r.region_end), 'position': 'both'}
+        elif r.include_start == 'True':
+            results[r.region_id] = {'coord':r.region_start - r.ext_5, 'position':'start'}
         else:
-            results[r.region_id] = {'coord':r.end, 'position':'end'}
+            results[r.region_id] = {'coord':r.region_end + r.ext_3, 'position':'end'}
 
     return results
 
@@ -453,24 +469,47 @@ def get_altered_region_ids_include(s, geneid, panelid):
     :return:
     """
     sql = text("""CREATE TEMP TABLE _cds_alt AS
-        SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end
-        FROM tx
-        JOIN exons on tx.id = exons.tx_id
-        JOIN regions ON exons.region_id = regions.id
-        WHERE tx.gene_id = :gene_id
-        GROUP BY regions.id;""")
+                    SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end
+                    FROM tx
+                    JOIN exons on tx.id = exons.tx_id
+                    JOIN regions ON exons.region_id = regions.id
+                    WHERE tx.gene_id = :gene_id
+                    GROUP BY regions.id;""")
     values = {'gene_id':geneid}
     s.execute(sql, values)
 
+    sql = text("""CREATE TEMP TABLE _utr AS
+                    SELECT regions.id as region_id,
+                    regions.start AS region_start,
+                    regions."end" AS region_end,
+                    'True' AS include_start,
+                    'True' AS include_end
+                    FROM regions
+                    JOIN exons ON regions.id = exons.region_id
+                    JOIN tx ON tx.id = exons.tx_id
+                    JOIN genes ON genes.id = tx.gene_id
+                    WHERE genes.id = :gene_id
+                    AND (regions.start > (SELECT cds_end FROM _cds_alt WHERE _cds_alt.id = regions.id)
+                    OR regions.end < (SELECT cds_start FROM _cds_alt WHERE _cds_alt.id = regions.id))
+                    GROUP BY regions.id;""")
+    s.execute(sql, values)
 
-    sql = text("""SELECT DISTINCT regions.id as region_id,
+    sql = text("""SELECT DISTINCT regions.id AS region_id,
         regions.start, regions.end,
         CASE WHEN (versions.extension_5 == (regions.start - (SELECT cds_start FROM _cds_alt WHERE _cds_alt.id = regions.id)))
-                    THEN 'True'
-                    ELSE 'False' END AS include_start,
+		        THEN 'True'
+            WHEN (versions.extension_5 IS NULL AND regions.start < (SELECT cds_start FROM _cds_alt WHERE _cds_alt.id = regions.id))
+                THEN 'True'
+            WHEN regions.start > (SELECT cds_end FROM _cds_alt WHERE _cds_alt.id = regions.id)
+                THEN 'True'
+            ELSE 'False' END AS include_start,
         CASE WHEN (versions.extension_3 == ((SELECT cds_end FROM _cds_alt WHERE _cds_alt.id = regions.id) - regions.end))
-                    THEN 'True'
-                    ELSE 'False' END AS include_end
+                THEN 'True'
+            WHEN (versions.extension_3 IS NULL AND regions.end > (SELECT cds_end FROM _cds_alt WHERE _cds_alt.id = regions.id))
+                THEN 'True'
+            WHEN regions.end < (SELECT cds_start FROM _cds_alt WHERE _cds_alt.id = regions.id)
+                THEN 'True'
+            ELSE 'False' END AS include_end
         FROM versions
         JOIN regions ON versions.region_id = regions.id
         JOIN exons ON regions.id = exons.region_id
@@ -478,13 +517,20 @@ def get_altered_region_ids_include(s, geneid, panelid):
         JOIN genes ON genes.id = tx.gene_id
         WHERE genes.id = :gene_id
         AND versions.panel_id = :panel_id
-        AND (include_start == 'True' OR include_end == 'True')""")
+        AND (include_start == 'True' OR include_end == 'True')
+        UNION
+        SELECT region_id, region_start, region_end, include_start, include_end FROM _utr ORDER BY region_start;""")
     values = {'gene_id':geneid, 'panel_id':panelid}
     regions = s.execute(sql, values)
 
     results = {}
     for r in regions:
-        if r.include_start == 'True':
+        print('hello')
+        print(r.include_start)
+        print(r.include_end)
+        if r.include_start == 'True' and r.include_end == 'True':
+            results[r.region_id] = {'coord': (r.start, r.end), 'position': 'both'}
+        elif r.include_start == 'True':
             results[r.region_id] = {'coord':r.start, 'position':'start'}
         else:
             results[r.region_id] = {'coord':r.end, 'position':'end'}

@@ -1368,7 +1368,8 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
     else:
         if utr is None:
             include_utr = check_if_utr(s, gene_id, panel_id)
-
+            print('include')
+            print(include_utr)
             if include_utr:
                 regions = get_regions_by_geneid_with_versions(s, gene_id, panel_id)
                 ok_opac = "1"
@@ -1389,6 +1390,7 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
             remove_opac = "1"
             remove_active = "btn-danger active"
         else:
+            print('utr')
             regions = get_regions_by_geneid_with_versions(s, gene_id, panel_id)
             changed_regions = get_altered_region_ids_include(s, gene_id, panel_id)
             ok_opac = "1"
@@ -1426,7 +1428,7 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
                         <th>Chrom</th>
                         <th>Region Start</th>
                         <th>Region End</th>
-                        <th>Names</th>
+                        <th class="expand">Names</th>
                         <th>Select All <div class="material-switch pull-right">
                                             <input type="checkbox" id="checkAll">
                                             <label for="checkAll" class="label-success label-selectall"></label>
@@ -1435,10 +1437,27 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
                     </tr>
                 </thead>"""
 
+    store = {}
     for i in regions:
         v_id = str(i.region_id)
         if i.region_id in changed_regions.keys():
-            if changed_regions[i.region_id]['position'] == 'start':
+            h = """<div class=\"material-switch pull-right\">
+                                <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
+                                <label for=\"""" + v_id + """\" class=\"label-success label-region\" checked=\"checked\"></label>
+                            </div>"""
+            print(changed_regions[i.region_id])
+            if changed_regions[i.region_id]['position'] == 'both':
+                print('both')
+                start = str(changed_regions[i.region_id]['coord'][0])
+                start_style = "style=\"color:red;\" "
+                end = str(changed_regions[i.region_id]['coord'][1])
+                end_style = "style=\"color:red;\" "
+                end_column = """<div class=\"material-switch pull-right\">
+                                                <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
+                                                <label for=\"""" + v_id + """\" class=\"label-success label-region\" ></label>
+                                            </div>"""
+            elif changed_regions[i.region_id]['position'] == 'start':
+                store[i.region_id] = {"start":{'html':h, 'value':i.region_start}}
                 start = str(changed_regions[i.region_id]['coord'])
                 start_style = "style=\"color:red;\" "
                 end = str(i.region_end + i.ext_3)
@@ -1456,6 +1475,7 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
                                                 </li>
                                             </ul>"""
             else:
+                store[i.region_id] = {"end": {'html': h, 'value': i.region_end}}
                 start = str(i.region_start - i.ext_5)
                 start_style = ""
                 end = str(changed_regions[i.region_id]['coord'])
@@ -1490,13 +1510,13 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
         row = """<tr>
                     <td><label for=\"""" + v_id + "\">" + v_id + "</label></td>" + \
               "<td>" + i.chrom + "</td>" + coord + \
-              "<td>" + i.name.replace(',', '\n') + "</td>" + \
+              "<td class=\"expand\">" + i.name.replace(',', '\n') + "</td>" + \
               "<td>" + end_column + "</td></tr>"
         html += row
 
     html += "</table>"
-
-    return html
+    print(store)
+    return html, store
 
 
 @panels.route('/virtualpanels/editregions', methods=['POST'])
@@ -1521,22 +1541,28 @@ def edit_vp_regions():
     version_ids = []
     for i in regions:
         version_ids.append(i[0])
-
+    store = {}
     if not vpanel_id and len(version_ids) > 0:
         if not utr:
-            html = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id)
+            print(1)
+            html, store = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id)
         elif utr == "added":
-            html = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, utr=None)
+            print(2)
+            html, store = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, utr=None)
         else:
-            html = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, utr=True)
+            print(3)
+            html, store = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, utr=True)
         html = html.replace("Add Regions", "Update Regions")
     elif not vpanel_id:
         if not utr:
-            html = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, added=True)
+            print(5)
+            html, store = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, added=True)
         else:
-            html = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, added=True, utr=True)
-
-    d = {'html': html, 'ids': version_ids}
+            print(6)
+            html, store = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, added=True, utr=True)
+    print(store)
+    print(version_ids)
+    d = {'html': html, 'ids': version_ids, 'store':store}
     return jsonify(d)
 
 

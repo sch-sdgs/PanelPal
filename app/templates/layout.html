@@ -408,13 +408,16 @@
                     $($(td).children()).remove();
                     var html;
                     if ("start" in store) {
-                        html = store["start"]["html"]
+                        html = store["start"]["html"];
+                        $(td).parent().children().eq(2).children().eq(0).removeAttr('style')
                     }
                     else {
-                        html = store["end"]["html"]
+                        html = store["end"]["html"];
+                        $(td).parent().children().eq(3).children().eq(0).removeAttr('style')
                     }
                     $(td).append(html);
                     $(td).children().eq(0).children().eq(0).prop('checked', true);
+
                 },
                 error: function (response) {
                     console.log($(response).responseText);
@@ -636,9 +639,7 @@
                 }
                 vpanel_id = null;
             }
-            console.log('length');
-            console.log($('#regions').children().length);
-            console.log(include_utr);
+
             var dict = {
                 "panel_id": panel_id,
                 "gene_id": gene_id,
@@ -649,7 +650,6 @@
             var data = JSON.stringify(dict);
 
             var url = '';
-            console.log($(element).hasClass('btn-custom'));
             if ($(element).hasClass('btn-custom')) {
                 url = "{{url_for('panels.get_custom_regions')}}";
             }
@@ -663,24 +663,31 @@
                 dataType: "json",
                 contentType: "application/json",
                 success: function (response) {
-                    console.log(response);
                     $('#regions').children().remove();
                     $('#regions').append(response['html']);
-                    console.log(response['ids']);
                     var ids = response['ids'];
+                    try {
+                        for (var key in response['store']) {
+                            if (response['store'].hasOwnProperty(key)) {
+                                sessionStorage.setItem(key, JSON.stringify(response['store'][key]));
+                            }
+                        }
+                    }
+                    catch (err) {
+                    }
 
                     sessionStorage.setItem("current_ids", JSON.stringify(response['ids']));
 
                     $('.label-region').each(function (i, obj) {
-                        if ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) > -1) {
+                        //this gets the third parent of the label (tr)
+                        var row = $(obj).parent().parent().parent();
+                        //this get the third child (index 2) of the row and the child of that row is the text box
+                        //check that ID is in list and
+                        var style = $($($($(row[0])).children().eq(2)[0])[0]).children().eq(0).attr('style');
+                        if (($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) > -1 && style != "color:red;") || ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) == -1 && style == "color:red;")) {
                             $(obj).trigger('click')
                         }
                     });
-
-                    $('#add-regions').attr('disabled', 'disabled');
-
-                    console.log('length');
-                    console.log($('#regions').children().length);
                 },
                 error: function (response) {
                     console.log($(response).responseText);

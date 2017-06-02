@@ -24,6 +24,10 @@ table{
     table-layout: fixed;
 }
 
+table td.expand {
+    width: 99%
+}
+
 /*.table-nonfluid {*/
    /*width: auto !important;*/
     /*word-wrap: break-word;*/
