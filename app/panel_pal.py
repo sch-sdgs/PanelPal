@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import scoped_session, sessionmaker
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import inspect
@@ -11,8 +12,13 @@ app = Flask(__name__)
 app.config.from_object('config')
 app.secret_key = 'development key'
 db = SQLAlchemy(app)
+
+session_factory = sessionmaker(bind=db)
+session = scoped_session(session_factory)
 s = db.session
 
+logging.basicConfig()
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 handler = TimedRotatingFileHandler('PanelPal.log', when="d", interval=1, backupCount=30)
 handler.setLevel(logging.INFO)
@@ -49,7 +55,7 @@ from mod_api.views import api_blueprint
 from mod_search.views import search
 
 
-#from app.views import *
+from app.views import *
 
 
 

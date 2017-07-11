@@ -1,4 +1,4 @@
-from app.queries import get_current_version, get_current_version_vp
+from app.mod_panels.queries import get_current_version, get_current_version_vp
 from sqlalchemy import and_, or_
 
 from app.mod_projects.queries import get_preftx_id_by_project_id, get_current_preftx_version, get_project_id_by_name

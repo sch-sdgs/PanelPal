@@ -90,8 +90,8 @@ class PrefTxVersions(db.Model):
 
 class VPRelationships(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    intro = db.Column(db.Integer)
-    last = db.Column(db.Integer)
+    intro = db.Column(db.DECIMAL)
+    last = db.Column(db.DECIMAL)
     version_id = db.Column(db.Integer, db.ForeignKey('versions.id'))
     vpanel_id = db.Column(db.Integer, db.ForeignKey('virtual_panels.id'))
 
@@ -108,7 +108,7 @@ class VPRelationships(db.Model):
 class VirtualPanels(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50))
-    current_version = db.Column(db.Integer)
+    current_version = db.Column(db.DECIMAL)
     vprelationship = db.relationship('VPRelationships', backref='i', lazy='dynamic')
 
     def __init__(self, name, current_version):

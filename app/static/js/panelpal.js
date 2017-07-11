@@ -1,0 +1,1545 @@
+/**
+ * Created by cytng on 23/05/2017.
+ */
+
+/**
+ * When a region is added to the panel the final window message is changed
+ */
+function region_added() {
+    var name;
+    if (window.location.href.indexOf('edit') > -1) {
+        name = "edited"
+    }
+    else {
+        name = "completed"
+    }
+
+    var comp_messge = $('#complete_message');
+    comp_messge.removeClass('alert-danger').addClass('alert-success');
+    comp_messge.html('<strong>Congratulations!</strong> You have ' + name + ' your panel');
+    var cancel = $('#cancel');
+    cancel.removeClass('btn-danger').addClass('btn-success');
+    cancel.text('Done!');
+    cancel.attr('type', 'submit');
+    $('#cancel_logo').removeClass('fa-remove').addClass('fa-check');
+    $('#make_live').removeAttr('hidden')
+}
+
+/**
+ * When create is cancelled the panel or virtual panel is removed from the database.
+ * If vp_name is none, it uses the panel name.
+ *
+ * @param vp_name: the name of the virtual panel
+ * @param panel_name: the name of the panel
+ */
+function remove_panel(vp_name, panel_name) {
+    var dict = {};
+    var url = "";
+    var redirect = "";
+    if (vp_name) {
+        dict = {
+            "vp_name": vp_name
+        };
+        url = Flask.url_for('panels.remove_vp');
+        redirect = Flask.url_for('panels.create_virtual_panel_process');
+    }
+    else {
+        dict = {
+            "panel_name": panel_name
+        };
+        url = Flask.url_for('panels.remove_panel');
+        redirect = Flask.url_for('panels.create_panel_process');
+    }
+    var data = JSON.stringify(dict);
+
+
+    $.ajax({
+        type: "POST",
+        url: url,
+        data: data,
+        dataType: "json",
+        contentType: "application/json",
+        success: function () {
+            window.location.replace(redirect);
+        },
+        error: function (xhr, status, error) {
+            console.log(error);
+            $('#trace').append("<p>" + error + "</p>");
+            $('#ajaxModal').modal('show');
+            return false;
+        }
+
+    });
+}
+
+/**
+ * When cancel is clicked, js checks if in create or edit wizard and executes appropriate function.
+ * Edit is redirected to view panel and create removes the panel from the database.
+ */
+$(document).on('click', '#cancel', function () {
+    var vpanel = $('#vpanelname');
+    var vp_name = vpanel.val();
+    var panel_name = $('#panelname').val();
+    if ($('#cancel').hasClass('btn-danger') && window.location.pathname.indexOf("wizard") >= 0) {
+        remove_panel(vp_name, panel_name)
+    }
+    else if (window.location.pathname.indexOf("edit") >= 0) {
+        if (vpanel.length) {
+            console.log($('#main').attr('name'));
+            var url = Flask.url_for('panels.view_vpanel') + "?id=" + $('#main').attr('name');
+            console.log(url);
+            window.location.replace(url);
+        }
+        else {
+            window.location.replace(Flask.url_for('panels.view_panels') + "?id=" + $('#main').attr('name'));
+        }
+    }
+});
+
+/**
+ * Method to add a panel or virtual panel to the database and unlock the other wizard tabs.
+ * Method determines if panel or virtual panel needs to be added.
+ *
+ * @param changeTab: indicates that back or next have been clicked. If none, tab page clicked is selected (e)
+ * @param e: Tab page that has been clicked
+ */
+function add_panel(changeTab, e) {
+    var dict = {};
+    var url = "";
+    var redirect = "";
+    var vpanel = $('#vpanelname');
+
+    if (vpanel.length) {
+        dict = {
+            "vp_name": vpanel.val(),
+            "panel_name": null,
+
+            "panel_id": $('#panel').val(),
+            "project_id": null
+        };
+        url = Flask.url_for('panels.add_vp');
+        redirect = Flask.url_for('panels.create_virtual_panel_process') + "?id=";
+    }
+    else {
+        dict = {
+            "vp_name": null,
+            "panel_name": $('#panelname').val(),
+
+            "panel_id": null,
+            "project_id": $('#project').val()
+        };
+        url = Flask.url_for('panels.add_panel');
+        redirect = Flask.url_for('panels.create_panel_process') + "?id=";
+    }
+    var data = JSON.stringify(dict);
+    var complete = false;
+    $.when($.ajax({
+        type: "POST",
+        url: url,
+        data: data,
+        dataType: "json",
+        contentType: "application/json",
+        success: function (response) {
+            var new_html = "";
+            var msg = $('#message');
+            if (response == -1 && vpanel.length) {
+                if (vpanel.val().length == 0) {
+                    new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't added a panel name</div>";
+                    msg.append(new_html)
+                }
+                else {
+                    new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
+                    msg.append(new_html)
+                }
+            }
+            else if (response == -1 && $('#panelname').length) {
+                if ($('#panelname').val().length == 0) {
+                    new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't added a panel name</div>";
+                    msg.append(new_html)
+                }
+                else {
+                    new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
+                    msg.append(new_html)
+                }
+            }
+            else if (response == -1) {
+                new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
+                msg.append(new_html)
+            }
+            else {
+                var newUrl = redirect + response;
+                var main = $('#main');
+                main.attr('name', response);
+                main.attr('action', newUrl);
+                $('.glyphicon-transfer').attr('href', '#select_tx');
+                $('.glyphicon-list-alt').attr('href', '#select_genes');
+                $('.glyphicon-th-large').attr('href', '#select_regions');
+                $('.glyphicon-ok').attr('href', '#submit_vp');
+                $("#vpanelname").attr("disabled", "disabled");
+                $("#panel").attr("disabled", "disabled");
+                $("#panelname").attr("disabled", "disabled");
+                $("#project").attr("disabled", "disabled");
+                $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
+
+                complete = true;
+
+                if (changeTab == 'next' || changeTab == 'back') {
+                    change_tab(changeTab)
+                }
+                else {
+                    var target = $('#' + e);
+                    target.removeClass('glyphicon-new').addClass('glyphicon-new-selected').blur();
+                    target.tab('show');
+                }
+            }
+        },
+        error: function (xhr, status, error) {
+            console.log(error);
+            $('#trace').append("<p>" + error + "</p>");
+            $('#ajaxModal').modal('show');
+            return false;
+        }
+    })).done(function () {
+        return complete;
+    });
+
+}
+
+$(document).on('click', '.glyphicon', function (j) {
+
+    $('#message').children().remove();
+
+    if ($('.glyphicon-new-selected').attr('href') == '#initialise' && $("#vpanelname").attr("disabled") != "disabled" && $("#panelname").attr("disabled") != "disabled") {
+        add_panel(false, $(j.target).attr('id'));
+    }
+    else if ($(j.target).hasClass('glyphicon-new') || $(j.target).hasClass('glyphicon-new-selected')) {
+        $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
+        $(this).addClass('glyphicon-new-selected').removeClass('glyphicon-new').blur();
+    }
+});
+
+function change_tab(tabChange) {
+    var activeTab = $('.tab-pane.active');
+    if (tabChange == 'next') {
+        var nextTab = activeTab.next('.tab-pane').attr('id');
+        var nextTab_elem = $('[href="#' + nextTab + '"]');
+        nextTab_elem.addClass('glyphicon-new-selected').removeClass('glyphicon-new');
+        nextTab_elem.tab('show');
+    }
+    else {
+        var prevTab = activeTab.prev('.tab-pane').attr('id');
+        var prevTab_elem = $('[href="#' + prevTab + '"]');
+        prevTab_elem.addClass('glyphicon-new-selected').removeClass('glyphicon-new');
+        prevTab_elem.tab('show');
+    }
+}
+
+$(document).on('click', '.next-step, .prev-step', function (e) {
+    var activeTab = $('.tab-pane.active');
+    $('#message').children().remove();
+    var tab = 'back';
+    var target;
+    if ($(e.target).is("button")) {
+        target = $(e.target)
+    }
+    else {
+        target = $(e.target).parent()
+    }
+    if ($(target).hasClass('next-step')) {
+        tab = 'next'
+    }
+    if ($(activeTab).attr('id') == "initialise" && $('#panelname').attr('disabled') != 'disabled' && $("#vpanelname").attr("disabled") != "disabled") {
+        add_panel(tab, $(e))
+    }
+    else {
+        $('.glyphicon.glyphicon-new-selected').removeClass('glyphicon-new-selected').addClass('glyphicon-new');
+        change_tab(tab)
+    }
+});
+
+$(document).on('change', '#panel', function () {
+    $('#geneselector').children().remove();
+    $('#loading').append("<br/><center><div class=\"row\"><div class=\"col-md-5\"></div><div class=\"col-md-2\"><div class=\"loader\"></div></div><div class=\"col-md-5\"></div></div></center>");
+
+    var panel_id = $('#panel').val();
+    var dict = {
+        "panel": panel_id
+    };
+    var data = JSON.stringify(dict);
+
+    $.ajax({
+        type: "POST",
+        url: Flask.url_for('panels.select_vp_genes'),
+        data: data,
+        dataType: "json",
+        contentType: "application/json",
+        success: function (response) {
+            $('#loading').children().remove();
+            $('#geneselector').append(response)
+        },
+        error: function (xhr, status, error) {
+            console.log(error);
+            $('#trace').append("<p>" + error + "</p>");
+            $('#ajaxModal').modal('show');
+            return false;
+        }
+
+    });
+});
+
+$(document).on('focusin', '[name="region_start"]', function () {
+    var row = $(event.target).parent().parent();
+    var td = $(row).children().eq(5);
+    var div = $(td).children().eq(0);
+    var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+    if ($.inArray(parseInt(region_id), JSON.parse(sessionStorage.getItem("current_ids"))) > -1) {
+        var current = sessionStorage.getItem(region_id);
+        var dict = {};
+        var arr = {"value": $(event.target).val(), "html": $(div).prop('outerHTML')};
+        if (current == null) {
+            dict["start"] = arr;
+        }
+        else {
+            dict = JSON.parse(current);
+            dict["start"] = arr;
+        }
+        sessionStorage.setItem(region_id, JSON.stringify(dict));
+        $($(td).children()).remove();
+        var html = '<ul class="list-unstyled list-inline pull-right"><li><button type="button" class="btn btn-small btn-success" name="update" data-name="region_start"><span class="glyphicon glyphicon-floppy-disk"></span></button></li><li><button type="button" class="btn btn-small btn-danger" name="undo"><span class="glyphicon glyphicon-remove"></span></button></li></ul>';
+        $(td).append(html);
+    }
+});
+
+$(document).on('focusout', '[name="region_start"]', function (e) {
+    if($(e.relatedTarget).attr('name') != 'update'){
+        var target = $(event.target);
+        var row = $(event.target).parent().parent();
+        // this section populates row and target correctly if event is triggered by check_regions() returning false
+        if ($(row).hasClass('list-unstyled')){
+            row = $(row).parent().parent();
+            target = $(row).children().eq(2).children().eq(0);
+        }
+        else if ($(row).parent().hasClass('list-unstyled')){
+            row = $(row).parent().parent().parent();
+            target = $(row).children().eq(2).children().eq(0);
+        }
+        //
+        var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+        var td = $(row).children().eq(5);
+        var store = JSON.parse(sessionStorage.getItem(region_id));
+        if (store == null) {
+        }
+        else if (!"start" in store) {
+        }
+        else if ($(target).val() == store["start"]["value"]) {
+            $($(td).children()).remove();
+            $(td).append(store["start"]["html"]);
+            $(td).children().eq(0).children().eq(0).prop('checked', true);
+        }
+    }
+});
+
+$(document).on('focusin', '[name="region_end"]', function () {
+    var row = $(event.target).parent().parent();
+    var td = $(row).children().eq(5);
+    var div = $(td).children().eq(0);
+    var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+    if ($.inArray(parseInt(region_id), JSON.parse(sessionStorage.getItem("current_ids"))) > -1) {
+        var current = sessionStorage.getItem(region_id);
+        var dict = {};
+        var arr = {"value": $(event.target).val(), "html": $(div).prop('outerHTML')};
+        if (current == null) {
+            dict["end"] = arr;
+        }
+        else {
+            dict = JSON.parse(current);
+            dict["end"] = arr;
+        }
+        sessionStorage.setItem(region_id, JSON.stringify(dict));
+        $($(td).children()).remove();
+        var html = '<ul class="list-unstyled list-inline pull-right"><li><button type="button" class="btn btn-small btn-success" name="update" data-name="region_start"><span class="glyphicon glyphicon-floppy-disk"></span></button></li><li><button type="button" class="btn btn-small btn-danger" name="undo"><span class="glyphicon glyphicon-remove"></span></button></li></ul>';
+        $(td).append(html);
+    }
+});
+
+$(document).on('focusout', '[name="region_end"]', function (e) {
+    if($(e.relatedTarget).attr('name') != 'update') {
+        var target = $(event.target);
+        var row = $(event.target).parent().parent();
+        // this section populates row and target correctly if event is triggered by check_regions() returning false
+        if ($(row).hasClass('list-unstyled')){
+            row = $(row).parent().parent();
+            target = $(row).children().eq(2).children().eq(0);
+        }
+        else if ($(row).parent().hasClass('list-unstyled')){
+            row = $(row).parent().parent().parent();
+            target = $(row).children().eq(2).children().eq(0);
+        }
+        //
+        var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+        var td = $(row).children().eq(5);
+        var store = JSON.parse(sessionStorage.getItem(region_id));
+        if (store == null) {
+        }
+        else if (!"end" in store) {
+        }
+        else if ($(target).val() == store["end"]["value"]) {
+            $($(td).children()).remove();
+            $(td).append(store["end"]["html"]);
+            $(td).children().eq(0).children().eq(0).prop('checked', true);
+        }
+    }
+});
+
+function checkRegions(row, changed, prev) {
+    var startBox = $(row).children().eq(2).children().eq(0);
+    var endBox = $(row).children().eq(3).children().eq(0);
+    if ($(startBox).val() > $(endBox).val()) {
+        $('#regionModal').modal('show');
+        if(changed == 'start'){
+            $(startBox).val(prev);
+            $(startBox).trigger('focusout')
+        }
+        else{
+            $(endBox).val(prev);
+            $(endBox).trigger('focusout')
+        }
+        return false
+    }
+    var newVal;
+    var cdsVal;
+    if (changed == 'start') {
+        newVal = $(startBox).val();
+        cdsVal = $(startBox).attr('id');
+
+        if (newVal > cdsVal) {
+            $('#cdsModal').modal('show');
+            return false
+        }
+    }
+    else {
+        newVal = $(endBox).val();
+        cdsVal = $(endBox).attr('id');
+
+        if (newVal < cdsVal) {
+            $('#cdsModal').modal('show');
+            return false
+        }
+    }
+    console.log(cdsVal);
+    console.log(newVal);
+
+    return true
+}
+
+$(document).on('click', '#region-ok', function () {
+
+    var button = $('[name="update"]');
+    var row = $(button).parent().parent().parent().parent();
+    var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+    var store = JSON.parse(sessionStorage.getItem(region_id));
+
+    update_region($(row), store, region_id);
+
+});
+
+$(document).on('click', '#region-cancel', function () {
+    console.log('there');
+    console.log($('[name="undo"]'));
+    $('[name="undo"]').trigger('click');
+
+});
+
+function update_region(row, store, region_id) {
+    var ext_3 = null;
+    var ext_5 = null;
+    var new_val;
+    var no_ext;
+
+    if ("start" in store) {
+        new_val = $(row).children().eq(2).children().eq(0).val();
+        no_ext = $(row).children().eq(2).children().eq(0).attr('id');
+        ext_5 = no_ext - new_val
+    }
+
+    if ("end" in store) {
+        new_val = $(row).children().eq(3).children().eq(0).val();
+        no_ext = $(row).children().eq(3).children().eq(0).attr('id');
+        ext_3 = new_val - no_ext
+    }
+
+    $(event.target).removeClass('glyphicon-floppy-disk').addClass('glyphicon-refresh glyphicon-refresh-animate');
+
+    var dict = {
+        "region_id": region_id,
+        "panel_id": $('#main').attr('name'),
+        "ext_3": ext_3,
+        "ext_5": ext_5
+    };
+
+    var data = JSON.stringify(dict);
+
+    $.ajax({
+        type: "POST",
+        url: Flask.url_for('panels.update_ext'),
+        data: data,
+        dataType: "json",
+        contentType: "application/json",
+        success: function () {
+            var td = $(row).children().eq(5);
+            $($(td).children()).remove();
+            var html;
+            if ("start" in store) {
+                html = store["start"]["html"];
+                $(td).parent().children().eq(2).children().eq(0).removeAttr('style')
+            }
+            else {
+                html = store["end"]["html"];
+                $(td).parent().children().eq(3).children().eq(0).removeAttr('style')
+            }
+            $(td).append(html);
+            $(td).children().eq(0).children().eq(0).prop('checked', true);
+            region_added()
+
+        },
+        error: function (xhr, status, error) {
+            console.log(error);
+            $('#trace').append("<p>" + error + "</p>");
+            $('#ajaxModal').modal('show');
+            return false;
+        }
+
+    });
+}
+
+$(document).on('click', '[name="update"]', function () {
+    var row;
+    if ($(event.target).attr('name') == 'update') {
+        row = $(event.target).parent().parent().parent().parent();
+    }
+    else {
+        row = $(event.target).parent().parent().parent().parent().parent();
+    }
+
+    var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+
+    var store = JSON.parse(sessionStorage.getItem(region_id));
+
+    var complete;
+    if ("start" in store) {
+        if(store["start"]["value"] == $(row).children().eq(2).children().eq(0).val())
+        {
+            $(row).children().eq(2).children().eq(0).trigger('focusout');
+            return
+        }
+        complete = checkRegions(row, 'start', store["start"]["value"]);
+    }
+    if ("end" in store) {
+        if(store["end"]["value"] == $(row).children().eq(3).children().eq(0).val())
+        {
+            $(row).children().eq(3).children().eq(0).trigger('focusout');
+        }
+        complete = checkRegions(row, 'end', store["end"]["value"]);
+    }
+
+    if (complete) {
+        update_region(row, store, region_id)
+    }
+
+
+});
+
+$(document).on('click', '[name="undo"]', function () {
+    var target = $('[name="undo"]');
+    var row = $(target).parent().parent().parent().parent();
+    var region_id = $(row).children().eq(0).children().eq(0).attr('for');
+    var store = JSON.parse(sessionStorage.getItem(region_id));
+    var html;
+    if ("start" in store) {
+        $(row).children().eq(2).children().eq(0).val(store["start"]["value"]);
+        html = store['start']['html']
+    }
+
+    if ("end" in store) {
+        $(row).children().eq(3).children().eq(0).val(store["end"]["value"]);
+        html = store['end']['html']
+    }
+
+    var td = $(row).children().eq(5);
+    $($(td).children()).remove();
+    $(td).append(html);
+    $(td).children().eq(0).children().eq(0).prop('checked', true);
+});
+
+$(document).on('click', '.label-gene', function () {
+    var target = $(event.target);
+    var gene_switch;
+    var geneName = '';
+    if ($(target).is("button")) {
+        geneName = $(target).attr('name');
+        $('.label-gene').each(function (i, obj) {
+            if ($(obj).attr('for') == geneName) {
+                gene_switch = $(obj);
+                return false;
+            }
+        });
+    }
+    else {
+        geneName = $(event.target).attr('for');
+        gene_switch = $(event.target)
+    }
+
+    if ($(gene_switch).attr('disabled') != 'disabled') {
+        if ($(gene_switch).attr('checked') == 'checked')//uncheck and remove gene button
+        {
+            $(gene_switch).removeAttr('checked');
+            $('[name="genebutton"]').each(function (i, obj) {
+                if ($(obj).attr('data-name') == geneName) {
+                    $(obj).remove();
+                    if ($('#remove-gene').attr('name') == geneName) {
+                        $('#regions').children().remove();
+                    }
+                    return false;
+                }
+            })
+        }
+        else {
+            $(event.target).attr('checked', 'checked');
+            var geneId = $("#" + geneName).attr('name');
+            $('#genelist').append("<button name=\"genebutton\" type=\"button\" class=\"btn btn-danger btn-md btngene\" data-name=\"" + geneName + "\" data-id=\"" + geneId + "\"><span class='glyphicon glyphicon-pencil'></span> " + geneName + "</button> ");
+            if (count_genes() == 0) {
+                $('#add-all').attr('disabled', 'disabled')
+            }
+            else if ($('#add-all').attr('disabled') == 'disabled') {
+                $('#add-all').removeAttr('disabled')
+            }
+        }
+    }
+});
+
+$(document).on('click', '[id^="btnO"]', function () {
+    console.log('clicked');
+    var notchecked = $('input[type="radio"][name="menucolor"]').not(':checked');
+    console.log(notchecked);
+    //$('.navbar.'+notchecked.val()).toggleClass('navbar-default navbar-inverse');
+    console.log($(notchecked).prop('checked'));
+    notchecked.prop("checked", true);
+    console.log($(notchecked).prop('checked'));
+    $(this).parent().find('a').each(function () {
+        if ($(this).attr('id') == 'btnOn') {
+            $(this).toggleClass('active btn-success btn-default');
+        } else {
+            $(this).toggleClass('active btn-danger btn-default');
+        }
+
+    });
+    doChange(notchecked);
+});
+
+$(document).on('change', 'input[type="radio"][name="menucolor"]', function () {
+    doChange(this);
+});
+
+function doChange() {
+    var btnOnGlyph = $('#btnOn .glyphicon-ok');
+    var btnOffGlyph = $('#btnOff .glyphicon-remove');
+
+    if (btnOnGlyph.attr('style') == 'opacity: 0;') {
+        $('#btnOff').removeClass('active');
+        btnOffGlyph.attr('style', 'opacity: 0;');
+        btnOnGlyph.attr('style', 'opacity: 1;');
+        $('#btnOn').focus();
+    }
+    else {
+        $('#btnOn').removeClass('active');
+        btnOnGlyph.attr('style', 'opacity: 0;');
+        btnOffGlyph.attr('style', 'opacity: 1;');
+        $('#btnOff').focus();
+    }
+
+    $('#region-table').remove();
+    $('#regions').append("<br/><center><div class=\"row\"><div class=\"col-md-5\"></div><div class=\"col-md-2\"><div class=\"loader\"></div></div><div class=\"col-md-5\"></div></div></center>");
+    get_regions($('.btn-warning'));
+}
+
+$(document).on('click', '#create-regions', function () {
+    $('#add-custom-region').removeAttr('style');
+});
+
+$(document).on('click', '#add-custom', function () {
+    var custom_message = $('#custom-message');
+    custom_message.attr('style', "display: none;");
+    custom_message.children().remove();
+    custom_message.append("<strong>You can't add that!</strong> ");
+    var chrom = $('#chrom').val();
+    var start = $('#start-pos').val();
+    var end = $('#end-pos').val();
+    var name = $('#region-name').val();
+    var message = '';
+    if (chrom == 0) {
+        message = "You haven't picked a chromosome"
+    }
+    else if (start.length == 0) {
+        message = 'The start position is not defined'
+    }
+    else if (end.length == 0) {
+        message = 'The end position is not defined'
+    }
+    else if (name.length == 0) {
+        message = 'The region name is not defined'
+    }
+    else if (start > end) {
+        message = "The start position is greater the end position"
+    }
+    else if (!/^[a-z0-9_\->]+$/i.test(name)) {
+        message = "The name field can only contain numbers, letters and the following special characters '_->'"
+    }
+
+    if (message != '') {
+        custom_message.append(message);
+        custom_message.removeAttr('style')
+    }
+    else {
+        var dict = {
+            "panel_id": $('#main').attr('name'),
+            "chrom": chrom,
+            "start": start,
+            "end": end,
+            "name": name
+        };
+        var data = JSON.stringify(dict);
+
+        $.ajax({
+            type: "POST",
+            url: Flask.url_for('panels.create_panel_custom_regions'),
+            data: data,
+            dataType: "json",
+            contentType: "application/json",
+            success: function () {
+                $('#add-custom-region').attr('style', "display: none;");
+                $('#chrom').val(0);
+                $('#start-pos').val('');
+                $('#end-pos').val('');
+                $('#region-name').val('');
+                get_regions($('.btn-custom'));
+
+                region_added()
+            },
+            error: function (xhr, status, error) {
+                console.log(error);
+                $('#trace').append("<p>" + error + "</p>");
+                $('#ajaxModal').modal('show');
+                return false;
+            }
+
+        });
+    }
+});
+
+function count_genes() {
+    var not_added = 0;
+    $('.btngene').each(function (i, obj) {
+        if ($(obj).children().eq(0).hasClass('glyphicon-pencil')) {
+            not_added += 1
+        }
+    });
+    return not_added
+}
+
+
+function get_regions(element) {
+    var gene_id = $(element).attr('data-id');
+    var gene_name = $(element).attr('data-name');
+    var panel_id = '';
+    var vpanel_id = '';
+    var include_utr = false;
+    var panel = $('#panel');
+    if (panel.length) {
+        panel_id = panel.val();
+        vpanel_id = $('#main').attr('name');
+    }
+    else {
+        panel_id = $('#main').attr('name');
+        if ($('#btnOn').hasClass('active')) {
+            include_utr = true;
+        }
+        else if ($('#regions').children().length == 2 && $(element).children(0).hasClass("glyphicon-ok")) {
+            include_utr = "added"
+        }
+        vpanel_id = null;
+    }
+
+    var dict = {
+        "panel_id": panel_id,
+        "gene_id": gene_id,
+        "gene_name": gene_name,
+        "vpanel_id": vpanel_id,
+        "include_utr": include_utr
+    };
+    var data = JSON.stringify(dict);
+
+    var url = '';
+    if ($(element).hasClass('btn-custom')) {
+        url = Flask.url_for('panels.get_custom_regions');
+    }
+    else {
+        url = Flask.url_for('panels.edit_vp_regions');
+    }
+    $.ajax({
+        type: "POST",
+        url: url,
+        data: data,
+        dataType: "json",
+        contentType: "application/json",
+        success: function (response) {
+            var regions = $('#regions');
+            regions.children().remove();
+            regions.append(response['html']);
+            var ids = response['ids'];
+            try {
+                for (var key in response['store']) {
+                    if (response['store'].hasOwnProperty(key)) {
+                        sessionStorage.setItem(key, JSON.stringify(response['store'][key]));
+                    }
+                }
+            }
+            catch (err) {
+            }
+
+            sessionStorage.setItem("current_ids", JSON.stringify(response['ids']));
+
+            $('.label-region').each(function (i, obj) {
+                //this gets the third parent of the label (tr)
+                var row = $(obj).parent().parent().parent();
+                //this get the third child (index 2) of the row and the child of that row is the text box
+                //check that ID is in list and
+                var style = $($($($(row[0])).children().eq(2)[0])[0]).children().eq(0).attr('style');
+                if (($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) > -1 && style != "color:red;") || ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) == -1 && style == "color:red;")) {
+                    $(obj).trigger('click')
+                }
+            });
+        },
+        error: function (xhr, status, error) {
+            console.log(error);
+            $('#trace').append("<p>" + error + "</p>");
+            $('#ajaxModal').modal('show');
+            return false;
+        }
+
+    });
+}
+
+$(document).on('click', '[name="genebutton"]', function (request) {
+    var add_custom = $('#add-custom-region');
+    var regions = $('#regions');
+    if (add_custom.attr("style") == null) {
+        add_custom.attr("style", "display: none;")
+    }
+    regions.children().remove();
+    regions.append("<br/><center><div class=\"row\"><div class=\"col-md-5\"></div><div class=\"col-md-2\"><div class=\"loader\"></div></div><div class=\"col-md-5\"></div></div></center>");
+    var element = $(request.currentTarget);
+    $('.btn-warning').each(function (i, obj) {
+        if ($(obj.firstElementChild).hasClass('glyphicon-ok')) {
+            $(obj).removeClass('btn-warning').addClass('btn-success')
+        }
+        else {
+            $(obj).removeClass('btn-warning').addClass('btn-danger')
+        }
+    });
+    $(element).removeClass("btn-danger").removeClass("btn-success").addClass("btn-warning").blur();
+    get_regions($(element));
+
+});
+
+function count_ids() {
+    var ids = [];
+    $('.label-region').each(function (i, obj) {
+        if ($(obj).attr('checked') == 'checked') {
+            ids.push($(obj).attr('for'));
+        }
+    });
+    return ids
+}
+
+$(document).on('click', ".label-region", function (request) {
+
+    var obj = $(request.currentTarget);
+    var select_all = $('.label-selectall');
+    if ($(obj).attr('checked') == 'checked') {
+        $(obj).removeAttr('checked');
+        if (select_all.attr('checked') == 'checked') {
+            select_all.removeAttr('checked');
+            select_all.attr('uncheck-all', 'false');
+            select_all.trigger('click')
+        }
+    }
+    else {
+        $(obj).attr('checked', 'checked')
+    }
+
+    var count = count_ids().length;
+
+    if (count > 0) {
+        $('#add-regions').removeAttr('disabled');
+    }
+    else if ($('#add-regions').attr('disabled') != 'disabled') {
+        $('#add-regions').attr('disabled', 'disabled');
+    }
+
+
+    if (count == $('.label-region').length && select_all.attr('checked') != 'checked') {
+        select_all.attr('uncheck-all', 'false');
+        select_all.attr('checked', 'checked');
+        select_all.trigger('click')
+    }
+});
+
+$(document).on('click', ".label-selectall", function () {
+    var select_all = $('.label-selectall');
+    if (select_all.attr('uncheck-all') == 'false')//if one
+    {
+        select_all.removeAttr('uncheck-all')
+    }
+    else if (select_all.attr('checked') == 'checked') //if select all has been clicked off
+    {
+        select_all.removeAttr('checked'); //remove the checked attribute
+
+        $(".label-region").each(function (i, obj)//loop through all elements with .label-region class
+        {
+            if ($(obj).attr('checked') == 'checked')//if object is checked turn it off
+            {
+                $(obj).trigger('click');
+            }
+        });
+    }
+    else //if select all has been clicked on
+    {
+        select_all.attr('checked', 'checked');//add checked attribute
+
+        if (select_all.attr('uncheck-all') == 'false') {
+            select_all.removeAttr('checked');
+        }
+        else {
+            $(".label-region").each(function (i, obj)//loop through all elements with .label-region class
+            {
+                if ($(obj).attr('checked') != 'checked')//if object is selected do nothing
+                {
+                    $(obj).trigger('click')
+                }
+            });
+        }
+
+    }
+
+});
+
+$(document).on('click', "#remove-gene", function () {
+    var geneName = $('#remove-gene').attr('name');
+    var ids;
+    var label_gene = $('.label-gene');
+    label_gene.each(function (i, obj) {
+        if ($(obj).attr('for') == geneName) {
+            $(obj).removeAttr('disabled');
+            $(obj).removeClass('label-added').addClass('label-success');
+            var name = $(obj).attr('for');
+            $('#' + name).removeAttr('disabled');
+            $(obj).trigger('click');
+            return false;
+        }
+    });
+
+    if (sessionStorage.getItem('current_ids') && $('#vpanelname').length) {
+        var vpanel_id = $('#main').attr('name');
+        ids = sessionStorage.getItem('current_ids');
+        label_gene.each(function (i, obj) {
+            if ($(obj).attr('for') == geneName) {
+                $(obj).trigger('click');
+            }
+        });
+        if (JSON.parse(sessionStorage.getItem("current_ids")).length > 0) {
+            remove_vp_regions(vpanel_id, ids)
+        }
+        else {
+            $('#regions').children().remove();
+        }
+    }
+    else if (sessionStorage.getItem('current_ids') && $('#panelname').length) {
+        var panel_id = $('#main').attr('name');
+        ids = sessionStorage.getItem('current_ids');
+
+        $('[name="genebutton"]').each(function (i, obj) {
+            if ($(obj).attr('data-name') == geneName) {
+                console.log('found');
+                $(obj).remove()
+            }
+        });
+        var row = $('#' + geneName).parent().parent().parent();
+        console.log($(row[0]));
+        $(row[0]).remove();
+        if (JSON.parse(sessionStorage.getItem("current_ids")).length > 0) {
+            remove_panel_regions(panel_id, ids, geneName)
+        }
+        else {
+            $('#regions').children().remove();
+        }
+    }
+    else {
+        $('#regions').children().remove();
+    }
+});
+
+function remove_vp_regions(vpanel_id, ids, geneName) {
+    var dict = {
+        "vp_id": vpanel_id,
+        "ids": ids
+    };
+    var data = JSON.stringify(dict);
+    $.ajax({
+        type: "POST",
+        url: Flask.url_for('panels.remove_vp_regions'),
+        data: data,
+        dataType: "json",
+        contentType: "application/json",
+        success: function (response) {
+            if (response == 0) {
+                var complete = $('#complete_message');
+                complete.addClass('alert-danger').removeClass('alert-success');
+                complete.html("<strong>Oopsie Daisy!</strong> You haven't added any regions to this panel yet...");
+                var cancel = $('#cancel');
+                cancel.addClass('btn-danger').removeClass('btn-success');
+                cancel.text('Cancel');
+                cancel.removeAttr('type');
+                $('#cancel_logo').addClass('fa-remove').removeClass('fa-check');
+                $('#make_live').attr('hidden', 'hidden')
+            }
+
+            $('[name="genebutton"]').each(function (i, obj) {
+                if ($(obj).attr('data-name') == geneName) {
+                    $(obj).children('.glyphicon-pencil').removeClass('glyphicon-pencil').addClass('glyphicon-ok').blur();
+                    $(obj).removeClass('btn-warning').addClass('btn-success').blur();
+                }
+            });
+
+            $('#regions').children().remove();
+            region_added()
+        },
+        error: function (xhr, status, error) {
+            console.log(error);
+            $('#trace').append("<p>" + error + "</p>");
+            $('#ajaxModal').modal('show');
+            return false;
+        }
+
+    });
+}
+
+function remove_panel_regions(panel_id, ids, gene_name) {
+    var dict = {
+        "panel_id": panel_id,
+        "ids": ids
+    };
+    var data = JSON.stringify(dict);
+    $.ajax({
+        type: "POST",
+        url: Flask.url_for('panels.remove_panel_regions'),
+        data: data,
+        dataType: "json",
+        contentType: "application/json",
+        success: function (response) {
+            if (response == 0) {
+                var complete = $('#complete_message');
+                complete.addClass('alert-danger').removeClass('alert-success');
+                complete.html("<strong>Oopsie Daisy!</strong> You haven't added any regions to this panel yet...");
+                var cancel = $('#cancel');
+                cancel.addClass('btn-danger').removeClass('btn-success');
+                cancel.text('Cancel');
+                cancel.removeAttr('type');
+                $('#cancel_logo').addClass('fa-remove').removeClass('fa-check');
+                $('#make_live').attr('hidden', 'hidden')
+            }
+
+            $('[name="genebutton"]').each(function (i, obj) {
+                if ($(obj).attr('data-name') == gene_name && $(obj).hasClass('btn-warning')) {
+
+                    $(obj).children('.glyphicon-pencil').removeClass('glyphicon-pencil').addClass('glyphicon-ok').blur();
+                    $(obj).removeClass('btn-warning').addClass('btn-success').blur();
+                }
+            });
+
+            if (count_genes() == 0) {
+                $('#add-all').attr('disabled', 'disabled')
+            }
+            else if ($('#add-all').attr('disabled') == 'disabled') {
+                $('#add-all').removeAttr('disabled')
+            }
+
+            $('#regions').children().remove();
+        },
+        error: function (xhr, status, error) {
+            console.log(error);
+            $('#trace').append("<p>" + error + "</p>");
+            $('#ajaxModal').modal('show');
+            return false;
+        }
+
+    });
+}
+
+$(document).ready(function () {
+    $("#dialog").dialog({autoOpen: false});
+});
+
+$(document).on('click', '#add-all', function () {
+    var gene_list = [];
+    $("#all-genes-progress").removeAttr("hidden");
+    $('.btngene').each(function (i, obj) {
+        if ($(obj).children().eq(0).hasClass('glyphicon-pencil')) {
+            gene_list.push($(obj).attr('data-id'))
+        }
+    });
+
+    var total = $(gene_list).length;
+    var complete = 0;
+    var progress = 0.0;
+
+    $.each(gene_list, function (i) {
+        var dict = {
+            "gene_id": gene_list[i],
+            "panel_id": $('#main').attr('name')
+        };
+        var data = JSON.stringify(dict);
+        $.ajax({
+            type: "POST",
+            url: Flask.url_for('panels.add_all_regions'),
+            data: data,
+            dataType: "json",
+            contentType: "application/json",
+            success: function (response) {
+                var gene = response["genes"];
+                $('.btngene').each(function (i, obj) {
+                    if ($(obj).attr('data-id') == gene) {
+                        $(obj).removeClass('btn-danger').addClass('btn-success');
+                        $(obj).children().eq(0).removeClass('glyphicon-pencil').addClass('glyphicon-ok');
+                    }
+                });
+
+                complete += 1;
+                progress = complete / total * 100;
+                var progress_bar = $('.progress-bar');
+                progress_bar.attr("aria-valuenow", progress);
+                progress_bar.attr("style", "height:25px; width:" + progress.toString() + "%");
+                if (i == total - 1) {
+                    $('#dialog').dialog("destroy");
+                }
+                if (!$('#cancel').hasClass('btn-success')) {
+                    region_added()
+                }
+
+                if (count_genes() == 0) {
+                    $('#add-all').attr('disabled', 'disabled');
+                    $('#all-genes-progress').attr('hidden', 'hidden');
+                }
+                else if ($('#add-all').attr('disabled') == 'disabled') {
+                    $('#add-all').removeAttr('disabled')
+                }
+            },
+            error: function (xhr, status, error) {
+                console.log(error);
+                $('#trace').append("<p>" + error + "</p>");
+                $('#ajaxModal').modal('show');
+                return false;
+            }
+        })
+    });
+});
+
+function add_regions(vpanel_id, ids, geneName) {
+    var dict = {
+        "vp_id": vpanel_id,
+        "ids": ids
+    };
+    var data = JSON.stringify(dict);
+    $.ajax({
+        type: "POST",
+        url: Flask.url_for('panels.add_vp_regions'),
+        data: data,
+        dataType: "json",
+        contentType: "application/json",
+        success: function () {
+            $('[name="genebutton"]').each(function (i, obj) {
+                if ($(obj).attr('data-name') == geneName) {
+                    $(obj).children('.glyphicon-pencil').removeClass('glyphicon-pencil').addClass('glyphicon-ok').blur();
+                    $(obj).removeClass('btn-warning').addClass('btn-success').blur();
+                }
+            });
+            $('#regions').children().remove();
+
+            if (geneName != "Custom") {
+                $('#' + geneName).attr('disabled', 'disabled');
+                var label = $('[for=' + geneName + ']');
+                label.attr('disabled', 'disabled');
+                label.removeClass('label-success').addClass('label-added');
+            }
+
+            if ($('#cancel').hasClass('btn-danger')) {
+                console.log('region added');
+                region_added();
+            }
+        },
+        error: function (xhr, status, error) {
+            console.log(error);
+            $('#trace').append("<p>" + error + "</p>");
+            $('#ajaxModal').modal('show');
+            return false;
+        }
+
+    });
+}
+
+function add_panel_regions(panel_id, ids, gene_name) {
+    var pref_tx_id = $('#' + gene_name).val();
+    console.log(pref_tx_id);
+
+    var id_ext = [];
+    console.log(ids);
+    for (var id in ids) {
+        //this gets the second parent of the switch (tr)
+        var row = $('[for="' + ids[id] + '"]').parent().parent();
+        //this get the third child (index 2) of the row and the child of that row is the text box
+        //id is original start, value is textbox start so difference is the extension
+        var start = $($($($(row[0])).children().eq(2)[0])[0]).children().eq(0).attr('id');
+        var ext_5 = start - $($($($(row[0])).children().eq(2)[0])[0]).children().eq(0).val();
+
+        var end = $($($($(row[0])).children().eq(3)[0])[0]).children().eq(0).attr('id');
+        var ext_3 = $($($($(row[0])).children().eq(3)[0])[0]).children().eq(0).val() - end;
+
+        id_ext.push({"id": ids[id], "ext_5": ext_5, "ext_3": ext_3})
+    }
+
+    var dict = {
+        "panel_id": panel_id,
+        "id_ext": id_ext,
+        "pref_tx_id": pref_tx_id,
+        "project_id": $('#project').val(),
+        "gene_name": gene_name
+    };
+    var data = JSON.stringify(dict);
+    $.ajax({
+        type: "POST",
+        url: Flask.url_for('panels.add_panel_regions'),
+        data: data,
+        dataType: "json",
+        contentType: "application/json",
+        success: function () {
+            $('[name="genebutton"]').each(function (i, obj) {
+                if ($(obj).attr('data-name') == gene_name) {
+                    $(obj).children('.glyphicon-pencil').removeClass('glyphicon-pencil').addClass('glyphicon-ok').blur();
+                    $(obj).removeClass('btn-warning').addClass('btn-success').blur();
+                }
+            });
+            $('#regions').children().remove();
+
+            if (gene_name != "Custom") {
+                $('#' + gene_name).attr('disabled', 'disabled');
+            }
+
+            if ($('#cancel').hasClass('btn-danger')) {
+                console.log('region added');
+                region_added();
+            }
+
+            if (count_genes() == 0) {
+                $('#add-all').attr('disabled', 'disabled')
+            }
+            else if ($('#add-all').attr('disabled') == 'disabled') {
+                $('#add-all').removeAttr('disabled')
+            }
+        },
+        error: function (xhr, status, error) {
+            console.log(error);
+            $('#trace').append("<p>" + error + "</p>");
+            $('#ajaxModal').modal('show');
+            return false;
+        }
+
+    });
+}
+
+$(document).on('click', '#upload', function () {
+    var file = ($('#my-file-selector'))[0].files[0];
+    if (file) {
+        var upload = $('#upload');
+        upload.empty();
+        upload.append("<span class=\"glyphicon glyphicon-refresh glyphicon-refresh-animate\"></span>");
+        var reader = new FileReader();
+        var project_id = $('#project').val();
+        var exists = "";
+        reader.readAsText(file, "UTF-8");
+        reader.onload = function (evt) {
+            var gene_list = [];
+            var current_list = [];
+            $('[name="genebutton"]').each(function (j, obj) {
+                current_list.push($(obj).attr('data-name'))
+            });
+            var lst = evt.target.result.split('\n');
+            $.each(lst, function (i) {
+                console.log(lst[i]);
+                if ($.inArray(lst[i].replace('\r', ''), current_list) < 0) {
+                    gene_list.push(lst[i].replace(/\r/g, ''))
+                }
+                else {
+                    console.log('exists');
+                    if (exists == "") {
+                        exists += lst[i].replace(/\r/g, '')
+                    }
+                    else {
+                        exists += ', ' + lst[i].replace(/\r/g, '')
+                    }
+                }
+            });
+            console.log(gene_list);
+            console.log(exists);
+            var dict = {
+                "project_id": project_id,
+                "gene_list": gene_list
+            };
+
+            var data = JSON.stringify(dict);
+            $.ajax({
+                type: "POST",
+                url: Flask.url_for('panels.upload_multiple'),
+                data: data,
+                dataType: "json",
+                contentType: "application/json",
+                success: function (response) {
+                    var gene_message = $('#genemessage');
+                    $('[name="message-fade"]').each(function (i, obj) {
+                        $(obj).remove()
+                    });
+                    $('#message-fail').each(function (i, obj) {
+                        $(obj).remove()
+                    });
+                    if (exists != "") {
+                        var message = "<div class =\"alert alert-warning\" id=\"message-fail\"><strong>Silly Sausage!</strong> " + exists + " have already been added</div>";
+                        gene_message.append(message);
+                    }
+                    gene_message.append(response['message']);
+                    console.log(response['message']);
+                    $('#tx_table').append(response['html']);
+                    $('#genelist').append(response['button_list']);
+                    if (count_genes() == 0) {
+                        $('#add-all').attr('disabled', 'disabled')
+                    }
+                    else if ($('#add-all').attr('disabled') == 'disabled') {
+                        $('#add-all').removeAttr('disabled')
+                    }
+
+                    upload.empty();
+                    upload.append('Upload');
+                },
+                error: function (xhr, status, error) {
+                    console.log(error);
+                    $('#trace').append("<p>" + error + "</p>");
+                    $('#ajaxModal').modal('show');
+                    return false;
+                }
+            })
+
+        };
+        reader.onerror = function () {
+            console.log('error')
+        }
+    }
+});
+
+$(document).on('click', "#add-regions", function () {
+    var add_Regions = $('#add-regions');
+    var geneName = add_Regions.attr('name');
+    var ids = count_ids();
+    var vpanel_id = $('#main').attr('name');
+
+    if (ids.length == 0) {
+    }
+    else if (add_Regions.text() == "Add Regions") {
+        if ($('#vpanelname').length) {
+            add_regions(vpanel_id, ids, geneName)
+        }
+        else {
+            add_panel_regions(vpanel_id, ids, geneName)
+        }
+    }
+    else {
+        var to_add = [];
+        var to_remove = [];
+
+        $('.label-region').each(function (i, obj) {
+
+            if ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) > -1 && $(obj).attr('checked') != 'checked') {
+                to_remove.push($(obj).attr("for"))
+            }
+            else if ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) == -1 && $(obj).attr('checked') == 'checked') {
+                to_add.push($(obj).attr("for"))
+            }
+
+        });
+
+        if ($('#vpanelname').length) {
+            if (to_add.length > 0) {
+                add_regions(vpanel_id, to_add, geneName)
+            }
+
+            if (to_remove.length > 0) {
+                remove_vp_regions(vpanel_id, to_remove, geneName)
+            }
+        }
+        else {
+            if (to_add.length > 0) {
+                add_panel_regions(vpanel_id, to_add, geneName)
+            }
+
+            if (to_remove.length > 0) {
+                remove_panel_regions(vpanel_id, to_remove, geneName)
+            }
+        }
+    }
+
+});
+
+$(document).ready(function () {
+
+    setTimeout(function () {
+        $('#message-fade').fadeOut('slow');
+    }, 2000); // <-- time in milliseconds
+
+    $('[data-toggle="tooltip"]').tooltip();
+
+    $("#genelabels").hide();
+
+    function add_panel_gene() {
+        var project_id = $('#project').val();
+        var gene_name = $('#genes').val();
+
+        if ($('#' + gene_name).length) {
+            var fail_message = "<strong>Oh Crumbs!</strong> " + gene_name + " has already been added";
+            alert(fail_message);
+            return
+        }
+
+        if (gene_name.length != 0) {
+            var dict = {
+                "project_id": project_id,
+                "gene_name": gene_name
+            };
+
+            var data = JSON.stringify(dict);
+
+
+            $.ajax({
+                type: "POST",
+                url: Flask.url_for('panels.create_panel_get_tx'),
+                data: data,
+                dataType: "json",
+                contentType: "application/json",
+                success: function (response) {
+                    $('[name="message-fade"]').each(function (i, obj) {
+                        $(obj).remove()
+                    });
+                    $('[name="message-fail"]').each(function (i, obj) {
+                        $(obj).remove()
+                    });
+                    $('#genemessage').append(response['message']);
+                    $('#tx_table').append(response['html']);
+                    $('#genelist').append(response['button_list']);
+                    if (count_genes() == 0) {
+                        $('#add-all').attr('disabled', 'disabled')
+                    }
+                    else if ($('#add-all').attr('disabled') == 'disabled') {
+                        $('#add-all').removeAttr('disabled')
+                    }
+                    var add = $('#add');
+                    add.empty();
+                    add.append('Add');
+                    $('#genes').val('');
+                },
+                error: function (xhr, status, error) {
+                    console.log(error);
+                    $('#trace').append("<p>" + error + "</p>");
+                    $('#ajaxModal').modal('show');
+                    return false;
+                }
+            })
+        }
+    }
+
+    $("#add").click(function () {
+        if ($('#genes').val().length > 0) {
+            var add = $('#add');
+            add.empty();
+            add.append("<span class=\"glyphicon glyphicon-refresh glyphicon-refresh-animate\"></span>");
+            add_panel_gene()
+        }
+    });
+});
+
+$(function () {
+    $("#genes").autocomplete({
+        source: function (request, response) {
+            $.getJSON(Flask.url_for('panels.autocomplete'), {
+                q: request.term // in flask, "q" will be the argument to look for using request.args
+            }, function (data) {
+                response(data.matching_results); // matching_results from jsonify
+            });
+        },
+        minLength: 2,
+        select: function (event, ui) {
+            console.log(ui.item.value); // not in your question, but might help later
+        }
+    });
+});
+
+function get_length() {
+    if ($('#tables').val() == "Transcript") {
+        return 5
+    }
+    else {
+        return 2
+    }
+}
+
+$(function () {
+    $("#search_term").autocomplete({
+        source: function (request, response) {
+            var url = '';
+            var value = $('#tables').val();
+            if (value == "Genes") {
+                url = Flask.url_for('panels.autocomplete')
+            }
+            else if (value == "Transcripts") {
+                url = Flask.url_for('search.autocomplete_tx');
+            }
+            else if (value == "Panels") {
+                url = Flask.url_for('search.autocomplete_panel')
+            }
+            else if (value == "VPanels") {
+                url = Flask.url_for('search.autocomplete_vp')
+            }
+            else if (value == "Projects") {
+                url = Flask.url_for('search.autocomplete_project')
+            }
+            else if (value == "Users") {
+                url = Flask.url_for('search.autocomplete_user')
+            }
+            console.log(url);
+            console.log(value);
+            $.getJSON(url, {
+                q: request.term // in flask, "q" will be the argument to look for using request.args
+            }, function (data) {
+                response(data.matching_results); // matching_results from jsonify
+            });
+        },
+        minLength: get_length(),
+        select: function (event, ui) {
+            console.log(ui.item.value); // not in your question, but might help later
+        }
+    });
+});

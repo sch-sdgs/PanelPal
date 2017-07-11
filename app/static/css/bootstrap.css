@@ -5902,6 +5902,14 @@ button.close {
   width: auto;
   margin: 10px;
 }
+
+.vertical-align-center {
+    /* To center vertically */
+    display: table-cell;
+    vertical-align: middle;
+    pointer-events:none;
+}
+
 .modal-content {
   position: relative;
   background-color: #fff;

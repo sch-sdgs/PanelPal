@@ -1,10 +1,77 @@
 from app.queries import *
 from sqlalchemy import and_, or_
 
-from app.views import message
-from app.mod_admin.queries import get_user_id_by_username
+from app.panel_pal import message
+from app.mod_admin.queries import get_user_id_by_username, check_user_has_permission
+from app.mod_panels.queries import get_gene_id_from_name
 from app.models import *
 
+def get_genes_by_projectid_new(s, projectid):
+    """
+    gets transcripts by project id
+
+    :param s: db session
+    :param id: project id
+    :return: sql alchemy object
+    """
+    genes = s.query(Genes, Tx, PrefTxVersions, PrefTx, Projects). \
+        distinct(Genes.name). \
+        group_by(Genes.name). \
+        join(Tx). \
+        join(PrefTxVersions). \
+        join(PrefTx). \
+        join(Projects). \
+        filter(Projects.id==projectid). \
+        order_by(Genes.name).\
+        values(Tx.id.label("txid"), \
+               Projects.name.label("projectname"), \
+               Projects.id.label("projectid"), \
+               Genes.name.label("genename"), \
+               Genes.id.label("geneid"), \
+               Tx.accession, \
+               Tx.tx_start, \
+               Tx.tx_end, \
+               Tx.strand)
+    return genes
+
+def get_tx_by_gene_id(s, gene_id):
+    tx = s.query(Genes,Tx).\
+        join(Tx).\
+        filter(Genes.id==gene_id).order_by(Genes.name).values(Tx.id,Tx.accession,Genes.id.label("geneid"))
+    return tx
+
+def get_all_by_project_id(s,project_id):
+    all = s.query(Projects,Panels,Versions,VPRelationships,VirtualPanels).\
+        join(Panels).\
+        join(Versions).\
+        join(VPRelationships).\
+        join(VirtualPanels).\
+        distinct(VirtualPanels.name).\
+        filter(Projects.id == project_id).\
+        values(Projects.name.label('projectname'),
+               Projects.id.label('projectid'),
+               Panels.name.label('panelname'),
+               Panels.id.label('panelid'),
+               VirtualPanels.name.label('vpname'),
+               VirtualPanels.id.label('vpid'))
+
+    return all
+
+def check_preftx_status_query(s, id):
+    """
+    query to check the status of a virtual panel - returns fields required to decide status of a panel
+
+    :param s: db session
+    :param id: panel id
+    :return: result of query
+    """
+
+    panels = s.query(PrefTx, PrefTxVersions).filter(PrefTx.id == id).join(PrefTxVersions). \
+        values(PrefTx.current_version, \
+               PrefTxVersions.last, \
+               PrefTxVersions.intro)
+
+    return panels
 
 @message
 def create_preftx_entry(s, project_id):

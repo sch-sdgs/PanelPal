@@ -1,16 +1,31 @@
-from app.queries import *
 from flask import Blueprint
 from flask import render_template, request, url_for, jsonify, redirect, flash
 from flask.ext.login import login_required, current_user
 from collections import OrderedDict
 from app.panel_pal import s
-from app.views import row2dict,LinkColPrefTx,LinkColConditional
 from flask_table import Table, Col, LinkCol
 from forms import ProjectForm, EditPermissions
 from queries import *
 
 projects = Blueprint('projects', __name__, template_folder='templates')
 
+class LinkColConditional(LinkCol):
+    def td_contents(self, item, attr_list):
+        if item["permission"] is True:
+            return '<a href="{url}">{text}</a>'.format(
+                url=self.url(item),
+                text=self.td_format(self.text(item, attr_list)))
+        else:
+            return '-'
+
+class LinkColPrefTx(LinkCol):
+    def td_contents(self, item, attr_list):
+        if item["preftx"] is True:
+            return '<a href="{url}">{text}</a>'.format(
+                url=self.url(item),
+                text=self.td_format(self.text(item, attr_list)))
+        else:
+            return '-'
 
 class ItemTableProject(Table):
     name = Col('Name')
@@ -29,11 +44,21 @@ class ItemTablePrefTx(Table):
 
 
 class ItemTablePermissions(Table):
-    # username = Col('Username')
     username = Col('User')
     delete = LinkCol('Remove', 'projects.remove_permission',
                      url_kwargs=dict(userid='user_id', projectid='project_id', rel_id='rel_id'))
 
+def row2dict(row):
+    """
+    converts a database row from certain queries (I think .all() style queries) to a dict
+    :param row: row from db
+    :return: dict
+    """
+    d = {}
+    for column in row.__table__.columns:
+        d[column.name] = str(getattr(row, column.name))
+
+    return d
 
 @projects.route('/')
 @login_required

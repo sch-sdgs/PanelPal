@@ -1,17 +1,22 @@
 from collections import OrderedDict
 
-from app.queries import get_users, unlock_panel_query, get_username_by_user_id, get_all_locked
+from app.mod_admin.queries import *
+from app.mod_panels.queries import  unlock_panel_query
 from queries import check_if_admin, get_user_id_by_username
 from flask import Blueprint
 from flask import render_template, request, url_for, redirect
-from flask.ext.login import login_required, current_user
+from flask_login import login_required, login_user, logout_user, current_user, UserMixin
+from functools import wraps
 
-from app.panel_pal import s
+from app.panel_pal import s, app
+from app.activedirectory import UserAuthentication
 from app.mod_projects.queries import get_all_projects, get_projects_by_user, remove_user_project_rel_no_id, add_user_project_rel
-from app.views import admin_required
 from flask_table import Table, Col, LinkCol
 from forms import UserForm
 from queries import create_user, toggle_admin_query
+
+
+
 
 
 class ItemTableUsers(Table):
@@ -25,9 +30,41 @@ class ItemTableLocked(Table):
     username = Col('Locked By')
     toggle_lock = LinkCol('Toggle Lock', 'admin.toggle_locked', url_kwargs=dict(id='id'))
 
+class User(UserMixin):
+    def __init__(self, id, password=None):
+        self.id = id
+        self.password = password
+
+    def is_authenticated(self, s, id, password):
+        validuser = get_user_by_username(s, id)
+        if len(list(validuser)) == 0:
+            return False
+        else:
+            check_activdir = UserAuthentication().authenticate(id, password)
+
+            if check_activdir != "False":
+                return True
+            else:
+                return False
+
+    def is_active(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id
 
 admin = Blueprint('admin', __name__, template_folder='templates')
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args,**kwargs):
+        if check_if_admin(s,current_user.id) is False:
+            return redirect('/')
+        return f(*args, **kwargs)
+    return decorated_function
 
 @admin.route('/user', methods=['GET', 'POST'])
 @login_required

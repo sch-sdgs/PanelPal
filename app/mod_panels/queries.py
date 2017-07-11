@@ -1,17 +1,141 @@
 from app.queries import *
 from sqlalchemy import and_, or_, case
+from decimal import *
 import itertools
-from app.views import message
-from app.mod_admin.queries import get_user_id_by_username
+from app.panel_pal import message
+from app.mod_admin.queries import get_user_id_by_username, check_user_has_permission
 from app.models import *
 
+def get_virtual_panels_by_panel_id(s, id):
+    vpanels = s.query(VirtualPanels, VPRelationships, Versions, Panels, Projects). \
+        distinct(VirtualPanels.name). \
+        group_by(VirtualPanels.name). \
+        join(VPRelationships). \
+        join(Versions). \
+        join(Panels). \
+        join(Projects). \
+        filter(Panels.id == id). \
+        values(VirtualPanels.id, \
+               VirtualPanels.current_version, \
+               Panels.name.label('panelname'),
+               Panels.id.label('panelid'),
+               Projects.id.label('projectid'),
+               Panels.locked,
+               VirtualPanels.name.label('vp_name'))
+    return vpanels
+
+def get_panels_by_project_id(s, id):
+    """
+    gets panels by project id
+
+    :param s: db session
+    :param id: project id
+    :return: sql alchemy object
+    """
+    panels = s.query(Projects, Panels). \
+        join(Panels). \
+        filter_by(project_id=id). \
+        values(Projects.id.label("projectid"), \
+               Projects.name.label("projectname"), \
+               Panels.name.label("panelname"), \
+               Panels.current_version, \
+               Panels.id.label("panelid"), \
+               Panels.locked)
+
+    return panels
+
+def get_current_version(s, panelid):
+    """
+    gets current version of a panel given the panel id
+
+    :param s: db session
+    :param panelid: panel id
+    :return: the panel id
+    """
+    version = s.query(Panels).filter_by(id=panelid).values(Panels.current_version)
+    for i in version:
+        return i.current_version
+
+def get_current_version_vp(s, panelid):
+    """
+    gets current version of a panel given the panel id
+
+    :param s: db session
+    :param panelid: panel id
+    :return: the panel id
+    """
+    version = s.query(VirtualPanels).filter_by(id=panelid).values(VirtualPanels.current_version)
+    for i in version:
+        return i.current_version
+
+def get_project_id_by_panel_id(s, panelid):
+    project = s.query(Projects, Panels).join(Panels).filter(Panels.id == panelid).values(Projects.id)
+    for i in project:
+        return i.id
+
+def get_genes_by_panelid(s, panelid, current_version):
+    genes = s.query(Genes, Tx, Exons, Regions, Versions, Panels). \
+        distinct(Genes.name). \
+        group_by(Genes.name). \
+        join(Tx). \
+        join(Exons). \
+        join(Regions). \
+        join(Versions). \
+        join(Panels). \
+        filter(and_(Panels.id == panelid, Versions.intro <= current_version,
+                    or_(Versions.last >= current_version, Versions.last == None))). \
+        values(Genes.name,
+               Genes.id)
+    return genes
+
+def get_genes_by_vpanelid(s, vpanel_id, current_version):
+    genes = s.query(Genes, Tx, Exons, Regions, Versions, VPRelationships, VirtualPanels). \
+        join(Tx). \
+        join(Exons). \
+        join(Regions). \
+        join(Versions). \
+        join(VPRelationships). \
+        join(VirtualPanels). \
+        filter(and_(VirtualPanels.id == vpanel_id, VPRelationships.intro <= current_version,
+                    or_(VPRelationships.last >= current_version, VPRelationships.last == None))). \
+        distinct(Genes.name). \
+        group_by(Genes.name). \
+        values(Genes.name, Genes.id)
+
+    return genes
+
+def get_gene_id_from_name(s, gene_name):
+    gene = s.query(Genes).filter(Genes.name == gene_name).values(Genes.id)
+    for i in gene:
+        return i.id
+
+@message
+def unlock_panel_query(s, panel_id):
+    s.query(Panels).filter_by(id=panel_id).update(
+        {Panels.locked: None})
+    s.commit()
+    return True
+
+def get_all_locked_by_username(s,username):
+    """
+    gets all locked panels
+    :param s: database session
+    :return: sql alchemy generator object
+    """
+    # print username
+    # user_id = get_user_by_username(s,username)
+    # print user_id
+    locked = s.query(Panels,Users).\
+        join(Users).\
+        filter(Users.username == username).\
+        values(Panels.name,Users.username,Panels.id.label("id"))
+    return locked
 
 def check_if_locked_by_user(s, username, panel_id):
     user_id = get_user_id_by_username(s, username)
     locked = s.query(Panels).filter(or_(and_(Panels.id == panel_id, Panels.locked == user_id),
                                         and_(Panels.locked == None, Panels.id == panel_id))).values(Panels.locked)
     # locked = s.query(Panels).filter(and_(Panels.locked == None, Panels.id == panel_id)).count()
-    print locked
     for i in locked:
         return i.locked
 
@@ -81,16 +205,19 @@ def create_panel_query(s, projectid, name, username):
 
 
 @message
-def create_virtualpanel_query(s, name):
+def create_virtualpanel_query(s, name, panel_id):
     """
     creates a virtual panel in the virtual panels table and adds the vp_relationship to the broad panel
 
     :param s: db session
     :param name: name of virtual panel
+    :param panel_id: id of the parent panel
     :return: virtual panel id
     """
     try:
-        virtualpanel = VirtualPanels(name, 0)
+        current_panel_version = get_current_version(s, panel_id)
+        print(float(current_panel_version))
+        virtualpanel = VirtualPanels(name, float(current_panel_version))
         s.add(virtualpanel)
         s.commit()
         return virtualpanel.id
@@ -155,6 +282,8 @@ def add_region_to_panel(s, regionid, panelid, ext_3=None, ext_5=None):
     :return: the id in the versions table
     """
     current = get_current_version(s, panelid)
+    if not current:
+        current = 0
     version = Versions(intro=int(current) + 1, last=None, panel_id=panelid, region_id=regionid, comment=None,
                        extension_3=ext_3, extension_5=ext_5)
     s.add(version)
@@ -209,11 +338,45 @@ def add_version_to_vp(s, vp_id, version_id):
     :param version_id:
     :return:
     """
-    vp_relationship = VPRelationships(intro=1, last=None, version_id=version_id, vpanel_id=vp_id)
+    current_version = get_current_version_vp(s, vp_id)
+    if not current_version:
+        panel_id = get_panel_by_vp_id(s, vp_id)
+        current_version = get_current_version(s,panel_id)
+    vp_relationship = VPRelationships(intro=float(current_version) + float(0.1), last=None, version_id=version_id, vpanel_id=vp_id)
     s.add(vp_relationship)
     s.commit()
     return vp_relationship.id
 
+def get_prev_versions_vp(s, vp_id):
+    """
+
+    :param s:
+    :param vp_id:
+    :return:
+    """
+    sql = text("DROP TABLE IF EXISTS _intro;")
+    s.execute(sql)
+
+    sql = text("""CREATE TEMP TABLE _intro AS
+                    SELECT DISTINCT VP_relationships.intro
+                    FROM VP_relationships
+                    WHERE VP_relationships.vpanel_id = :vp_id;""")
+
+    values = {"vp_id": vp_id}
+    s.execute(sql, values)
+    sql = text("""SELECT DISTINCT VP_relationships.last as val
+                    FROM VP_relationships
+                    WHERE VP_relationships.vpanel_id = :vp_id
+                    AND val IS NOT NULL
+                    AND NOT EXISTS (SELECT * FROM _intro WHERE intro LIKE val)
+                    UNION SELECT intro as val FROM _intro
+                    ORDER BY val;""")
+    versions = s.execute(sql, values)
+
+    results = []
+    for v in versions:
+        results.append(v.val)
+    return results
 
 @message
 def create_custom_region(s, panel_id, chrom, start, end, name):
@@ -318,15 +481,12 @@ def get_vprelationships(s, vp_id, gene_id):
         join(Regions). \
         join(Exons). \
         join(Tx). \
-        filter(and_(Tx.gene_id == gene_id, VPRelationships.vpanel_id == vp_id,
-                    or_(VPRelationships.intro == current_version + 1,
-                        and_(VPRelationships.intro <= current_version,
-                             or_(VPRelationships.last != current_version, VPRelationships.last == None)
-                             )
-                        )
+        filter(and_(Tx.gene_id == gene_id,
+                    VPRelationships.intro <= float(current_version) + 0.1,
+                    or_(VPRelationships.last != current_version, VPRelationships.last == None)
                     )
                ). \
-        group_by(VPRelationships.id). \
+        group_by(VPRelationships.version_id). \
         values(VPRelationships.version_id)
     return versions
 
@@ -341,6 +501,10 @@ def get_versions(s, panel_id, gene_id):
     :return:
     """
     current_version = get_current_version(s, panel_id)
+    print(current_version)
+    if not current_version:
+        print('none')
+        current_version = 0
     versions = s.query(Versions, Regions, Exons, Tx). \
         join(Regions). \
         join(Exons). \
@@ -614,6 +778,8 @@ def get_regions_by_geneid_with_versions_no_utr(s, geneid, panel_id):
     values = {'gene_id': geneid}
     s.execute(sql, values)
     current_version = get_current_version(s, panel_id)
+    if not current_version:
+        current_version = 0
     values = {'panel_id': panel_id, 'gene_id': geneid, 'current_version': current_version,
               'new_version': current_version + 1}
 
@@ -789,6 +955,7 @@ def get_version_row(s, panel_id, region_id, current_version):
 def update_ext_query(s, version_id, panel_id=None, ext_3=None, ext_5=None, current_version=None, region_id=None):
     """
     If version row is in a live panel a new row is updated else just the relevant extension is updated.
+
     :param s:
     :param panel_id:
     :param version_id:
@@ -946,7 +1113,7 @@ def get_panel_edit(s, id, version):
 
     return query
 
-
+# todo edit this for new vp number format
 @message
 def remove_version_from_panel(s, panel_id, version_id):
     """
@@ -1135,6 +1302,11 @@ def get_regions_by_vpanelid(s, vpanelid, version):
     :param version:
     :return:
     """
+    print('version=')
+    print(version)
+    print(type(version))
+    if type(version) == float or type(version) == Decimal:
+        version = round(version, 1)
     sql = text("""CREATE TEMP TABLE _custom AS SELECT versions.id AS version_id,
                 regions.chrom, virtual_panels.current_version, virtual_panels.name AS panel_name, 'N/A' AS gene_name,
                 CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5 END AS region_start,
@@ -1148,6 +1320,7 @@ def get_regions_by_vpanelid(s, vpanelid, version):
                 AND regions.name IS NOT NULL;
                 """)
     values = {'vpanel_id': vpanelid, 'version': version}
+    print(values["version"])
     s.execute(sql, values)
 
     sql = text("""SELECT versions.id AS version_id,
@@ -1172,6 +1345,8 @@ def get_regions_by_vpanelid(s, vpanelid, version):
 
 
 def get_genes_by_vpanelid_edit(s, vpanel_id, current_version):
+
+    print(float(current_version) + 0.1)
     genes = s.query(Genes, Tx, Exons, Regions, Versions, VPRelationships, VirtualPanels). \
         join(Tx). \
         join(Exons). \
@@ -1181,10 +1356,10 @@ def get_genes_by_vpanelid_edit(s, vpanel_id, current_version):
         join(VirtualPanels). \
         filter(and_(VirtualPanels.id == vpanel_id,
                     or_(
-                        and_(VPRelationships.intro == current_version,
+                        and_(VPRelationships.intro <= current_version,
                              or_(VPRelationships.last == None,
                                  VPRelationships.last != current_version)),
-                        VPRelationships.intro == current_version + 1),
+                        VPRelationships.intro == float(current_version) + 0.1),
                     or_(VPRelationships.last >= current_version,
                         VPRelationships.last == None))). \
         distinct(Genes.name). \

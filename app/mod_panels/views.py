@@ -1,28 +1,106 @@
-from app.queries import *
 from flask import Blueprint
-from flask import render_template, request, url_for, jsonify, redirect, Response, Markup
+from flask import render_template, request, url_for, jsonify, redirect, Response
 from flask.ext.login import login_required, current_user
 from pybedtools import BedTool
 from app.panel_pal import s
-from app.views import LockCol, LinkColConditional, LabelCol, LinkColLive, NumberCol
+from app.mod_projects.views import LinkColConditional
 from flask_table import Table, Col, LinkCol
-from forms import ViewPanel, CreatePanel, CreatePanelProcess, EditPanelProcess, CreateVirtualPanelProcess, \
-    EditVirtualPanelProcess, AddGene, RemoveGene
+from forms import ViewPanel, CreatePanelProcess, EditPanelProcess, CreateVirtualPanelProcess, \
+    EditVirtualPanelProcess
 from queries import *
 from app.mod_projects.queries import get_preftx_by_gene_id, get_upcoming_preftx_by_gene_id, get_tx_by_gene_id, \
-    add_preftxs_to_panel, make_preftx_live, get_preftx_by_project_id, get_current_preftx_version, \
-    get_preftx_id_by_project_id
+    add_preftxs_to_panel, make_preftx_live, get_current_preftx_version, get_preftx_id_by_project_id
+from app.mod_admin.queries import get_username_by_user_id, check_user_has_permission
 import json
 import time
 
 panels = Blueprint('panels', __name__, template_folder='templates')
 
+class NumberCol(Col):
+    def __init__(self, name, valmin=False, attr=None, attr_list=None, **kwargs):
+        self.valmin = valmin
+        super(NumberCol, self).__init__(
+            name,
+            attr=attr,
+            attr_list=attr_list,
+            **kwargs)
+
+    def td_contents(self, item, attr_list):
+        """
+        special td contents for editing a panel - so includes form input fields etc
+        :param item:
+        :param attr_list:
+        :return:
+        """
+        id = "region_" + str(self.from_attr_list(item, ['region_id'])) + "_" + str(
+            self.from_attr_list(item, ['intro'])) + "_" + str(
+            self.from_attr_list(item, ['last'])) + "_" + str(
+            self.from_attr_list(item, ['current_version'])) + "_" + str(self.from_attr_list(item, ['id'])) + "_" + str(
+            self.from_attr_list(item, ['original_start'])) + "_" + str(
+            self.from_attr_list(item, ['extension_5'])) + "_" + str(
+            self.from_attr_list(item, ['original_end'])) + "_" + str(
+            self.from_attr_list(item, ['extension_3'])) + "_" + str(attr_list[0])
+        # todo add an id to teh input class so you can check if starts are less than ends?
+        return '<input class="form-control" value="{number}" name="{id}">'.format(
+            number=self.from_attr_list(item, attr_list), id=id)
+
+
+class LockCol(Col):
+    def __init__(self, name, attr=None, attr_list=None, **kwargs):
+        super(LockCol, self).__init__(
+            name,
+            attr=attr,
+            attr_list=attr_list,
+            **kwargs)
+
+    def td_contents(self, item, attr_list):
+        if item["locked"] is not None:
+            username = get_username_by_user_id(s, item["locked"])
+            return '<center><span class="glyphicon glyphicon-lock"  data-toggle="tooltip" data-placement="bottom" title="Locked by: ' + username + '" aria-hidden="true"></span></center>'
+        else:
+            return ''
+
+
+class LinkColLive(LinkCol):
+    def td_contents(self, item, attr_list):
+        if item["locked"] is None and item["permission"] is True and item["status"] is False:
+            return '<a href="{url}">{text}</a>'.format(
+                url=self.url(item),
+                text=self.td_format(self.text(item, attr_list)))
+        else:
+            return '-'
 
 class RegionCol(Col):
     def td(self, item, attr):
         return '<td style="word-wrap: break-word;max-width:800px;">{}</td>'.format(
             self.td_contents(item, self.get_attr_list(attr)))
 
+class LabelCol(Col):
+    def __init__(self, name, valmin=False, attr=None, attr_list=None, **kwargs):
+
+        self.valmin = valmin
+        super(LabelCol, self).__init__(
+            name,
+            attr=attr,
+            attr_list=attr_list,
+            **kwargs)
+
+    def td_contents(self, item, attr_list):
+        """
+        This is the contents of a status column to indicate whether a panel is live or has changes
+
+        :param item:
+        :param attr_list:
+        :return:
+        """
+        if self.from_attr_list(item, attr_list):
+            type = "success"
+            status = "Live"
+        else:
+            type = "danger"
+            status = "Changes"
+
+        return '<p><span class="label label-{type}">{status}</span></p>'.format(type=type, status=status)
 
 class ItemTablePanels(Table):
     panelname = Col('Name')
@@ -100,7 +178,7 @@ def isgene(s, gene):
     :return: true or false
     :rtype: Boolean
     """
-    test = s.query(Genes).filter_by(name=gene).first()
+    test = s.query(Genes).filter(Genes.name.ilike(gene)).first()
     if test is None:
         return False
     else:
@@ -156,6 +234,16 @@ def check_virtualpanel_status(s, id):
 
     return status
 
+@panels.route('/autocomplete', methods=['GET'])
+def autocomplete():
+    """
+    this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it
+    :return: jsonified gene list
+    """
+    value = str(request.args.get('q'))
+    result = s.query(Genes).filter(Genes.name.like("%" + value + "%")).all()
+    data = [i.name for i in result]
+    return jsonify(matching_results=data)
 
 @panels.route('/download')
 @login_required
@@ -353,9 +441,12 @@ def create_panel_process():
         project_id = get_project_id_by_panel_id(s, panel_id)
         preftx_id = get_preftx_id_by_project_id(s, project_id)
         version = get_current_preftx_version(s, preftx_id)
+        if not version:
+            version = 0
         if make_live == "True":
             make_preftx_live(s, preftx_id, version + 1, current_user.id)
             make_panel_live(s, panel_id, 1, current_user.id)
+        unlock_panel_query(s, panel_id)
         return redirect(url_for('panels.view_panel') + "?id=" + panel_id)
     elif request.method == "GET":
         return render_template('panel_createprocess.html', form=form, panel_id="main",
@@ -381,10 +472,12 @@ def edit_panel_process():
         project_id = get_project_id_by_panel_id(s, panel_id)
         preftx_id = get_preftx_id_by_project_id(s, project_id)
         version = get_current_preftx_version(s, preftx_id)
-
+        if not version:
+            version = 0
         if make_live == "True":
             make_preftx_live(s, preftx_id, version + 1, current_user.id)
             make_panel_live(s, panel_id, 1, current_user.id)
+        unlock_panel_query(s, panel_id)
         return redirect(url_for('panels.view_panel') + "?id=" + panel_id)
     elif request.method == "GET":
         panel_id = request.args.get('id')
@@ -471,7 +564,7 @@ def remove_panel():
 
     If the panel has not been made live it can be removed from the db.
 
-    :return: status (in JSOn format)
+    :return: status (in JSON format)
     """
     panel_name = request.json['panel_name']
     remove_panel_query(s, panel_name)
@@ -500,7 +593,7 @@ def upload_multiple():
     button_list = ''
 
     for gene in gene_list:
-        if gene == "":
+        if gene == "" or gene in added_list:
             continue
         dct = create_panel_get_tx(gene, project_id)
         if dct["message"] == "added":
@@ -557,7 +650,7 @@ def create_panel_get_tx(gene_name=None, project_id=None):
         project_id = request.json['project_id']
         json = True
     exists = isgene(s, gene_name)
-
+    print(exists)
     if exists:
         gene_id = get_gene_id_from_name(s, gene_name)
         preftx_id = get_preftx_by_gene_id
@@ -978,6 +1071,10 @@ def view_virtual_panels(id=None):
     for i in panels:
         row = dict(zip(i.keys(), i))
 
+        print(row)
+        row["current_version"] = round(row["current_version"], 1)
+        print(row)
+
         status = check_virtualpanel_status(s, row["id"])
         row["status"] = status
         permission = check_user_has_permission(s, current_user.id, row["projectid"])
@@ -1037,9 +1134,12 @@ def view_vpanel():
                 panel_name = i.panel_name
                 current_version = i.current_version
         else:
-            message = "This Panel has no regions yet & may also have chnages that have not been made live yet"
+            message = "This Panel has no regions yet & may also have changes that have not been made live yet"
             bed = 'disabled'
             current_version = version
+
+        current_version = round(current_version, 1)
+        version = round(version, 1)
 
         if check_user_has_permission(s, current_user.id, project_id):
             edit = ''
@@ -1047,10 +1147,14 @@ def view_vpanel():
             edit = 'disabled'
 
         form = ViewPanel()
-        v_list = range(1, current_version + 1)
+        v_list = get_prev_versions_vp(s, id)
         choices = []
         for i in v_list:
             choices.append((i, i))
+
+        if (current_version, current_version) not in choices:
+            choices.append((current_version, current_version))
+
         form.versions.choices = choices
         form.versions.default = current_version
         form.process()
@@ -1093,7 +1197,10 @@ def create_virtual_panel_process():
         make_live = request.form['make_live']
         vp_id = request.args.get('id')
         if make_live == "True":
-            make_vp_panel_live(s, vp_id, 1)
+            panel_id = get_panel_by_vp_id(s, vp_id)
+            current_panel_version = get_current_version(s, panel_id)
+            new_version  = float(current_panel_version) + 0.1
+            make_vp_panel_live(s, vp_id, new_version)
         panel_id = get_panel_by_vp_id(s, vp_id)
         unlock_panel_query(s, panel_id)
         return redirect(url_for('panels.view_vpanel') + "?id=" + vp_id)
@@ -1122,10 +1229,13 @@ def edit_virtual_panel_process():
     form = EditVirtualPanelProcess()
 
     vp_id = request.args.get('id')
+    print('id = ' + str(vp_id))
     panel_id = get_panel_by_vp_id(s, vp_id)
     if request.method == "POST":
-        if make_live == "True":
-            make_vp_panel_live(s, vp_id, 1)
+        if request.form['make_live'] == "True":
+            current_version = get_current_version_vp(s, vp_id)
+            new_version = float(current_version) + 0.1
+            make_vp_panel_live(s, vp_id, new_version)
         unlock_panel_query(s, panel_id)
         return redirect(url_for('panels.view_vpanel') + "?id=" + vp_id)
     elif request.method == "GET":
@@ -1147,6 +1257,7 @@ def edit_virtual_panel_process():
         genelist = ""
         vp_list = []
         for i in vp_genes:
+            print(i.id)
             vp_list.append(i.id)
 
         for i in panel_genes:
@@ -1169,7 +1280,7 @@ def edit_virtual_panel_process():
                        "\" class=\"label-success label-gene\"></label></div></li>"
             gene_html += line
 
-        url = url_for('panels.edit_virtual_panel_process')
+        url = url_for('panels.edit_virtual_panel_process') + '?id=' + str(vp_id)
         return render_template('virtualpanels_createprocess.html', form=form, genes=gene_html, genelist=genelist,
                                vp_id=vp_id, panel_name=vp_name, current_version=vp_version, url=url)
 
@@ -1184,7 +1295,7 @@ def add_vp():
     """
     vp_name = request.json['vp_name']
     panel_id = request.json['panel_id']
-    vp_id = create_virtualpanel_query(s, vp_name)
+    vp_id = create_virtualpanel_query(s, vp_name, panel_id)
     if vp_id != -1:
         lock_panel(s, current_user.id, panel_id)
     return jsonify(vp_id)
@@ -1352,51 +1463,39 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
     :return:
     """
     changed_regions = {}
+    include_utr = False
     if added: #added is true when the gene has been added to the panel during the edit (no regions have been saved to versions yet)
-        if not utr:  # if utr is false then only coding regions are added
+        if not utr:  # if utr is false (default) then only coding regions are added
             regions = get_regions_by_gene_no_utr(s, gene_id)
-            ok_opac = "0"
-            ok_active = "btn-default"
-            remove_opac = "1"
-            remove_active = "btn-danger active"
         else:
             regions = get_regions_by_geneid(s, gene_id)
-            ok_opac = "1"
-            ok_active = "btn-success active"
-            remove_opac = "0"
-            remove_active = "btn-default"
     else:
         if utr is None:
             include_utr = check_if_utr(s, gene_id, panel_id)
-            print('include')
-            print(include_utr)
             if include_utr:
                 regions = get_regions_by_geneid_with_versions(s, gene_id, panel_id)
-                ok_opac = "1"
-                ok_active = "btn-success active"
-                remove_opac = "0"
-                remove_active = "btn-default"
             else:
                 regions = get_regions_by_geneid_with_versions_no_utr(s, gene_id, panel_id)
-                ok_opac = "0"
-                ok_active = "btn-default"
-                remove_opac = "1"
-                remove_active = "btn-danger active"
         elif not utr:
             regions = get_regions_by_geneid_with_versions_no_utr(s, gene_id, panel_id)
             changed_regions = get_altered_region_ids_exclude(s, gene_id, panel_id)
-            ok_opac = "0"
-            ok_active = "btn-default"
-            remove_opac = "1"
-            remove_active = "btn-danger active"
         else:
             print('utr')
             regions = get_regions_by_geneid_with_versions(s, gene_id, panel_id)
             changed_regions = get_altered_region_ids_include(s, gene_id, panel_id)
-            ok_opac = "1"
-            ok_active = "btn-success active"
-            remove_opac = "0"
-            remove_active = "btn-default"
+    print('utr = ')
+    print(utr)
+    print(include_utr)
+    if utr or include_utr:
+        ok_opac = "1"
+        ok_active = "btn-success active"
+        remove_opac = "0"
+        remove_active = "btn-default"
+    else:
+        ok_opac = "0"
+        ok_active = "btn-default"
+        remove_opac = "1"
+        remove_active = "btn-danger active"
 
     utr_html = """<li>
                         <div class="btn-group" role="group" aria-label="basic label">
@@ -1424,12 +1523,12 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
             <table class=\"table table-striped\" id=\"region-table\">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Chrom</th>
-                        <th>Region Start</th>
-                        <th>Region End</th>
-                        <th class="expand">Names</th>
-                        <th>Select All <div class="material-switch pull-right">
+                        <th width='14%'>ID</th>
+                        <th width='13%'>Chrom</th>
+                        <th width='17%'>Region Start</th>
+                        <th width='17%'>Region End</th>
+                        <th width='22%'>Names</th>
+                        <th width='17%'>Select All <div class="material-switch pull-right">
                                             <input type="checkbox" id="checkAll">
                                             <label for="checkAll" class="label-success label-selectall"></label>
                                         </div>
@@ -1542,6 +1641,9 @@ def edit_vp_regions():
     for i in regions:
         version_ids.append(i[0])
     store = {}
+    if len(version_ids) > 0:
+        html = html.replace("Add Regions", "Update Regions")
+
     if not vpanel_id and len(version_ids) > 0:
         if not utr:
             print(1)
@@ -1552,7 +1654,7 @@ def edit_vp_regions():
         else:
             print(3)
             html, store = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, utr=True)
-        html = html.replace("Add Regions", "Update Regions")
+
     elif not vpanel_id:
         if not utr:
             print(5)
@@ -1583,7 +1685,9 @@ def remove_vp_regions():
 
     :return:
     """
-    version_ids = request.json['ids'].replace('[', '').replace(']', '').split(',')
+    version_ids = request.json['ids']
+    if type(version_ids) != list:
+        version_ids = version_ids.replace('[', '').replace(']', '').split(',')
     vpanel_id = request.json['vp_id']
     for i in version_ids:
         remove_version_from_vp(s, int(vpanel_id), int(i))
@@ -1592,7 +1696,7 @@ def remove_vp_regions():
     length = len(list(panel))
     return jsonify(length)
 
-
+# todo is this needed
 @panels.route('/virtualpanels/live', methods=['GET', 'POST'])
 def make_virtualpanel_live():
     """

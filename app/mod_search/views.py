@@ -1,12 +1,14 @@
-from app.queries import *
-from app.mod_projects.queries import get_project_name, get_project_id_by_name, get_user_rel_by_project_id, get_projects_by_user
+from app.mod_projects.queries import get_project_name, get_project_id_by_name, get_user_rel_by_project_id, \
+    get_projects_by_user, get_tx_by_gene_id
+from app.mod_panels.queries import get_gene_id_from_name, get_virtual_panels_by_panel_id, get_current_version, \
+    get_genes_by_panelid, get_project_id_by_panel_id, get_current_version_vp, get_genes_by_vpanelid, \
+    get_panels_by_project_id
 from flask import Blueprint
-from flask import render_template, request, url_for, jsonify, redirect, Response,Markup
-from flask.ext.login import login_required, current_user
+from flask import render_template, request, jsonify
+from flask.ext.login import login_required
 from forms import *
 
 from app.panel_pal import s
-from app.views import LockCol,LinkColConditional, LabelCol, LinkColLive, NumberCol
 from flask_table import Table, Col, LinkCol
 from queries import *
 
@@ -33,6 +35,61 @@ class ItemTableSearchProjects(Table):
 
 class ItemTableSearchUsers(Table):
     username = Col('')
+
+@search.route('/autocomplete_tx', methods=['GET'])
+def autocomplete_tx():
+    """
+    this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it
+    :return: jsonified gene list
+    """
+    value = str(request.args.get('q'))
+    result = s.query(Tx).filter(Tx.accession.like("%" + value + "%")).all()
+    data = [i.accession for i in result]
+    return jsonify(matching_results=data)
+
+@search.route('/autocomplete_panel', methods=['GET'])
+def autocomplete_panel():
+    """
+    this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it
+    :return: jsonified gene list
+    """
+    value = str(request.args.get('q'))
+    result = s.query(Panels).filter(Panels.name.like("%" + value + "%")).all()
+    data = [i.name for i in result]
+    return jsonify(matching_results=data)
+
+@search.route('/autocomplete_vp', methods=['GET'])
+def autocomplete_vp():
+    """
+    this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it
+    :return: jsonified gene list
+    """
+    value = str(request.args.get('q'))
+    result = s.query(VirtualPanels).filter(VirtualPanels.name.like("%" + value + "%")).all()
+    data = [i.name for i in result]
+    return jsonify(matching_results=data)
+
+@search.route('/autocomplete_project', methods=['GET'])
+def autocomplete_project():
+    """
+    this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it
+    :return: jsonified gene list
+    """
+    value = str(request.args.get('q'))
+    result = s.query(Projects).filter(Projects.name.like("%" + value + "%")).all()
+    data = [i.name for i in result]
+    return jsonify(matching_results=data)
+
+@search.route('/autocomplete_user', methods=['GET'])
+def autocomplete_user():
+    """
+    this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it
+    :return: jsonified gene list
+    """
+    value = str(request.args.get('q'))
+    result = s.query(Users).filter(Users.username.like("%" + value + "%")).all()
+    data = [i.username for i in result]
+    return jsonify(matching_results=data)
 
 @search.route('/', methods=['GET', 'POST'])
 @login_required

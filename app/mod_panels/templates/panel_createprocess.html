@@ -8,6 +8,8 @@
         <center><h2>Panel Wizard</h2></center>
         <div class="row">
 
+
+
             <div class="line hidden-xs"></div>
             <div class="process">
                 <div class="process-row nav nav-tabs">
@@ -243,13 +245,22 @@
                                             <span class='glyphicon glyphicon-pencil'></span> Custom Regions
                                         </button>
                                         {{ genelist | safe }}
-                                    </h3><h3 id="add_all_head"><button id="add-all" type="button" class="btn btn-danger btn-md btn-custom"
+                                    </h3>
+                                    <h3 id="add_all_head">
+                                        <button id="add-all" type="button" class="btn btn-danger btn-md btn-custom"
                                                 data-name="add-all" data-id="add-all">
                                             <span class='glyphicon glyphicon-plus'></span> Add all
-                                        </button></h3>
-                                    <div id="dialog" title="Uploading all genes">Progress:
-                                        <br/>
-                                        <div id="progressbar"></div>
+                                        </button>
+                                    </h3>
+                                    <br/>
+                                    <br/>
+                                    <div id="all-genes-progress" hidden="hidden">
+                                        <h3>Uploading all genes...</h3>
+                                        <div id="progressbar" class="progress" style="height:25px">
+                                            <div class="progress-bar progress-bar-striped active" role="progressbar"
+                                                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+                                                 style="height:25px; width:0%"></div>
+                                        </div>
                                     </div>
 
                                 </div>
