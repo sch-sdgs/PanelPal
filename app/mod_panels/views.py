@@ -282,7 +282,7 @@ def download_as_bed():
 
     bed_tool = BedTool(bed, from_string=True)
     bed_sorted = bed_tool.sort()
-    bed_sorted_merged = bed_sorted.merge(c=4)
+    bed_sorted_merged = bed_sorted.merge(c=4, o='collapse')
 
     result = []
     for i in bed_sorted_merged:
