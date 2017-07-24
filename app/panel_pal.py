@@ -17,8 +17,8 @@ session_factory = sessionmaker(bind=db)
 session = scoped_session(session_factory)
 s = db.session
 
-# logging.basicConfig()
-# logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+logging.basicConfig()
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 handler = TimedRotatingFileHandler('PanelPal.log', when="d", interval=1, backupCount=30)
 handler.setLevel(logging.INFO)
