@@ -288,7 +288,7 @@ def add_region_to_panel(s, regionid, panelid, ext_3=None, ext_5=None):
     # s.commit()
     return version
 
-
+@message
 def add_genes_to_panel_with_ext(s, panel_id, gene_id):
     """
     Gets all region for gene with extensions to remove UTR and adds to versions table

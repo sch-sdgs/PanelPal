@@ -24,6 +24,9 @@ ENV PATH $PATH:/tmp/bedtools2/bin
 
 WORKDIR /app
 
+RUN touch /tmp/PanelPal.log
+RUN chmod 777 /tmp/PanelPal.log
+
 ENV MESSAGE "PanelPal is running..."
 
 

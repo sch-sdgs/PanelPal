@@ -20,7 +20,7 @@ s = db.session
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-handler = TimedRotatingFileHandler('PanelPal.log', when="d", interval=1, backupCount=30)
+handler = TimedRotatingFileHandler('/tmp/PanelPal.log', when="d", interval=1, backupCount=30)
 handler.setLevel(logging.INFO)
 
 def message(f):
