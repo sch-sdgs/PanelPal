@@ -275,13 +275,17 @@ def download_as_bed():
         line.append(i.chrom)
         line.append(str(i.region_start))
         line.append(str(i.region_end))
-        line.append(i.name)
+        if not i.gene_name == '' and not i.gene_name == 'N/A':
+            line.append(i.gene_name + ':' + i.name)
+        else:
+            line.append(i.name)
         result.append(line)
 
     bed = '\n'.join(['\t'.join(l) for l in result])
 
     bed_tool = BedTool(bed, from_string=True)
     bed_sorted = bed_tool.sort()
+    print(bed_sorted)
     bed_sorted_merged = bed_sorted.merge(c=4, o='collapse')
 
     result = []
