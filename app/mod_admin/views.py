@@ -129,16 +129,16 @@ def view_logs():
     """
     view admin logs so that you can see what users have been doing
 
-    :return: render hmtl template
+    :return: render html template
     """
     if request.args.get('file'):
         log = request.args.get('file')
     else:
-        log = 'PanelPal.log'
+        log = '/tmp/PanelPal.log'
 
     import glob
     files = []
-    listing = glob.glob('*log*')
+    listing = glob.glob('/tmp/PanelPal*log*')
     for filename in listing:
         files.append(filename)
 
