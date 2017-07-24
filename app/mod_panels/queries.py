@@ -474,12 +474,14 @@ def get_vprelationships(s, vp_id, gene_id):
     :return:
     """
     current_version = get_current_version_vp(s, vp_id)
+    print('getting versions')
     versions = s.query(VPRelationships, Versions, Regions, Exons, Tx). \
         join(Versions). \
         join(Regions). \
         join(Exons). \
         join(Tx). \
         filter(and_(Tx.gene_id == gene_id,
+                    VPRelationships.vpanel_id == vp_id,
                     VPRelationships.intro <= float(current_version) + 0.1,
                     or_(VPRelationships.last != current_version, VPRelationships.last == None)
                     )

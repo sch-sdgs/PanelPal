@@ -880,6 +880,8 @@ def make_live():
     """
     panelid = request.args.get('id')
     current_version = get_current_version(s, panelid)
+    if not current_version:
+        current_version = 0
     new_version = current_version + 1
     make_panel_live(s, panelid, new_version, current_user.id)
     return redirect(url_for('panels.view_panels'))
