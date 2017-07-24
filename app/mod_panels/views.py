@@ -282,7 +282,7 @@ def download_as_bed():
 
     bed_tool = BedTool(bed, from_string=True)
     bed_sorted = bed_tool.sort()
-    bed_sorted_merged = bed_sorted.merge(nms=True)
+    bed_sorted_merged = bed_sorted.merge(c=4)
 
     result = []
     for i in bed_sorted_merged:
@@ -332,7 +332,8 @@ def view_panels(id=None):
         status = check_panel_status(s, row["panelid"])
         row["status"] = status
         permission = check_user_has_permission(s, current_user.id, row["projectid"])
-        locked = check_if_locked_by_user(s, current_user.id, row["panelid"])
+        print('locked')
+        locked = check_if_locked(s, row["panelid"])
         row['permission'] = permission
         row['locked'] = locked
 
@@ -609,7 +610,7 @@ def upload_multiple():
         except KeyError:
             pass
 
-    added_message = "<div class =\"alert alert-success\" name=\"message-fade\"><strong>FYI</strong> "
+    added_message = "<div class =\"alert alert-success\" name=\"message-fade\"><strong>Just so you know... </strong> "
 
     for g in added_list:
         if added_list.index(g) == len(added_list) - 1:
@@ -619,7 +620,7 @@ def upload_multiple():
             string = g + ", "
             added_message += string
 
-    if added_message != "<div class =\"alert alert-success\" name=\"message-fade\"><strong>FYI</strong> ":
+    if added_message != "<div class =\"alert alert-success\" name=\"message-fade\"><strong>Just so you know... </strong> ":
         added_message += " have been added</div>"
         all_message += added_message
     return jsonify({'message': all_message, 'html': html, 'button_list': button_list})
@@ -686,7 +687,7 @@ def create_panel_get_tx(gene_name=None, project_id=None):
                                </td>
                        </tr>"""
 
-                success_message = "<div class =\"alert alert-success\" name=\"message-fade\"><strong>FYI</strong> " + gene_name + " was added</div>"
+                success_message = "<div class =\"alert alert-success\" name=\"message-fade\"><strong>Just so you know... </strong> " + gene_name + " was added</div>"
                 if json:
                     return jsonify({'html': html, 'button_list': gene_button, 'message': success_message})
                 else:
@@ -705,7 +706,7 @@ def create_panel_get_tx(gene_name=None, project_id=None):
                 </td>
             </tr>"""
 
-        success_message = "<div class =\"alert alert-success\" name=\"message-fade\"><strong>FYI</strong> " + gene_name + " was added</div>"
+        success_message = "<div class =\"alert alert-success\" name=\"message-fade\"><strong>Just so you know... </strong> " + gene_name + " was added</div>"
 
         if json:
             return jsonify({'html': html, 'button_list': gene_button, 'message': success_message})
@@ -1697,23 +1698,23 @@ def remove_vp_regions():
     return jsonify(length)
 
 # todo is this needed
-@panels.route('/virtualpanels/live', methods=['GET', 'POST'])
-def make_virtualpanel_live():
-    """
-    given a panel id this method makes a panel live
-
-    :return: redirection to view panels
-    """
-    vpanelid = request.args.get('id')
-    current_version = get_current_version_vp(s, vpanelid)
-    panelid = get_panel_by_vp_id(s, vpanelid)
-    new_version = current_version + 1
-    locked = check_if_locked_by_user(s, current_user.id, panelid)
-    if locked:
-        return redirect(url_for('panels.view_virtual_panels'))
-    else:
-        make_vp_panel_live(s, vpanelid, new_version)
-        return redirect(url_for('panels.view_virtual_panels'))
+# @panels.route('/virtualpanels/live', methods=['GET', 'POST'])
+# def make_virtualpanel_live():
+#     """
+#     given a panel id this method makes a panel live
+#
+#     :return: redirection to view panels
+#     """
+#     vpanelid = request.args.get('id')
+#     current_version = get_current_version_vp(s, vpanelid)
+#     panelid = get_panel_by_vp_id(s, vpanelid)
+#     new_version = current_version + 1
+#     locked = check_if_locked_by_user(s, current_user.id, panelid)
+#     if locked:
+#         return redirect(url_for('panels.view_virtual_panels'))
+#     else:
+#         make_vp_panel_live(s, vpanelid, new_version)
+#         return redirect(url_for('panels.view_virtual_panels'))
 
 
 @panels.route('/virtualpanels/delete', methods=['GET', 'POST'])

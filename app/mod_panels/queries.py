@@ -131,10 +131,8 @@ def get_all_locked_by_username(s,username):
         values(Panels.name,Users.username,Panels.id.label("id"))
     return locked
 
-def check_if_locked_by_user(s, username, panel_id):
-    user_id = get_user_id_by_username(s, username)
-    locked = s.query(Panels).filter(or_(and_(Panels.id == panel_id, Panels.locked == user_id),
-                                        and_(Panels.locked == None, Panels.id == panel_id))).values(Panels.locked)
+def check_if_locked(s, panel_id):
+    locked = s.query(Panels).filter(Panels.id == panel_id).values(Panels.locked)
     # locked = s.query(Panels).filter(and_(Panels.locked == None, Panels.id == panel_id)).count()
     for i in locked:
         return i.locked
