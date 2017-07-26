@@ -2,7 +2,7 @@ from flask import Blueprint
 from flask import render_template, request, url_for, jsonify, redirect, Response
 from flask.ext.login import login_required, current_user
 from pybedtools import BedTool
-from app.panel_pal import s
+from app.panel_pal import s, Session
 from app.mod_projects.views import LinkColConditional
 from flask_table import Table, Col, LinkCol
 from forms import ViewPanel, CreatePanelProcess, EditPanelProcess, CreateVirtualPanelProcess, \
@@ -763,7 +763,8 @@ def add_all_regions():
     gene_id = request.json['gene_id']
     panel_id = request.json['panel_id']
     complete = []
-    add_genes_to_panel_with_ext(s, panel_id, gene_id)
+    gene_session = Session()
+    add_genes_to_panel_with_ext(gene_session, panel_id, gene_id)
     complete.append(gene_id)
     return jsonify({"genes": complete})
 

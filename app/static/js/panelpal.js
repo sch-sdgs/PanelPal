@@ -1089,6 +1089,62 @@ $(document).ready(function () {
     $("#dialog").dialog({autoOpen: false});
 });
 
+function add_gene(gene_list, complete, progress){
+    var i = 0;
+    var total = $(gene_list).length;
+    var dict = {
+                "gene_id": gene_list[i],
+                "panel_id": $('#main').attr('name')
+            };
+    var data = JSON.stringify(dict);
+
+    $.ajax({
+        type: "POST",
+        url: Flask.url_for('panels.add_all_regions'),
+        data: data,
+        dataType: "json",
+        contentType: "application/json",
+        success: function (response) {
+            var gene = response["genes"];
+            $('.btngene').each(function (i, obj) {
+                if ($(obj).attr('data-id') == gene) {
+                    $(obj).removeClass('btn-danger').addClass('btn-success');
+                    $(obj).children().eq(0).removeClass('glyphicon-pencil').addClass('glyphicon-ok');
+                }
+            });
+
+            complete += 1;
+            progress = complete / total * 100;
+            var progress_bar = $('.progress-bar');
+            progress_bar.attr("aria-valuenow", progress);
+            progress_bar.attr("style", "height:25px; width:" + progress.toString() + "%");
+            if (i == total - 1) {
+                $('#dialog').dialog("destroy");
+            }
+            if (!$('#cancel').hasClass('btn-success')) {
+                region_added()
+            }
+
+            if (count_genes() == 0) {
+                $('#add-all').attr('disabled', 'disabled');
+                $('#all-genes-progress').attr('hidden', 'hidden');
+            }
+            else if ($('#add-all').attr('disabled') == 'disabled') {
+                $('#add-all').removeAttr('disabled')
+            }
+
+            i++;
+            add_gene(gene_list, complete, progress)
+        },
+        error: function (xhr, status, error) {
+            console.log(error);
+            $('#trace').append("<p>" + error + "</p>");
+            $('#ajaxModal').modal('show');
+            return false;
+        }
+    })
+};
+
 $(document).on('click', '#add-all', function () {
     var gene_list = [];
     $("#all-genes-progress").removeAttr("hidden");
@@ -1098,59 +1154,7 @@ $(document).on('click', '#add-all', function () {
         }
     });
 
-    var total = $(gene_list).length;
-    var complete = 0;
-    var progress = 0.0;
-
-    $.each(gene_list, function (i) {
-        var dict = {
-            "gene_id": gene_list[i],
-            "panel_id": $('#main').attr('name')
-        };
-        var data = JSON.stringify(dict);
-        $.ajax({
-            type: "POST",
-            url: Flask.url_for('panels.add_all_regions'),
-            data: data,
-            dataType: "json",
-            contentType: "application/json",
-            success: function (response) {
-                var gene = response["genes"];
-                $('.btngene').each(function (i, obj) {
-                    if ($(obj).attr('data-id') == gene) {
-                        $(obj).removeClass('btn-danger').addClass('btn-success');
-                        $(obj).children().eq(0).removeClass('glyphicon-pencil').addClass('glyphicon-ok');
-                    }
-                });
-
-                complete += 1;
-                progress = complete / total * 100;
-                var progress_bar = $('.progress-bar');
-                progress_bar.attr("aria-valuenow", progress);
-                progress_bar.attr("style", "height:25px; width:" + progress.toString() + "%");
-                if (i == total - 1) {
-                    $('#dialog').dialog("destroy");
-                }
-                if (!$('#cancel').hasClass('btn-success')) {
-                    region_added()
-                }
-
-                if (count_genes() == 0) {
-                    $('#add-all').attr('disabled', 'disabled');
-                    $('#all-genes-progress').attr('hidden', 'hidden');
-                }
-                else if ($('#add-all').attr('disabled') == 'disabled') {
-                    $('#add-all').removeAttr('disabled')
-                }
-            },
-            error: function (xhr, status, error) {
-                console.log(error);
-                $('#trace').append("<p>" + error + "</p>");
-                $('#ajaxModal').modal('show');
-                return false;
-            }
-        })
-    });
+    add_gene(gene_list, 0, 0.0)
 });
 
 function add_regions(vpanel_id, ids, geneName) {
