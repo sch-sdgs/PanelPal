@@ -1,11 +1,13 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import inspect
 import itertools
 from functools import wraps
+from config import SQLALCHEMY_DATABASE_URI
 from flask_login import current_user
 
 app = Flask(__name__)
@@ -13,9 +15,12 @@ app.config.from_object('config')
 app.secret_key = 'development key'
 db = SQLAlchemy(app)
 
-session_factory = sessionmaker(bind=db)
-session = scoped_session(session_factory)
-s = db.session
+engine = create_engine(SQLALCHEMY_DATABASE_URI)
+
+session_factory = sessionmaker(bind=engine)
+Session = scoped_session(session_factory)
+s = Session()
+# s = db.session
 
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
