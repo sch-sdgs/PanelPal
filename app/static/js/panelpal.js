@@ -1089,8 +1089,10 @@ $(document).ready(function () {
     $("#dialog").dialog({autoOpen: false});
 });
 
-function add_gene(gene_list, complete, progress){
-    var i = 0;
+function add_gene(i, gene_list, complete, progress){
+    console.log('gene_list');
+    console.log($(gene_list).length);
+    console.log(i);
     var total = $(gene_list).length;
     var dict = {
                 "gene_id": gene_list[i],
@@ -1134,7 +1136,10 @@ function add_gene(gene_list, complete, progress){
             }
 
             i++;
-            add_gene(gene_list, complete, progress)
+            if(i != total){
+                add_gene(i, gene_list, complete, progress)
+            }
+
         },
         error: function (xhr, status, error) {
             console.log(error);
@@ -1154,7 +1159,7 @@ $(document).on('click', '#add-all', function () {
         }
     });
 
-    add_gene(gene_list, 0, 0.0)
+    add_gene(0, gene_list, 0, 0.0)
 });
 
 function add_regions(vpanel_id, ids, geneName) {

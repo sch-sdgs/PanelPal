@@ -763,8 +763,7 @@ def add_all_regions():
     gene_id = request.json['gene_id']
     panel_id = request.json['panel_id']
     complete = []
-    gene_session = Session()
-    add_genes_to_panel_with_ext(gene_session, panel_id, gene_id)
+    add_genes_to_panel_with_ext(s, panel_id, gene_id)
     complete.append(gene_id)
     return jsonify({"genes": complete})
 
