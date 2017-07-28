@@ -1,4 +1,4 @@
-from flask.ext.wtf import Form
+from flask_wtf import Form
 from wtforms.fields import TextField, SubmitField, HiddenField, PasswordField
 
 # TODO is this needed?

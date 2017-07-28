@@ -7,7 +7,8 @@ from logging.handlers import TimedRotatingFileHandler
 import inspect
 import itertools
 from functools import wraps
-from config import SQLALCHEMY_DATABASE_URI
+from app.config import SQLALCHEMY_DATABASE_URI
+import sys
 from flask_login import current_user
 
 app = Flask(__name__)
@@ -22,11 +23,27 @@ Session = scoped_session(session_factory)
 s = Session()
 # s = db.session
 
-logging.basicConfig()
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+# logging.basicConfig()
+# logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-handler = TimedRotatingFileHandler('/tmp/PanelPal.log', when="d", interval=1, backupCount=30)
-handler.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
+
+log_handler = TimedRotatingFileHandler('/tmp/PanelPal.log', when="d", interval=1, backupCount=30)
+log_handler.setLevel(logging.INFO)
+logger.addHandler(log_handler)
+
+error_handler = TimedRotatingFileHandler('/tmp/PanelPal.error',when='d', interval=1, backupCount=30)
+error_handler.setLevel(logging.ERROR)
+logger.addHandler(error_handler)
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+sys.excepthook = handle_exception
 
 def message(f):
     """
@@ -40,12 +57,12 @@ def message(f):
         method = f.__name__
 
         formatter = logging.Formatter('%(levelname)s|' + current_user.id + '|%(asctime)s|%(message)s')
-        handler.setFormatter(formatter)
-        app.logger.addHandler(handler)
+        log_handler.setFormatter(formatter)
+        #app.logger.addHandler(log_handler)
 
         args_name = inspect.getargspec(f)[0]
         args_dict = dict(itertools.izip(args_name, args))
-
+        print('message executed')
         del args_dict['s']
         app.logger.info(method + "|" + str(args_dict))
         return f(*args, **kwargs)

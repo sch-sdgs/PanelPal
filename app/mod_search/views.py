@@ -5,7 +5,7 @@ from app.mod_panels.queries import get_gene_id_from_name, get_virtual_panels_by_
     get_panels_by_project_id
 from flask import Blueprint
 from flask import render_template, request, jsonify
-from flask.ext.login import login_required
+from flask_login import login_required
 from forms import *
 
 from app.panel_pal import s

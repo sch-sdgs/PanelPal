@@ -1,6 +1,6 @@
 from flask import Blueprint
 from flask import render_template, request, url_for, jsonify, redirect, Response
-from flask.ext.login import login_required, current_user
+from flask_login import login_required, current_user
 from pybedtools import BedTool
 from app.panel_pal import s, Session
 from app.mod_projects.views import LinkColConditional

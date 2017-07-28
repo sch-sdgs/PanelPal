@@ -1,4 +1,4 @@
-from flask.ext.wtf import Form
+from flask_wtf import Form
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.fields import TextField, SubmitField, HiddenField, BooleanField
 from wtforms.validators import Required

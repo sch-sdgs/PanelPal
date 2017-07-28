@@ -1,6 +1,6 @@
 from flask import Blueprint
 from flask import render_template, request, url_for, jsonify, redirect, flash
-from flask.ext.login import login_required, current_user
+from flask_login import login_required, current_user
 from collections import OrderedDict
 from app.panel_pal import s
 from flask_table import Table, Col, LinkCol
