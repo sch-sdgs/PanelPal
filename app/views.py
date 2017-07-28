@@ -5,7 +5,13 @@ from app.forms import Login
 from mod_admin.queries import check_if_admin
 from flask_login import LoginManager, current_user
 from app.mod_admin.views import User
+import traceback
+import logging
+from app.panel_pal import error_handler
+# import sys
+# from app.panel_pal import handle_exception
 
+# sys.excepthook = handle_exception
 
 # todo are these needed?
 # class ItemTable(Table):
@@ -92,10 +98,20 @@ def logout():
 
 @app.errorhandler(404)
 def page_not_found(e):
+    formatter = logging.Formatter('%(levelname)s|' + current_user.id + '|%(asctime)s|%(message)s')
+    error_handler.setFormatter(formatter)
+    app.logger.addHandler(error_handler)
+    app.logger.error(traceback.format_exc())
+
     return render_template('404.html'), 404
 
 @app.errorhandler(500)
 def internal_server_error(e):
+    formatter = logging.Formatter('%(levelname)s|' + current_user.id + '|%(asctime)s|%(message)s')
+    error_handler.setFormatter(formatter)
+    app.logger.addHandler(error_handler)
+    app.logger.error(traceback.format_exc())
+
     return render_template('500.html'), 500
 
 @app.context_processor
@@ -112,7 +128,6 @@ def logged_in():
 
 @app.route('/')
 def index():
-    print('hello')
     return render_template('home.html', panels=3)
 
 

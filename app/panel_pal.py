@@ -23,27 +23,18 @@ Session = scoped_session(session_factory)
 s = Session()
 # s = db.session
 
-# logging.basicConfig()
+#logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 # logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-logger = logging.getLogger(__name__)
-
-log_handler = TimedRotatingFileHandler('/tmp/PanelPal.log', when="d", interval=1, backupCount=30)
+log_handler = TimedRotatingFileHandler('PanelPal.log', when="d", interval=1, backupCount=30)
 log_handler.setLevel(logging.INFO)
 logger.addHandler(log_handler)
 
-error_handler = TimedRotatingFileHandler('/tmp/PanelPal.error',when='d', interval=1, backupCount=30)
+error_handler = TimedRotatingFileHandler('PanelPal.error',when='d', interval=1, backupCount=30)
 error_handler.setLevel(logging.ERROR)
 logger.addHandler(error_handler)
-
-def handle_exception(exc_type, exc_value, exc_traceback):
-    if issubclass(exc_type, KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-        return
-
-    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-
-sys.excepthook = handle_exception
 
 def message(f):
     """
@@ -58,7 +49,7 @@ def message(f):
 
         formatter = logging.Formatter('%(levelname)s|' + current_user.id + '|%(asctime)s|%(message)s')
         log_handler.setFormatter(formatter)
-        #app.logger.addHandler(log_handler)
+        app.logger.addHandler(log_handler)
 
         args_name = inspect.getargspec(f)[0]
         args_dict = dict(itertools.izip(args_name, args))
@@ -86,7 +77,4 @@ app.register_blueprint(api_blueprint,url_prefix='/api')
 app.register_blueprint(projects,url_prefix='/projects')
 app.register_blueprint(panels,url_prefix='/panels')
 app.register_blueprint(search,url_prefix='/search')
-
-
-
 
