@@ -1302,11 +1302,12 @@ def get_regions_by_vpanelid(s, vpanelid, version):
     :param version:
     :return:
     """
-    print('version=')
-    print(version)
-    print(type(version))
     if type(version) == float or type(version) == Decimal:
         version = round(version, 1)
+    print('drop table')
+    sql = text("DROP TABLE IF EXISTS _custom;")
+    s.execute(sql)
+
     sql = text("""CREATE TEMP TABLE _custom AS SELECT versions.id AS version_id,
                 regions.chrom, virtual_panels.current_version, virtual_panels.name AS panel_name, 'N/A' AS gene_name,
                 CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5 END AS region_start,
@@ -1320,7 +1321,6 @@ def get_regions_by_vpanelid(s, vpanelid, version):
                 AND regions.name IS NOT NULL;
                 """)
     values = {'vpanel_id': vpanelid, 'version': version}
-    print(values["version"])
     s.execute(sql, values)
 
     sql = text("""SELECT versions.id AS version_id,
