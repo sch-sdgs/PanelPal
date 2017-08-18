@@ -1,5 +1,5 @@
-from app.panel_pal import app,s
-from queries import get_panel_api, get_exonic_api, get_vpanel_api, get_preftx_api
+from app.panel_pal import app, s
+from queries import get_panel_api, get_intronic_api, get_vpanel_api, get_preftx_api
 from flask import request, Blueprint
 from flask_restful_swagger import swagger
 from flask_restful import Resource, Api, reqparse, fields
@@ -9,6 +9,7 @@ api_blueprint = Blueprint('api_blueprint', __name__)
 
 api = swagger.docs(Api(api_blueprint), apiVersion='0.0', api_spec_url='/spec', description="PanelPal API")
 
+
 class ChrSorter():
     def __init__(self):
         pass
@@ -16,7 +17,7 @@ class ChrSorter():
     @staticmethod
     def lt_helper(a):
         """
-        helper to sort chromosmes properly
+        helper to sort chromosomes properly
 
         :param a: sort object
         :return:
@@ -43,8 +44,6 @@ class ChrSorter():
         :return: proper sorted chromosomes
         """
         return cmp(ChrSorter.lt_helper(a), ChrSorter.lt_helper(b))
-
-
 
 
 region_fields = {
@@ -103,6 +102,7 @@ def region_result_to_json(data, extension=0):
             result['regions'].append(region)
 
     return result
+
 
 def prefttx_result_to_json(data):
     result = {}
@@ -198,6 +198,32 @@ class APIVirtualPanels(Resource):
         resp.headers['content-type'] = 'application/json'
         return resp
 
+
+class APIIntronic(Resource):
+    @swagger.operation(
+        notes='Gets a JSON of the intronic portion of the bed virtual panel (i.e. +/- 6bp to +/- 25 bp)',
+        responseClass='x',
+        nickname='intronic',
+        parameters=[],
+        responseMessages=[
+                {
+                    "code": 201,
+                    "message": "Created. The URL of the created blueprint should be in the Location header"
+                },
+                {
+                    "code": 405,
+                    "message": "Invalid input"
+                }
+        ]
+    )
+    def get(self, name, version):
+        result = get_intronic_api(s, name, version)
+        result_json = {'details':{'name':name, 'version':version}, 'regions':[]}
+        resp = output_json(result_json, 200)
+        resp.headers['content-type'] = 'application/json'
+        return resp
+
+
 class APIPreferredTx(Resource):
     @swagger.operation(
         notes='Gets a JSON of all preftx',
@@ -218,7 +244,7 @@ class APIPreferredTx(Resource):
     )
     def get(self, name, version):
         result = get_preftx_api(s, name, version)
-        #result_json = region_result_to_json(result.panel)
+        # result_json = region_result_to_json(result.panel)
         result_json = prefttx_result_to_json(result.result)
         result_json["details"]["project"] = name
         result_json["details"]["version"] = int(result.current_version)
@@ -226,35 +252,9 @@ class APIPreferredTx(Resource):
         resp.headers['content-type'] = 'application/json'
         return resp
 
-# class Exonic(Resource):
-#     @swagger.operation(
-#         notes='Gets a JSON of regions in a virtual panel and adjusts for "exnoic" - equivalent to the exon file',
-#         responseClass='x',
-#         nickname='small',
-#         parameters=[
-#         ],
-#         responseMessages=[
-#             {
-#                 "code": 201,
-#                 "message": "Created. The URL of the created blueprint should be in the Location header"
-#             },
-#             {
-#                 "code": 405,
-#                 "message": "Invalid input"
-#             }
-#         ]
-#     )
-#     def get(self, name, version):
-#         result = get_exonic_api(s, name, version)
-#         result_json = region_result_to_json(result.panel,scope="exonic")
-#         result_json["details"]["panel"] = name
-#         result_json["details"]["version"] = int(result.current_version)
-#         resp = output_json(result_json, 200)
-#         resp.headers['content-type'] = 'application/json'
-#         return resp
-
 
 api.add_resource(APIPanels, '/panel/<string:name>/<string:version>', )
 api.add_resource(APIVirtualPanels, '/virtualpanel/<string:name>/<string:version>', )
+api.add_resource(APIIntronic, '/intronic/<string:name>/<string:version>/', )
+# api.add_resource(APIPanelFilled, '/filled/<string:name>/<string:version>/<int:extension>', )
 api.add_resource(APIPreferredTx, '/preftx/<string:name>/<string:version>', )
-# api.add_resource(Exonic, '/api/exonic/<string:name>/<string:version>', )

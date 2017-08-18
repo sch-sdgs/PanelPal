@@ -23,7 +23,7 @@ Session = scoped_session(session_factory)
 s = Session()
 # s = db.session
 
-#logging.basicConfig()
+# logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 # logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
@@ -53,7 +53,6 @@ def message(f):
 
         args_name = inspect.getargspec(f)[0]
         args_dict = dict(itertools.izip(args_name, args))
-        print('message executed')
         del args_dict['s']
         app.logger.info(method + "|" + str(args_dict))
         return f(*args, **kwargs)

@@ -9,8 +9,19 @@
     <p><a href="{{url_for('panels.create_panel_process')}}" class="btn btn-default btn-lg">
         <span class="glyphicon glyphicon-pencil"></span> Create Your 1st Panel
     </a></p>
-    Need to register? email you windows login name to <a
-        href="mailto:matthew.parker@sch.nhs.uk?Subject=PanelPal%20Registration" target="_top">bioinformatics</a>
+    {% if browser == 'msie' %}
+    <p>
+
+        Using internet explorer? Go to the <a
+            href="{{url_for('admin.faq_page')}}" target="_top">FAQ</a> page for display instructions</p>
+    {% endif %}
+    Need to register? Email your windows login name to <a
+        href="mailto:matthewparker24+lzj6vkpuibpnivi6nsog@boards.trello.com?Subject=#PanelPal%20#registration%20New%20login"
+        target="_top">bioinformatics</a>
+    <br/>
+    Need to report a bug? Email a ticket to <a
+        href="mailto:matthewparker24+lzj6vkpuibpnivi6nsog@boards.trello.com?Subject=#PanelPal%20#bugreport%20PanelPal%20bug"
+        target="_top">bioinformatics</a>
 </div>
 
 

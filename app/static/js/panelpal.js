@@ -63,13 +63,51 @@ function remove_panel(vp_name, panel_name) {
             window.location.replace(redirect);
         },
         error: function (xhr, status, error) {
-            console.log(error);
             $('#trace').append("<p>" + error + "</p>");
             $('#ajaxModal').modal('show');
             return false;
         }
 
     });
+}
+
+function unlock_panel() {
+    var url = Flask.url_for('panels.toggle_locked');
+    var id;
+    if (window.location.href.indexOf('virtualpanels') > -1) {
+        if ($('#main').attr('name') == 'main') {
+            id = 'main'
+        }
+        else {
+            id = $('#panel').val()
+        }
+    }
+    else {
+        id = $('#main').attr('name');
+    }
+
+    if (id == 'main') {
+        return true;
+    }
+    else {
+        var dict = {"id": id};
+        var data = JSON.stringify(dict);
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: data,
+            dataType: "json",
+            contentType: "application/json",
+            success: function () {
+                return true;
+            },
+            error: function (xhr, status, error) {
+                $('#trace').append("<p>" + error + "</p>");
+                $('#ajaxModal').modal('show');
+                return false;
+            }
+        })
+    }
 }
 
 /**
@@ -81,17 +119,18 @@ $(document).on('click', '#cancel', function () {
     var vp_name = vpanel.val();
     var panel_name = $('#panelname').val();
     if ($('#cancel').hasClass('btn-danger') && window.location.pathname.indexOf("wizard") >= 0) {
+        unlock_panel();
         remove_panel(vp_name, panel_name)
     }
     else if (window.location.pathname.indexOf("edit") >= 0) {
         if (vpanel.length) {
-            console.log($('#main').attr('name'));
-            var url = Flask.url_for('panels.view_vpanel') + "?id=" + $('#main').attr('name');
-            console.log(url);
+            unlock_panel();
+            var url = Flask.url_for('panels.view_vpanel') + '?id=' + $('#main').attr('name');
             window.location.replace(url);
         }
         else {
-            window.location.replace(Flask.url_for('panels.view_panels') + "?id=" + $('#main').attr('name'));
+            unlock_panel();
+            window.location.replace(Flask.url_for('panels.view_panels'));
         }
     }
 });
@@ -108,13 +147,26 @@ function add_panel(changeTab, e) {
     var url = "";
     var redirect = "";
     var vpanel = $('#vpanelname');
+    var msg = $('#message');
+    var panel = $('#panel');
+
+    if ($('#vpanelname').length && panel.val() == "__None" ) {
+        new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't selected a panel name</div>";
+        msg.append(new_html);
+        return false;
+    }
+    else if($('#panelname').length && $('#project').val() == "__None"){
+        new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't selected a project name</div>";
+        msg.append(new_html);
+        return false;
+    }
 
     if (vpanel.length) {
         dict = {
             "vp_name": vpanel.val(),
             "panel_name": null,
 
-            "panel_id": $('#panel').val(),
+            "panel_id": panel.val(),
             "project_id": null
         };
         url = Flask.url_for('panels.add_vp');
@@ -140,29 +192,7 @@ function add_panel(changeTab, e) {
         dataType: "json",
         contentType: "application/json",
         success: function (response) {
-            var new_html = "";
-            var msg = $('#message');
-            if (response == -1 && vpanel.length) {
-                if (vpanel.val().length == 0) {
-                    new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't added a panel name</div>";
-                    msg.append(new_html)
-                }
-                else {
-                    new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
-                    msg.append(new_html)
-                }
-            }
-            else if (response == -1 && $('#panelname').length) {
-                if ($('#panelname').val().length == 0) {
-                    new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't added a panel name</div>";
-                    msg.append(new_html)
-                }
-                else {
-                    new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
-                    msg.append(new_html)
-                }
-            }
-            else if (response == -1) {
+            if (response == -1) {
                 new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
                 msg.append(new_html)
             }
@@ -194,7 +224,6 @@ function add_panel(changeTab, e) {
             }
         },
         error: function (xhr, status, error) {
-            console.log(error);
             $('#trace').append("<p>" + error + "</p>");
             $('#ajaxModal').modal('show');
             return false;
@@ -262,6 +291,10 @@ $(document).on('change', '#panel', function () {
     $('#loading').append("<br/><center><div class=\"row\"><div class=\"col-md-5\"></div><div class=\"col-md-2\"><div class=\"loader\"></div></div><div class=\"col-md-5\"></div></div></center>");
 
     var panel_id = $('#panel').val();
+
+    if(panel_id == "__None"){
+        return false;
+    }
     var dict = {
         "panel": panel_id
     };
@@ -278,7 +311,6 @@ $(document).on('change', '#panel', function () {
             $('#geneselector').append(response)
         },
         error: function (xhr, status, error) {
-            console.log(error);
             $('#trace').append("<p>" + error + "</p>");
             $('#ajaxModal').modal('show');
             return false;
@@ -311,15 +343,15 @@ $(document).on('focusin', '[name="region_start"]', function () {
 });
 
 $(document).on('focusout', '[name="region_start"]', function (e) {
-    if($(e.relatedTarget).attr('name') != 'update'){
+    if ($(e.relatedTarget).attr('name') != 'update') {
         var target = $(event.target);
         var row = $(event.target).parent().parent();
         // this section populates row and target correctly if event is triggered by check_regions() returning false
-        if ($(row).hasClass('list-unstyled')){
+        if ($(row).hasClass('list-unstyled')) {
             row = $(row).parent().parent();
             target = $(row).children().eq(2).children().eq(0);
         }
-        else if ($(row).parent().hasClass('list-unstyled')){
+        else if ($(row).parent().hasClass('list-unstyled')) {
             row = $(row).parent().parent().parent();
             target = $(row).children().eq(2).children().eq(0);
         }
@@ -363,15 +395,15 @@ $(document).on('focusin', '[name="region_end"]', function () {
 });
 
 $(document).on('focusout', '[name="region_end"]', function (e) {
-    if($(e.relatedTarget).attr('name') != 'update') {
+    if ($(e.relatedTarget).attr('name') != 'update') {
         var target = $(event.target);
         var row = $(event.target).parent().parent();
         // this section populates row and target correctly if event is triggered by check_regions() returning false
-        if ($(row).hasClass('list-unstyled')){
+        if ($(row).hasClass('list-unstyled')) {
             row = $(row).parent().parent();
             target = $(row).children().eq(2).children().eq(0);
         }
-        else if ($(row).parent().hasClass('list-unstyled')){
+        else if ($(row).parent().hasClass('list-unstyled')) {
             row = $(row).parent().parent().parent();
             target = $(row).children().eq(2).children().eq(0);
         }
@@ -396,11 +428,11 @@ function checkRegions(row, changed, prev) {
     var endBox = $(row).children().eq(3).children().eq(0);
     if ($(startBox).val() > $(endBox).val()) {
         $('#regionModal').modal('show');
-        if(changed == 'start'){
+        if (changed == 'start') {
             $(startBox).val(prev);
             $(startBox).trigger('focusout')
         }
-        else{
+        else {
             $(endBox).val(prev);
             $(endBox).trigger('focusout')
         }
@@ -426,8 +458,6 @@ function checkRegions(row, changed, prev) {
             return false
         }
     }
-    console.log(cdsVal);
-    console.log(newVal);
 
     return true
 }
@@ -444,8 +474,6 @@ $(document).on('click', '#region-ok', function () {
 });
 
 $(document).on('click', '#region-cancel', function () {
-    console.log('there');
-    console.log($('[name="undo"]'));
     $('[name="undo"]').trigger('click');
 
 });
@@ -503,7 +531,6 @@ function update_region(row, store, region_id) {
 
         },
         error: function (xhr, status, error) {
-            console.log(error);
             $('#trace').append("<p>" + error + "</p>");
             $('#ajaxModal').modal('show');
             return false;
@@ -527,16 +554,14 @@ $(document).on('click', '[name="update"]', function () {
 
     var complete;
     if ("start" in store) {
-        if(store["start"]["value"] == $(row).children().eq(2).children().eq(0).val())
-        {
+        if (store["start"]["value"] == $(row).children().eq(2).children().eq(0).val()) {
             $(row).children().eq(2).children().eq(0).trigger('focusout');
             return
         }
         complete = checkRegions(row, 'start', store["start"]["value"]);
     }
     if ("end" in store) {
-        if(store["end"]["value"] == $(row).children().eq(3).children().eq(0).val())
-        {
+        if (store["end"]["value"] == $(row).children().eq(3).children().eq(0).val()) {
             $(row).children().eq(3).children().eq(0).trigger('focusout');
         }
         complete = checkRegions(row, 'end', store["end"]["value"]);
@@ -572,7 +597,7 @@ $(document).on('click', '[name="undo"]', function () {
 });
 
 $(document).on('click', '.label-gene', function () {
-    var target = $(event.target);
+    var target = $(this);
     var gene_switch;
     var geneName = '';
     if ($(target).is("button")) {
@@ -585,14 +610,13 @@ $(document).on('click', '.label-gene', function () {
         });
     }
     else {
-        geneName = $(event.target).attr('for');
-        gene_switch = $(event.target)
+        geneName = $(target).attr('for');
+        gene_switch = $(target)
     }
-
+    var input = $(gene_switch).parent().children().eq(0);
     if ($(gene_switch).attr('disabled') != 'disabled') {
-        if ($(gene_switch).attr('checked') == 'checked')//uncheck and remove gene button
+        if ($(input).prop('checked'))//remove gene button
         {
-            $(gene_switch).removeAttr('checked');
             $('[name="genebutton"]').each(function (i, obj) {
                 if ($(obj).attr('data-name') == geneName) {
                     $(obj).remove();
@@ -601,30 +625,31 @@ $(document).on('click', '.label-gene', function () {
                     }
                     return false;
                 }
-            })
+            });
+            var select_all = $('#all-genes');
+            if (select_all.prop('checked')) {
+                select_all.attr('uncheck-all', 'false');
+                select_all.trigger('click')
+            }
+
         }
         else {
-            $(event.target).attr('checked', 'checked');
             var geneId = $("#" + geneName).attr('name');
             $('#genelist').append("<button name=\"genebutton\" type=\"button\" class=\"btn btn-danger btn-md btngene\" data-name=\"" + geneName + "\" data-id=\"" + geneId + "\"><span class='glyphicon glyphicon-pencil'></span> " + geneName + "</button> ");
             if (count_genes() == 0) {
                 $('#add-all').attr('disabled', 'disabled')
             }
-            else if ($('#add-all').attr('disabled') == 'disabled') {
-                $('#add-all').removeAttr('disabled')
+            else if ($('#add-all-vp').attr('disabled') == 'disabled') {
+                $('#add-all-vp').removeAttr('disabled')
             }
         }
     }
 });
 
 $(document).on('click', '[id^="btnO"]', function () {
-    console.log('clicked');
     var notchecked = $('input[type="radio"][name="menucolor"]').not(':checked');
-    console.log(notchecked);
     //$('.navbar.'+notchecked.val()).toggleClass('navbar-default navbar-inverse');
-    console.log($(notchecked).prop('checked'));
     notchecked.prop("checked", true);
-    console.log($(notchecked).prop('checked'));
     $(this).parent().find('a').each(function () {
         if ($(this).attr('id') == 'btnOn') {
             $(this).toggleClass('active btn-success btn-default');
@@ -726,7 +751,6 @@ $(document).on('click', '#add-custom', function () {
                 region_added()
             },
             error: function (xhr, status, error) {
-                console.log(error);
                 $('#trace').append("<p>" + error + "</p>");
                 $('#ajaxModal').modal('show');
                 return false;
@@ -820,7 +844,6 @@ function get_regions(element) {
             });
         },
         error: function (xhr, status, error) {
-            console.log(error);
             $('#trace').append("<p>" + error + "</p>");
             $('#ajaxModal').modal('show');
             return false;
@@ -854,7 +877,7 @@ $(document).on('click', '[name="genebutton"]', function (request) {
 function count_ids() {
     var ids = [];
     $('.label-region').each(function (i, obj) {
-        if ($(obj).attr('checked') == 'checked') {
+        if ($(obj).prop('checked')) {
             ids.push($(obj).attr('for'));
         }
     });
@@ -865,16 +888,13 @@ $(document).on('click', ".label-region", function (request) {
 
     var obj = $(request.currentTarget);
     var select_all = $('.label-selectall');
-    if ($(obj).attr('checked') == 'checked') {
-        $(obj).removeAttr('checked');
-        if (select_all.attr('checked') == 'checked') {
-            select_all.removeAttr('checked');
+    if (!$(obj).prop('checked')) {
+        if (select_all.prop('checked')) {
             select_all.attr('uncheck-all', 'false');
             select_all.trigger('click')
         }
     }
     else {
-        $(obj).attr('checked', 'checked')
     }
 
     var count = count_ids().length;
@@ -887,26 +907,53 @@ $(document).on('click', ".label-region", function (request) {
     }
 
 
-    if (count == $('.label-region').length && select_all.attr('checked') != 'checked') {
+    if (count == $('.label-region').length && !select_all.prop('checked')) {
         select_all.attr('uncheck-all', 'false');
-        select_all.attr('checked', 'checked');
         select_all.trigger('click')
+    }
+});
+
+$(document).on('change', '#all-genes', function (e) {
+    var all_genes = $('#all-genes');
+    if ($(all_genes).prop('checked')) {//if select all has been clicked on
+
+        $('.label-gene').each(function (i, obj) {
+            var check = $(obj).parent().children().eq(0);
+            if (!$(check).prop('checked')) {
+                $(obj).trigger('click')
+            }
+        })
+
+    }
+    else {
+        console.log('unchecked');
+        console.log($(all_genes).attr('uncheck-all'));
+        if ($(all_genes).attr('uncheck-all') == 'false') {
+            $(all_genes).removeAttr('uncheck-all')
+        }
+        else {
+            $('.label-gene').each(function (i, obj) {
+                var check = $(obj).parent().children().eq(0);
+                if ($(check).prop('checked')) {
+                    $(obj).trigger('click')
+                }
+            })
+        }
     }
 });
 
 $(document).on('click', ".label-selectall", function () {
     var select_all = $('.label-selectall');
-    if (select_all.attr('uncheck-all') == 'false')//if one
+    if (select_all.attr('uncheck-all') == 'false')//if one region has been unselected (not all regions need to be deselected)
     {
         select_all.removeAttr('uncheck-all')
     }
-    else if (select_all.attr('checked') == 'checked') //if select all has been clicked off
+    else if (select_all.prop('checked')) //if select all has been clicked off
     {
-        select_all.removeAttr('checked'); //remove the checked attribute
 
         $(".label-region").each(function (i, obj)//loop through all elements with .label-region class
         {
-            if ($(obj).attr('checked') == 'checked')//if object is checked turn it off
+            if ($(obj).prop('checked'))//if object is checked turn it off
             {
                 $(obj).trigger('click');
             }
@@ -914,15 +961,13 @@ $(document).on('click', ".label-selectall", function () {
     }
     else //if select all has been clicked on
     {
-        select_all.attr('checked', 'checked');//add checked attribute
 
         if (select_all.attr('uncheck-all') == 'false') {
-            select_all.removeAttr('checked');
         }
         else {
             $(".label-region").each(function (i, obj)//loop through all elements with .label-region class
             {
-                if ($(obj).attr('checked') != 'checked')//if object is selected do nothing
+                if (!$(obj).prop('checked'))//if object is selected do nothing
                 {
                     $(obj).trigger('click')
                 }
@@ -969,12 +1014,10 @@ $(document).on('click', "#remove-gene", function () {
 
         $('[name="genebutton"]').each(function (i, obj) {
             if ($(obj).attr('data-name') == geneName) {
-                console.log('found');
                 $(obj).remove()
             }
         });
         var row = $('#' + geneName).parent().parent().parent();
-        console.log($(row[0]));
         $(row[0]).remove();
         if (JSON.parse(sessionStorage.getItem("current_ids")).length > 0) {
             remove_panel_regions(panel_id, ids, geneName)
@@ -1024,7 +1067,6 @@ function remove_vp_regions(vpanel_id, ids, geneName) {
             region_added()
         },
         error: function (xhr, status, error) {
-            console.log(error);
             $('#trace').append("<p>" + error + "</p>");
             $('#ajaxModal').modal('show');
             return false;
@@ -1076,7 +1118,6 @@ function remove_panel_regions(panel_id, ids, gene_name) {
             $('#regions').children().remove();
         },
         error: function (xhr, status, error) {
-            console.log(error);
             $('#trace').append("<p>" + error + "</p>");
             $('#ajaxModal').modal('show');
             return false;
@@ -1089,15 +1130,12 @@ $(document).ready(function () {
     $("#dialog").dialog({autoOpen: false});
 });
 
-function add_gene(i, gene_list, complete, progress){
-    console.log('gene_list');
-    console.log($(gene_list).length);
-    console.log(i);
+function add_gene(i, gene_list, complete, progress) {
     var total = $(gene_list).length;
     var dict = {
-                "gene_id": gene_list[i],
-                "panel_id": $('#main').attr('name')
-            };
+        "gene_id": gene_list[i],
+        "panel_id": $('#main').attr('name')
+    };
     var data = JSON.stringify(dict);
 
     $.ajax({
@@ -1136,19 +1174,18 @@ function add_gene(i, gene_list, complete, progress){
             }
 
             i++;
-            if(i != total){
+            if (i != total) {
                 add_gene(i, gene_list, complete, progress)
             }
 
         },
         error: function (xhr, status, error) {
-            console.log(error);
             $('#trace').append("<p>" + error + "</p>");
             $('#ajaxModal').modal('show');
             return false;
         }
     })
-};
+}
 
 $(document).on('click', '#add-all', function () {
     var gene_list = [];
@@ -1160,6 +1197,76 @@ $(document).on('click', '#add-all', function () {
     });
 
     add_gene(0, gene_list, 0, 0.0)
+});
+
+function add_gene_vp(i, gene_list, complete, progress) {
+    var total = $(gene_list).length;
+    var dict = {
+        "gene_id": gene_list[i],
+        "vpanel_id": $('#main').attr('name'),
+        "panel_id": $('#panel').val()
+    };
+    var data = JSON.stringify(dict);
+
+    $.ajax({
+        type: "POST",
+        url: Flask.url_for('panels.add_all_regions_vp'),
+        data: data,
+        dataType: "json",
+        contentType: "application/json",
+        success: function (response) {
+            var gene = response["genes"];
+            $('.btngene').each(function (i, obj) {
+                if ($(obj).attr('data-id') == gene) {
+                    $(obj).removeClass('btn-danger').addClass('btn-success');
+                    $(obj).children().eq(0).removeClass('glyphicon-pencil').addClass('glyphicon-ok');
+                }
+            });
+
+            complete += 1;
+            progress = complete / total * 100;
+            var progress_bar = $('.progress-bar');
+            progress_bar.attr("aria-valuenow", progress);
+            progress_bar.attr("style", "height:25px; width:" + progress.toString() + "%");
+            if (i == total - 1) {
+                $('#dialog').dialog("destroy");
+            }
+            if (!$('#cancel').hasClass('btn-success')) {
+                region_added()
+            }
+
+            if (count_genes() == 0) {
+                $('#add-all-vp').attr('disabled', 'disabled');
+                $('#all-genes-progress').attr('hidden', 'hidden');
+            }
+            else if ($('#add-all').attr('disabled') == 'disabled') {
+                $('#add-all').removeAttr('disabled')
+            }
+
+            i++;
+            if (i != total) {
+                add_gene_vp(i, gene_list, complete, progress)
+            }
+
+        },
+        error: function (xhr, status, error) {
+            $('#trace').append("<p>" + error + "</p>");
+            $('#ajaxModal').modal('show');
+            return false;
+        }
+    })
+}
+
+$(document).on('click', '#add-all-vp', function () {
+    var gene_list = [];
+    $("#all-genes-progress").removeAttr("hidden");
+    $('.btngene').each(function (i, obj) {
+        if ($(obj).children().eq(0).hasClass('glyphicon-pencil')) {
+            gene_list.push($(obj).attr('data-id'))
+        }
+    });
+
+    add_gene_vp(0, gene_list, 0, 0.0)
 });
 
 function add_regions(vpanel_id, ids, geneName) {
@@ -1191,12 +1298,10 @@ function add_regions(vpanel_id, ids, geneName) {
             }
 
             if ($('#cancel').hasClass('btn-danger')) {
-                console.log('region added');
                 region_added();
             }
         },
         error: function (xhr, status, error) {
-            console.log(error);
             $('#trace').append("<p>" + error + "</p>");
             $('#ajaxModal').modal('show');
             return false;
@@ -1207,10 +1312,8 @@ function add_regions(vpanel_id, ids, geneName) {
 
 function add_panel_regions(panel_id, ids, gene_name) {
     var pref_tx_id = $('#' + gene_name).val();
-    console.log(pref_tx_id);
 
     var id_ext = [];
-    console.log(ids);
     for (var id in ids) {
         //this gets the second parent of the switch (tr)
         var row = $('[for="' + ids[id] + '"]').parent().parent();
@@ -1253,7 +1356,6 @@ function add_panel_regions(panel_id, ids, gene_name) {
             }
 
             if ($('#cancel').hasClass('btn-danger')) {
-                console.log('region added');
                 region_added();
             }
 
@@ -1265,7 +1367,6 @@ function add_panel_regions(panel_id, ids, gene_name) {
             }
         },
         error: function (xhr, status, error) {
-            console.log(error);
             $('#trace').append("<p>" + error + "</p>");
             $('#ajaxModal').modal('show');
             return false;
@@ -1292,12 +1393,10 @@ $(document).on('click', '#upload', function () {
             });
             var lst = evt.target.result.split('\n');
             $.each(lst, function (i) {
-                console.log(lst[i]);
                 if ($.inArray(lst[i].replace('\r', ''), current_list) < 0) {
                     gene_list.push(lst[i].replace(/\r/g, ''))
                 }
                 else {
-                    console.log('exists');
                     if (exists == "") {
                         exists += lst[i].replace(/\r/g, '')
                     }
@@ -1306,8 +1405,6 @@ $(document).on('click', '#upload', function () {
                     }
                 }
             });
-            console.log(gene_list);
-            console.log(exists);
             var dict = {
                 "project_id": project_id,
                 "gene_list": gene_list
@@ -1333,7 +1430,7 @@ $(document).on('click', '#upload', function () {
                         gene_message.append(message);
                     }
                     gene_message.append(response['message']);
-                    console.log(response['message']);
+
                     $('#tx_table').append(response['html']);
                     $('#genelist').append(response['button_list']);
                     if (count_genes() == 0) {
@@ -1347,7 +1444,6 @@ $(document).on('click', '#upload', function () {
                     upload.append('Upload');
                 },
                 error: function (xhr, status, error) {
-                    console.log(error);
                     $('#trace').append("<p>" + error + "</p>");
                     $('#ajaxModal').modal('show');
                     return false;
@@ -1355,8 +1451,12 @@ $(document).on('click', '#upload', function () {
             })
 
         };
-        reader.onerror = function () {
-            console.log('error')
+        reader.onerror = function (xhr, status, error) {
+            var trace = $('#trace');
+            trace.children().remove();
+            trace.append("<p>" + error + "</p>");
+            $('#ajaxModal').modal('show');
+            return false;
         }
     }
 });
@@ -1383,10 +1483,10 @@ $(document).on('click', "#add-regions", function () {
 
         $('.label-region').each(function (i, obj) {
 
-            if ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) > -1 && $(obj).attr('checked') != 'checked') {
+            if ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) > -1 && !$(obj).prop('checked')) {
                 to_remove.push($(obj).attr("for"))
             }
-            else if ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) == -1 && $(obj).attr('checked') == 'checked') {
+            else if ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) == -1 && $(obj).prop('checked')) {
                 to_add.push($(obj).attr("for"))
             }
 
@@ -1471,7 +1571,6 @@ $(document).ready(function () {
                     $('#genes').val('');
                 },
                 error: function (xhr, status, error) {
-                    console.log(error);
                     $('#trace').append("<p>" + error + "</p>");
                     $('#ajaxModal').modal('show');
                     return false;
@@ -1538,8 +1637,7 @@ $(function () {
             else if (value == "Users") {
                 url = Flask.url_for('search.autocomplete_user')
             }
-            console.log(url);
-            console.log(value);
+
             $.getJSON(url, {
                 q: request.term // in flask, "q" will be the argument to look for using request.args
             }, function (data) {

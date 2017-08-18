@@ -249,7 +249,9 @@ th {
     border: 1px solid #000;
   }
   .table {
+    table-layout: auto;
     border-collapse: collapse !important;
+
   }
   .table td,
   .table th {
@@ -4495,6 +4497,7 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
 .navbar-default {
   background-color: #f8f8f8;
   border-color: #e7e7e7;
+  width: 100%;
 }
 .navbar-default .navbar-brand {
   color: #777;

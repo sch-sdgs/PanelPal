@@ -116,15 +116,25 @@ def unlock_panel_query(s, panel_id):
     s.commit()
     return True
 
+def get_locked_user(s, panel_id):
+    """
+    returns the username of the person who locked the panel
+
+    :param s:
+    :param panel_id:
+    :return:
+    """
+    users = s.query(Panels,Users).join(Users).filter(Panels.id == panel_id).values(Users.username)
+    for i in users:
+        return i.username
+
+
 def get_all_locked_by_username(s,username):
     """
     gets all locked panels
     :param s: database session
     :return: sql alchemy generator object
     """
-    # print username
-    # user_id = get_user_by_username(s,username)
-    # print user_id
     locked = s.query(Panels,Users).\
         join(Users).\
         filter(Users.username == username).\
@@ -214,12 +224,12 @@ def create_virtualpanel_query(s, name, panel_id):
     """
     try:
         current_panel_version = get_current_version(s, panel_id)
-        print(float(current_panel_version))
         virtualpanel = VirtualPanels(name, float(current_panel_version))
         s.add(virtualpanel)
         s.commit()
         return virtualpanel.id
     except exc.IntegrityError:
+        s.rollback()
         return -1
 
 
@@ -305,6 +315,21 @@ def add_genes_to_panel_with_ext(s, panel_id, gene_id):
 
     return True
 
+def add_all_regions_to_vp(s, panel_id, gene_id, vpanel_id):
+    """
+    Add all the current panel regions to the virtual panel for a given gene
+
+    :param s:
+    :param panel_id:
+    :param gene_id:
+    :param vpanel_id:
+    :return:
+    """
+    regions = get_panel_regions_by_geneid(s, gene_id, panel_id)
+    for r in regions:
+        add_version_to_vp(s, vpanel_id, r.version_id)
+    s.commit()
+    return True
 
 @message
 def add_genes_to_panel(s, panelid, gene):
@@ -330,6 +355,8 @@ def add_genes_to_panel(s, panelid, gene):
 @message
 def add_version_to_vp(s, vp_id, version_id):
     """
+    Adds a row from versions to the VP_relationships table.
+    This method does not commit - must be committed following use.
 
     :param s:
     :param vp_id:
@@ -342,7 +369,7 @@ def add_version_to_vp(s, vp_id, version_id):
         current_version = get_current_version(s,panel_id)
     vp_relationship = VPRelationships(intro=float(current_version) + float(0.1), last=None, version_id=version_id, vpanel_id=vp_id)
     s.add(vp_relationship)
-    s.commit()
+    # s.commit()
     return vp_relationship.id
 
 def get_prev_versions_vp(s, vp_id):
@@ -392,7 +419,6 @@ def create_custom_region(s, panel_id, chrom, start, end, name):
     region = Regions(chrom=chrom, start=start, end=end, name=name)
     s.add(region)
     s.commit()
-    print(region.id)
     version_id = add_region_to_panel(s, region.id, panel_id)
     s.commit()
     return region.id, version_id
@@ -474,7 +500,6 @@ def get_vprelationships(s, vp_id, gene_id):
     :return:
     """
     current_version = get_current_version_vp(s, vp_id)
-    print('getting versions')
     versions = s.query(VPRelationships, Versions, Regions, Exons, Tx). \
         join(Versions). \
         join(Regions). \
@@ -501,9 +526,7 @@ def get_versions(s, panel_id, gene_id):
     :return:
     """
     current_version = get_current_version(s, panel_id)
-    print(current_version)
     if not current_version:
-        print('none')
         current_version = 0
     versions = s.query(Versions, Regions, Exons, Tx). \
         join(Regions). \
@@ -612,9 +635,6 @@ def get_altered_region_ids_exclude(s, geneid, panelid):
 
     results = {}
     for r in regions:
-        print('hey')
-        print(r.include_start)
-        print(r.include_end)
         if r.include_start == 'True' and r.include_end == 'True':
             results[r.region_id] = {'coord': (r.region_start, r.region_end), 'position': 'both'}
         elif r.include_start == 'True':
@@ -689,9 +709,6 @@ def get_altered_region_ids_include(s, geneid, panelid):
 
     results = {}
     for r in regions:
-        print('hello')
-        print(r.include_start)
-        print(r.include_end)
         if r.include_start == 'True' and r.include_end == 'True':
             results[r.region_id] = {'coord': (r.start, r.end), 'position': 'both'}
         elif r.include_start == 'True':
@@ -1063,6 +1080,10 @@ def get_panel_details_by_id(s, panel_id):
 
     return panel
 
+def get_panel_id_by_name(s, panel_name):
+    panels = s.query(Panels).filter(Panels.name == panel_name).values(Panels.id)
+    for panel in panels:
+        return panel.id
 
 def get_vpanel_details_by_id(s, vpanel_id):
     panel = s.query(Projects, Panels, Versions, VPRelationships, VirtualPanels). \
@@ -1129,7 +1150,6 @@ def remove_version_from_panel(s, panel_id, version_id):
     current_version = get_current_version(s, panel_id)
     for v in version:
         if v.last == None:
-            print('no last')
             if v.intro > current_version:
                 s.query(Versions).filter_by(id=v.id).delete()
             else:
@@ -1222,6 +1242,9 @@ def get_regions_by_panelid(s, panelid, version):
     :param panelid:
     :return:
     """
+    sql = text("DROP TABLE IF EXISTS _custom;")
+    s.execute(sql)
+
     sql = text("""CREATE TEMP TABLE _custom AS SELECT versions.id AS version_id,
                        regions.chrom, panels.current_version, panels.name AS panel_name, '' AS gene_name,
                        CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5 END AS region_start,
@@ -1304,7 +1327,7 @@ def get_regions_by_vpanelid(s, vpanelid, version):
     """
     if type(version) == float or type(version) == Decimal:
         version = round(version, 1)
-    print('drop table')
+
     sql = text("DROP TABLE IF EXISTS _custom;")
     s.execute(sql)
 
@@ -1345,8 +1368,14 @@ def get_regions_by_vpanelid(s, vpanelid, version):
 
 
 def get_genes_by_vpanelid_edit(s, vpanel_id, current_version):
+    """
 
-    print(float(current_version) + 0.1)
+
+    :param s:
+    :param vpanel_id:
+    :param current_version:
+    :return:
+    """
     genes = s.query(Genes, Tx, Exons, Regions, Versions, VPRelationships, VirtualPanels). \
         join(Tx). \
         join(Exons). \

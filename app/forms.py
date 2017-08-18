@@ -1,4 +1,4 @@
-from flask_wtf import Form
+from flask_wtf import FlaskForm
 from wtforms.fields import TextField, SubmitField, HiddenField, PasswordField
 
 # TODO is this needed?
@@ -12,7 +12,7 @@ from wtforms.fields import TextField, SubmitField, HiddenField, PasswordField
 #     gene = RadioField(u'Genes',choices=[],coerce=int)
 #     project_id = TextField("Project ID")
 
-class Login(Form):
+class Login(FlaskForm):
     username  = TextField("Username")
     password = PasswordField("Password")
     submit = SubmitField("Login")

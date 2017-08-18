@@ -247,3 +247,12 @@ def edit_permissions_admin():
             result[username][u.id] = {'name': u.name, 'checked': 'checked'}
 
     return render_template("permissions_admin.html", permissions=result, message=message)
+
+@admin.route("/FAQ", methods=["GET", "POST"])
+def faq_page():
+    """
+    Displays the FAQs for PanelPal
+
+    :return: render FAQ template
+    """
+    return render_template("faq.html")

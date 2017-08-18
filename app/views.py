@@ -98,7 +98,10 @@ def logout():
 
 @app.errorhandler(404)
 def page_not_found(e):
-    formatter = logging.Formatter('%(levelname)s|' + current_user.id + '|%(asctime)s|%(message)s')
+    try:
+        formatter = logging.Formatter('%(levelname)s|' + current_user.id + '|%(asctime)s|%(message)s')
+    except AttributeError:
+        formatter = logging.Formatter('%(levelname)s|anonymous|%(asctime)s|%(message)s')
     error_handler.setFormatter(formatter)
     app.logger.addHandler(error_handler)
     app.logger.error(traceback.format_exc())
@@ -128,7 +131,8 @@ def logged_in():
 
 @app.route('/')
 def index():
-    return render_template('home.html', panels=3)
+    browser = request.user_agent.browser
+    return render_template('home.html', panels=3, browser=browser)
 
 
 @app.route('/about')

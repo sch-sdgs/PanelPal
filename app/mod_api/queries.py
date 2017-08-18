@@ -48,6 +48,10 @@ def get_vpanel_api(s, panel_name, version='current'):
                     or_(VPRelationships.last >= current_version, VPRelationships.last == None))).order_by(Regions.start)
     return PanelApiReturn(current_version, panel)
 
+def get_intronic_api(s, vpanel_name, version='current'):
+    vpanel_id = s.query(VirtualPanels).filter_by(name=vpanel_name).values(VirtualPanels.id)
+    print(vpanel_id)
+    return vpanel_id
 
 def get_exonic_api(s, panel_name, version='current'):
     panel_ids = s.query(VirtualPanels).filter_by(name=panel_name).values(VirtualPanels.id)
