@@ -452,3 +452,6 @@ input[type=checkbox].permissions_checkbox {
     margin-top : -16px;
 }
 
+.list-group-item-select-all{
+    background-color: #f9f9f9;
+}

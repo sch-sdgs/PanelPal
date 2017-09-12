@@ -877,7 +877,9 @@ $(document).on('click', '[name="genebutton"]', function (request) {
 function count_ids() {
     var ids = [];
     $('.label-region').each(function (i, obj) {
-        if ($(obj).prop('checked')) {
+        var check = $(obj).parent().children().eq(0);
+
+        if ($(check).prop('checked')) {
             ids.push($(obj).attr('for'));
         }
     });
@@ -885,29 +887,35 @@ function count_ids() {
 }
 
 $(document).on('click', ".label-region", function (request) {
-
     var obj = $(request.currentTarget);
+    var check = $(obj).parent().children().eq(0);
     var select_all = $('.label-selectall');
-    if (!$(obj).prop('checked')) {
-        if (select_all.prop('checked')) {
-            select_all.attr('uncheck-all', 'false');
-            select_all.trigger('click')
-        }
-    }
-    else {
-    }
 
     var count = count_ids().length;
-
-    if (count > 0) {
+    console.log(count);
+    if (count == 1 && $(check).prop('checked')){
+        $('#add-regions').attr('disabled', 'disabled');
+    }
+    else if (count > 0 || (count == 0 && !$(check).prop('checked'))) {
         $('#add-regions').removeAttr('disabled');
     }
     else if ($('#add-regions').attr('disabled') != 'disabled') {
         $('#add-regions').attr('disabled', 'disabled');
     }
 
-
-    if (count == $('.label-region').length && !select_all.prop('checked')) {
+    console.log(count == $('.label-region').length -1 && !$(check).prop('checked'));
+    console.log(count == 1 && $(check).prop('checked'));
+    console.log(select_all.attr('clicked') != "clicked");
+    if (((count == $('.label-region').length -1 && !$(check).prop('checked')) || //if the count is one less than the total and the current target is about to be "checked"
+        (count == 1 && $(check).prop('checked'))) && //if the count is one and the current target is about to be "unchecked"
+        select_all.attr('clicked') != "clicked") { //if the selectall slider has not been clicked
+        console.log('trigger');
+        select_all.attr('uncheck-all', 'false');
+        select_all.trigger('click')
+    }
+    else if ($(check).prop('checked') && $(select_all.parent().children().eq(0)).prop('checked')//if the current target is being "unchecked" and the selectall button is checked
+        && select_all.attr('clicked') != "clicked"){ //if the selectall slider has not been clicked
+        console.log('uncheck');
         select_all.attr('uncheck-all', 'false');
         select_all.trigger('click')
     }
@@ -944,16 +952,20 @@ $(document).on('change', '#all-genes', function (e) {
 
 $(document).on('click', ".label-selectall", function () {
     var select_all = $('.label-selectall');
-    if (select_all.attr('uncheck-all') == 'false')//if one region has been unselected (not all regions need to be deselected)
+    var select_check = $(select_all).parent().children().eq(0);
+    console.log(select_check.prop('checked'));
+    select_all.attr('clicked', 'clicked');
+    if (select_all.attr('uncheck-all') == 'false')//if one region has been (un)selected (not all regions need to be deselected)
     {
+        console.log('here');
         select_all.removeAttr('uncheck-all')
     }
-    else if (select_all.prop('checked')) //if select all has been clicked off
+    else if (select_check.prop('checked')) //if select all has been clicked off
     {
-
         $(".label-region").each(function (i, obj)//loop through all elements with .label-region class
         {
-            if ($(obj).prop('checked'))//if object is checked turn it off
+            var check = $(obj).parent().children().eq(0);
+            if ($(check).prop('checked'))//if object is checked turn it off
             {
                 $(obj).trigger('click');
             }
@@ -961,13 +973,14 @@ $(document).on('click', ".label-selectall", function () {
     }
     else //if select all has been clicked on
     {
-
+        console.log('else');
         if (select_all.attr('uncheck-all') == 'false') {
         }
         else {
             $(".label-region").each(function (i, obj)//loop through all elements with .label-region class
             {
-                if (!$(obj).prop('checked'))//if object is selected do nothing
+                var check = $(obj).parent().children().eq(0);
+                if (!$(check).prop('checked'))//if object is selected do nothing
                 {
                     $(obj).trigger('click')
                 }
@@ -975,6 +988,8 @@ $(document).on('click', ".label-selectall", function () {
         }
 
     }
+
+    select_all.removeAttr('clicked');
 
 });
 
@@ -996,13 +1011,9 @@ $(document).on('click', "#remove-gene", function () {
     if (sessionStorage.getItem('current_ids') && $('#vpanelname').length) {
         var vpanel_id = $('#main').attr('name');
         ids = sessionStorage.getItem('current_ids');
-        label_gene.each(function (i, obj) {
-            if ($(obj).attr('for') == geneName) {
-                $(obj).trigger('click');
-            }
-        });
         if (JSON.parse(sessionStorage.getItem("current_ids")).length > 0) {
-            remove_vp_regions(vpanel_id, ids)
+            remove_vp_regions(vpanel_id, ids);
+            region_added()
         }
         else {
             $('#regions').children().remove();
@@ -1020,7 +1031,8 @@ $(document).on('click', "#remove-gene", function () {
         var row = $('#' + geneName).parent().parent().parent();
         $(row[0]).remove();
         if (JSON.parse(sessionStorage.getItem("current_ids")).length > 0) {
-            remove_panel_regions(panel_id, ids, geneName)
+            remove_panel_regions(panel_id, ids, geneName);
+            region_added()
         }
         else {
             $('#regions').children().remove();

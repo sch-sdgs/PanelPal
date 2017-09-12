@@ -103,6 +103,33 @@ def region_result_to_json(data, extension=0):
 
     return result
 
+def intronic_result_to_json(data):
+    result = dict()
+    result["details"] = dict()
+    result["regions"] = list()
+    regions = dict()
+
+    for i in data:
+        print(i)
+        region = dict()
+        region["start"] = i.start
+        region["end"] = i.end
+        region["annotation"] = ""
+        if i.chrom.replace('chr', '') not in regions:
+            regions[i.chrom.replace('chr', '')] = list()
+        regions[i.chrom.replace('chr', '')].append(region)
+
+    for i in sorted(regions, cmp=ChrSorter.__lt__):
+        for details in regions[i]:
+            region = dict()
+            region["chrom"] = "chr" + str(i)
+            region["start"] = details["start"]
+            region["end"] = details["end"]
+            region["annotation"] = details["annotation"]
+            print(region)
+            result['regions'].append(region)
+
+    return result
 
 def prefttx_result_to_json(data):
     result = {}
@@ -193,7 +220,7 @@ class APIVirtualPanels(Resource):
         result = get_vpanel_api(s, name, version)
         result_json = region_result_to_json(result.result)
         result_json["details"]["panel"] = name
-        result_json["details"]["version"] = int(result.current_version)
+        result_json["details"]["version"] = float(result.current_version)
         resp = output_json(result_json, 200)
         resp.headers['content-type'] = 'application/json'
         return resp
@@ -218,7 +245,9 @@ class APIIntronic(Resource):
     )
     def get(self, name, version):
         result = get_intronic_api(s, name, version)
-        result_json = {'details':{'name':name, 'version':version}, 'regions':[]}
+        result_json = intronic_result_to_json(result.result)
+        result_json['details']['panel'] = name
+        result_json['details']['version'] = result.current_version
         resp = output_json(result_json, 200)
         resp.headers['content-type'] = 'application/json'
         return resp

@@ -9,7 +9,7 @@
         <thead>
         <tr>
             <th>Gene</th>
-            <th>Transcripts (Current PrefTx is selected and highlighted, upcoming PrefTx indicated by *)</th>
+            <th>Transcripts (Current PrefTx is selected and highlighted, upcoming PrefTx appear in red)</th>
         </tr>
         </thead>
         {% for gene in genes %}
@@ -18,8 +18,12 @@
             <td>
                 <div class="form-group">
                     <select class="form-control" name="{{ gene }}" id="{{ gene }}">
-                        {% for tx in genes[gene] %}
+                        {% for tx in genes[gene]["tx"] %}
                         {% if tx[2] == "selected" %}
+                        <option value="{{ tx[0] }}" class="bolden red" selected>{{ tx[1] }}</option>
+                        {% elif tx[2] == "current" and genes[gene]["upcoming"] %}
+                        <option value="{{ tx[0] }}" class="bolden">{{ tx[1] }}</option>
+                        {% elif tx[2] == "current" %}
                         <option value="{{ tx[0] }}" class="bolden" selected>{{ tx[1] }}</option>
                         {% else %}
                         <option value="{{ tx[0] }}" class="{{ tx[3] }}">{{ tx[1] }}</option>

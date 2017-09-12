@@ -107,7 +107,10 @@ def add_projects():
             flash('All fields are required.')
             return render_template('project_add.html', form=form)
         else:
-            create_project(s, name=form.data["name"], user=current_user.id)
+            id = create_project(s, name=form.data["name"], user=current_user.id)
+            if id == -1:
+                form.name.errors = ["That name isn't unique.",]
+                return render_template('project_add.html', form=form)
             return view_projects()
 
     elif request.method == 'GET':
@@ -165,27 +168,28 @@ def create_preftx():
         result = get_genes_by_projectid_new(s=s, projectid=project_id)
         genes = OrderedDict()
         for i in result:
-            print i.genename
             preftx_id = get_preftx_by_gene_id(s, project_id, i.geneid)
             upcoming_preftx = get_upcoming_preftx_by_gene_id(s,preftx_id_master,i.geneid)
-            print "UPCOMING"
-            print upcoming_preftx
             all_tx = get_tx_by_gene_id(s, i.geneid)
+            genes[i.genename] = {"upcoming": False, "tx": list()}
             for j in all_tx:
-                if preftx_id == j.id:
+                print(j)
+
+                if upcoming_preftx == j.id:
                     selected = "selected"
+                elif preftx_id == j.id:
+                    selected = "current"
                 else:
                     selected = ""
+
                 if upcoming_preftx == j.id:
-                    genes[i.genename] = list()
-                    genes[i.genename].append((0, j.accession + " - This Is a Change Not Made Live Yet", "","red"))
-                    break
+                    genes[i.genename]["upcoming"] = True
+                    genes[i.genename]["tx"].append((j.id, j.accession + " - This Is a Change Not Made Live Yet", selected,"red"))
                 else:
                     if i.genename not in genes:
-                        genes[i.genename] = list()
-                        genes[i.genename].append((j.id, j.accession, selected,""))
+                        genes[i.genename]["tx"].append((j.id, j.accession, selected,""))
                     else:
-                        genes[i.genename].append((j.id, j.accession, selected,""))
+                        genes[i.genename]["tx"].append((j.id, j.accession, selected,""))
 
         print genes
 
@@ -203,7 +207,7 @@ def create_preftx():
             else:
                 result=dict()
                 result["gene"]=i
-                result["tx_id"]=request.form[i]
+                result["tx_id"]=request.form[i].replace(' - This Is a Change Not Made Live Yet', '')
                 tx_ids.append(result)
         print tx_ids
         print project_id

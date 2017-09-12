@@ -1,5 +1,5 @@
 from app.queries import *
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, exc
 
 from app.panel_pal import message
 from app.mod_admin.queries import get_user_id_by_username, check_user_has_permission
@@ -89,9 +89,14 @@ def create_preftx_entry(s, project_id):
 
 @message
 def create_project(s, name, user):
-    project = Projects(name=name)
-    s.add(project)
-    s.flush()
+    try:
+        project = Projects(name=name)
+        s.add(project)
+        s.flush()
+    except exc.IntegrityError:
+        s.rollback()
+        return -1
+
     create_preftx_entry(s, project.id)
     user_id = get_user_id_by_username(s, user)
     user_rel = UserRelationships(user_id=user_id, project_id=project.id)

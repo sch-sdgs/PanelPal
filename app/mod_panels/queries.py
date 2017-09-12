@@ -573,7 +573,7 @@ def check_if_utr(s, geneid, panelid):
                             current_regions[-1].region_end + current_regions[-1].ext_3 == excl_utr[-1].region_end + \
                     excl_utr[-1].ext_3:
         return False
-    elif current_regions[-1].region_id == excl_utr[-1].region_id and \
+    elif current_regions[-1].region_id != excl_utr[-1].region_id and \
                             current_regions[0].region_start - current_regions[0].ext_5 == excl_utr[0].region_start - \
                     excl_utr[0].ext_5:
         return False
@@ -588,6 +588,9 @@ def get_altered_region_ids_exclude(s, geneid, panelid):
     :param panelid:
     :return:
     """
+    sql = text("DROP TABLE IF EXISTS _cds_alt;")
+    s.execute(sql)
+
     sql = text("""CREATE TEMP TABLE _cds_alt AS
         SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end
         FROM tx
@@ -642,6 +645,8 @@ def get_altered_region_ids_exclude(s, geneid, panelid):
         else:
             results[r.region_id] = {'coord':r.region_end + r.ext_3, 'position':'end'}
 
+    s.commit()
+    s.flush()
     return results
 
 def get_altered_region_ids_include(s, geneid, panelid):
@@ -652,6 +657,9 @@ def get_altered_region_ids_include(s, geneid, panelid):
     :param panelid:
     :return:
     """
+    sql = text("DROP TABLE IF EXISTS _cds_alt;")
+    s.execute(sql)
+
     sql = text("""CREATE TEMP TABLE _cds_alt AS
                     SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end
                     FROM tx
@@ -661,6 +669,9 @@ def get_altered_region_ids_include(s, geneid, panelid):
                     GROUP BY regions.id;""")
     values = {'gene_id':geneid}
     s.execute(sql, values)
+
+    sql = text("DROP TABLE IF EXISTS _utr;")
+    s.execute(sql)
 
     sql = text("""CREATE TEMP TABLE _utr AS
                     SELECT regions.id as region_id,
@@ -715,7 +726,8 @@ def get_altered_region_ids_include(s, geneid, panelid):
             results[r.region_id] = {'coord':r.start, 'position':'start'}
         else:
             results[r.region_id] = {'coord':r.end, 'position':'end'}
-
+    s.commit()
+    s.flush()
     return results
 
 def get_regions_by_geneid_with_versions(s, geneid, panel_id):
@@ -748,7 +760,7 @@ def get_regions_by_geneid_with_versions(s, geneid, panel_id):
                     WHERE genes.id = :gene_id
                     AND versions.panel_id = :panel_id
                     AND (versions.intro = :new_version OR (versions.intro <= :current_version AND (versions.last > :current_version OR versions.last IS NULL)))
-                    GROUP BY regions.id ORDER BY region_start""")
+                    GROUP BY regions.id ORDER BY region_start;""")
 
     values = {'panel_id': panel_id, 'gene_id': geneid, 'current_version': current_version,
               'new_version': current_version + 1}
@@ -771,8 +783,8 @@ def get_regions_by_geneid_with_versions(s, geneid, panel_id):
                         UNION
                         SELECT r_id AS region_id, chrom, region_start, ext_5, region_end, ext_3, name FROM _versions ORDER BY region_start;""")
     regions = s.execute(sql, values)
-
-    return regions
+    s.flush()
+    return list(regions)
 
 
 def get_regions_by_geneid_with_versions_no_utr(s, geneid, panel_id):
@@ -783,6 +795,9 @@ def get_regions_by_geneid_with_versions_no_utr(s, geneid, panel_id):
     :param panel_id:
     :return:
     """
+    sql = text("DROP TABLE IF EXISTS _cds;")
+    s.execute(sql)
+
     sql = text(
         """CREATE TEMP TABLE _cds AS
             SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end
@@ -799,6 +814,9 @@ def get_regions_by_geneid_with_versions_no_utr(s, geneid, panel_id):
         current_version = 0
     values = {'panel_id': panel_id, 'gene_id': geneid, 'current_version': current_version,
               'new_version': current_version + 1}
+
+    sql = text("DROP TABLE IF EXISTS _versions_no_utr;")
+    s.execute(sql)
 
     sql = text("""CREATE TEMP TABLE _versions_no_utr AS SELECT regions.id as r_id,
                     regions.chrom as chrom,
@@ -847,8 +865,8 @@ def get_regions_by_geneid_with_versions_no_utr(s, geneid, panel_id):
                     UNION
                     SELECT r_id AS region_id, chrom, region_start, ext_5, region_end, ext_3, name FROM _versions_no_utr ORDER BY region_start;""")
     regions = s.execute(sql, values)
-
-    return regions
+    s.flush()
+    return list(regions)
 
 
 def get_regions_by_gene_no_utr(s, geneid):
@@ -858,6 +876,9 @@ def get_regions_by_gene_no_utr(s, geneid):
     :param geneid:
     :return:
     """
+    sql = text("DROP TABLE IF EXISTS _cds_gene;")
+    s.execute(sql)
+
     sql = text(
         "CREATE TEMP TABLE _cds_gene AS SELECT regions.id as id, min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end FROM tx JOIN exons on tx.id = exons.tx_id JOIN regions ON exons.region_id = regions.id WHERE tx.gene_id = :gene_id GROUP BY regions.id;")
     values = {'gene_id': geneid}
@@ -881,7 +902,7 @@ def get_regions_by_gene_no_utr(s, geneid):
     values = {'gene_id': geneid}
     regions = s.execute(sql, values)
 
-    return regions
+    return list(regions)
 
 
 def get_regions_by_geneid(s, geneid):
@@ -909,7 +930,7 @@ def get_regions_by_geneid(s, geneid):
 
     values = {'gene_id': geneid}
     regions = s.execute(sql, values)
-    return regions
+    return list(regions)
 
 
 def get_panel_regions_by_geneid(s, geneid, panelid):
@@ -938,7 +959,7 @@ def get_panel_regions_by_geneid(s, geneid, panelid):
                     GROUP BY regions.id ORDER BY region_start""")
     values = {'panel_id': panelid, 'gene_id': geneid, 'version': current_version}
     regions = s.execute(sql, values)
-    return regions
+    return list(regions)
 
 
 def get_version_row(s, panel_id, region_id, current_version):
@@ -964,8 +985,7 @@ def get_version_row(s, panel_id, region_id, current_version):
                     )). \
         values(Versions.id, Versions.intro, Versions.last, Versions.extension_3, Versions.extension_5)
     for version in versions:
-        print(version)
-    return version
+        return version
 
 
 @message
@@ -1139,7 +1159,7 @@ def get_panel_edit(s, id, version):
 def remove_version_from_panel(s, panel_id, version_id):
     """
     Checks to see if region is live and if it is populates last, else removes from table
-    Then checks vprelationships table and removes from virtual panels
+    Then checks vprelationships table and removes from virtual panels using the same logic
 
     :param s:
     :param panel_id:
@@ -1150,7 +1170,7 @@ def remove_version_from_panel(s, panel_id, version_id):
     current_version = get_current_version(s, panel_id)
     for v in version:
         if v.last == None:
-            if v.intro > current_version:
+            if v.intro > current_version: #if region is not live in the panel it cannot have been added to a virtual panel
                 s.query(Versions).filter_by(id=v.id).delete()
             else:
                 vp_relationships = s.query(VPRelationships).filter_by(version_id=v.id).all()
@@ -1190,7 +1210,7 @@ def remove_version_from_vp(s, vp_id, version_id):
 @message
 def make_panel_live(s, panelid, new_version, username):
     """
-    makes a panel line
+    makes a panel live
 
     :return: True
     :param s: db session
@@ -1207,16 +1227,24 @@ def make_panel_live(s, panelid, new_version, username):
 
 
 @message
-def make_vp_panel_live(s, panelid, new_version):
+def make_vp_panel_live(s, vpanelid):
     """
-    makes a panel line
+    makes a virtual panel live
 
     :return: True
     :param s: db session
-    :param panelid: panel id
+    :param vpanelid: panel id
     :param new_version: the new version number of the panel
     """
-    s.query(VirtualPanels).filter_by(id=panelid).update({VirtualPanels.current_version: new_version})
+    panel_id = get_panel_by_vp_id(s, vpanelid)
+    current_panel_version = get_current_version(s, panel_id)
+    current_vpanel_version = get_current_version_vp(s, vpanelid)
+    if current_panel_version > current_vpanel_version:
+        new_version = float(current_panel_version) + 0.1
+    else:
+        new_version = float(current_vpanel_version) + 0.1
+
+    s.query(VirtualPanels).filter_by(id=vpanelid).update({VirtualPanels.current_version: new_version})
     s.commit()
 
     return True
@@ -1231,7 +1259,7 @@ def lock_panel(s, username, panel_id):
     return True
 
 
-def get_regions_by_panelid(s, panelid, version):
+def get_regions_by_panelid(s, panelid, version, extension=0):
     """
     Gets current regions for a given gene within a given panel.
     Creates temp table containing custom regions and joins with all other regions.
@@ -1262,8 +1290,8 @@ def get_regions_by_panelid(s, panelid, version):
     if len(list(custom)) > 0:
         sql = text("""SELECT versions.id AS version_id,
                     regions.chrom, panels.current_version, panels.name AS panel_name, genes.name AS gene_name,
-                    CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5 END AS region_start,
-                    CASE WHEN (versions.extension_3 IS NULL) THEN regions."end" ELSE regions."end" + versions.extension_3 END AS region_end,
+                    CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5 - :extension END AS region_start,
+                    CASE WHEN (versions.extension_3 IS NULL) THEN regions."end" ELSE regions."end" + versions.extension_3 + :extension END AS region_end,
                     CASE WHEN regions.name IS NULL THEN group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) ELSE regions.name END AS name
                     FROM panels
                     JOIN versions ON versions.panel_id = panels.id
@@ -1278,8 +1306,8 @@ def get_regions_by_panelid(s, panelid, version):
     else:
         sql = text("""SELECT versions.id AS version_id,
                     regions.chrom, panels.current_version, panels.name AS panel_name, genes.name AS gene_name,
-                    CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5 END AS region_start,
-                    CASE WHEN (versions.extension_3 IS NULL) THEN regions."end" ELSE regions."end" + versions.extension_3 END AS region_end,
+                    CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5 - :extension END AS region_start,
+                    CASE WHEN (versions.extension_3 IS NULL) THEN regions."end" ELSE regions."end" + versions.extension_3 + :extension END AS region_end,
                     CASE WHEN regions.name IS NULL THEN group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) ELSE regions.name END AS name
                     FROM panels
                     JOIN versions ON versions.panel_id = panels.id
@@ -1290,8 +1318,9 @@ def get_regions_by_panelid(s, panelid, version):
                     WHERE panels.id = :panel_id AND versions.intro <= :version AND (versions.last >= :version OR versions.last IS NULL)
                     GROUP BY regions.id
                     ORDER BY chrom,region_start;""")
+    values['extension'] = extension
     regions = s.execute(sql, values)
-    return regions
+    return list(regions)
 
 
 def get_genes_by_panelid_edit(s, panelid, current_version):
@@ -1304,9 +1333,9 @@ def get_genes_by_panelid_edit(s, panelid, current_version):
         join(Versions). \
         join(Panels). \
         filter(and_(Panels.id == panelid, or_(
-        and_(Versions.intro == current_version,
+        and_(Versions.intro <= current_version,
              or_(Versions.last == None,
-                 Versions.last != current_version)),
+                 Versions.last > current_version)),
         Versions.intro == current_version + 1),
                     or_(Versions.last >= current_version,
                         Versions.last == None))). \
@@ -1315,7 +1344,7 @@ def get_genes_by_panelid_edit(s, panelid, current_version):
     return genes
 
 
-def get_regions_by_vpanelid(s, vpanelid, version):
+def get_regions_by_vpanelid(s, vpanelid, version, extension=0):
     """
     Creates temporary table containing custom regions then selects all regions for virtual panels and combines with custom regions.
     Table is sorted by chrom then region start.
@@ -1364,7 +1393,7 @@ def get_regions_by_vpanelid(s, vpanelid, version):
                 ORDER BY chrom,region_start;""")
 
     regions = s.execute(sql, values)
-    return regions
+    return list(regions)
 
 
 def get_genes_by_vpanelid_edit(s, vpanel_id, current_version):
@@ -1396,3 +1425,5 @@ def get_genes_by_vpanelid_edit(s, vpanel_id, current_version):
         values(Genes.name, Genes.id)
 
     return genes
+
+

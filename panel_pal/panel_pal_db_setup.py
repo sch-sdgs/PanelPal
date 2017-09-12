@@ -55,7 +55,7 @@ def main():
     args = parser.parse_args()
 
 
-    db = '/home/bioinfo/Natalie/wc/panel_pal/resources/panel_pal.db'
+    db = '/home/bioinfo/Natalie/wc/PanelPal/resources/panel_pal.db'
     print(db)
 
     conn_main = sqlite3.connect(db)

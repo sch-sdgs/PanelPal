@@ -1,0 +1,8 @@
+setup.cfg
+imagesize/__init__.py
+imagesize/get.py
+pip-egg-info/imagesize.egg-info/PKG-INFO
+pip-egg-info/imagesize.egg-info/SOURCES.txt
+pip-egg-info/imagesize.egg-info/dependency_links.txt
+pip-egg-info/imagesize.egg-info/top_level.txt
+test/test_get.py

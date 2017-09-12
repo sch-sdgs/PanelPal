@@ -1,5 +1,5 @@
 from app.mod_panels.queries import get_current_version, get_current_version_vp
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, text
 
 from app.mod_projects.queries import get_preftx_id_by_project_id, get_current_preftx_version, get_project_id_by_name
 from app.models import *
@@ -49,9 +49,40 @@ def get_vpanel_api(s, panel_name, version='current'):
     return PanelApiReturn(current_version, panel)
 
 def get_intronic_api(s, vpanel_name, version='current'):
-    vpanel_id = s.query(VirtualPanels).filter_by(name=vpanel_name).values(VirtualPanels.id)
+    vpanel = s.query(VirtualPanels).filter_by(name=vpanel_name).values(VirtualPanels.id)
+    for i in vpanel:
+        vpanel_id = i.id
     print(vpanel_id)
-    return vpanel_id
+    if version == 'current':
+        current_version = get_current_version_vp(s, vpanel_id)
+    else:
+        current_version = version
+
+    sql = text("""SELECT regions.chrom, regions.start - 25 as start, regions.start - 5 as end
+                    FROM virtual_panels 
+                    JOIN VP_relationships on virtual_panels.id = VP_relationships.vpanel_id
+                    JOIN versions on VP_relationships.version_id = versions.id
+                    JOIN regions ON regions.id = versions.region_id
+                    WHERE virtual_panels.id = :vpanel_id AND VP_relationships.intro <= :version AND (VP_relationships.last >= :version OR VP_relationships.last IS NULL)
+                    AND regions.name IS NULL
+                    UNION
+                    SELECT regions.chrom, regions.end + 5 as start, regions.end + 25 as end
+                    FROM virtual_panels 
+                    JOIN VP_relationships on virtual_panels.id = VP_relationships.vpanel_id
+                    JOIN versions on VP_relationships.version_id = versions.id
+                    JOIN regions ON regions.id = versions.region_id
+                    WHERE virtual_panels.id = :vpanel_id AND VP_relationships.intro <= :version AND (VP_relationships.last >= :version OR VP_relationships.last IS NULL)
+                    AND regions.name IS NULL
+                    ORDER BY start
+                        """)
+    values = {"vpanel_id":vpanel_id, "version":current_version}
+    regions = s.execute(sql, values)
+
+    result = []
+    # for i in regions:
+    #     result.append({"chrom":i.chrom, "start":i.start, "end":i.end, "annotation":""})
+    # print(result)
+    return PanelApiReturn(current_version, regions)
 
 def get_exonic_api(s, panel_name, version='current'):
     panel_ids = s.query(VirtualPanels).filter_by(name=panel_name).values(VirtualPanels.id)

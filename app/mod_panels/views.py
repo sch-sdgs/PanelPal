@@ -60,6 +60,14 @@ class LockCol(Col):
         else:
             return ''
 
+class LinkColEdit(LinkCol):
+    def td_contents(self, item, attr_list):
+        if (item["locked"] is None or current_user.id == get_username_by_user_id(s, item["locked"])) and item["permission"] is True:
+            return '<a href="{url}">{text}</a>'.format(
+                url=self.url(item),
+                text=self.td_format(self.text(item, attr_list)))
+        else:
+            return '-'
 
 class LinkColLive(LinkCol):
     def td_contents(self, item, attr_list):
@@ -107,7 +115,7 @@ class ItemTablePanels(Table):
     panelname = Col('Name')
     current_version = Col('Stable Version', column_html_attrs=args)
     view_panel = LinkCol('View Panel', 'panels.view_panel', url_kwargs=dict(id='panelid'), column_html_attrs=args)
-    edit = LinkColConditional('Edit Panel', 'panels.edit_panel_process', url_kwargs=dict(id='panelid'), column_html_attrs=args)
+    edit = LinkColEdit('Edit Panel', 'panels.edit_panel_process', url_kwargs=dict(id='panelid'), column_html_attrs=args)
     view = LinkCol('View Virtual Panels', 'panels.view_virtual_panels', url_kwargs=dict(id='panelid'), column_html_attrs=args)
     locked = LockCol('Locked', column_html_attrs=args)
     status = LabelCol('Status', column_html_attrs=args)
@@ -119,7 +127,7 @@ class ItemTableVPanels(Table):
     vp_name = Col('Name')
     current_version = Col('Stable Version')
     view_panel = LinkCol('View Panel', 'panels.view_vpanel', url_kwargs=dict(id='id'))
-    edit = LinkColConditional('Edit Panel', 'panels.edit_virtual_panel_process', url_kwargs=dict(id='id'))
+    edit = LinkColEdit('Edit Panel', 'panels.edit_virtual_panel_process', url_kwargs=dict(id='id'))
     locked = LockCol('Locked')
     status = LabelCol('Status')
     make_live = LinkColLive('Make Live', 'panels.make_virtualpanel_live', url_kwargs=dict(id='id'))
@@ -181,9 +189,9 @@ def isgene(s, gene):
     """
     test = s.query(Genes).filter(Genes.name.ilike(gene)).first()
     if test is None:
-        return False
+        return None
     else:
-        return True
+        return test.name
 
 
 def check_panel_status(s, id):
@@ -246,9 +254,60 @@ def autocomplete():
     data = [i.name for i in result]
     return jsonify(matching_results=data)
 
+
+def create_design(regions):
+    """
+    Method to translate regions to the design file required for upload to Agilent.
+
+    This file is in the format:
+
+    *
+    *
+    *
+    *
+
+    and is comma separated instead of tab separated. All design files contain the +/- 25 bp extension
+
+    :regions: merged sorted list of regions to be included in the BED file
+    :type regions:
+    :return: result string - fields are comma separated and lines are joined with a new line character
+    :rtype: String
+    """
+    print(type(regions))
+    result = []
+    for i in regions:
+        line = []
+        line.append(i.chrom)
+        line.append(str(i.start))
+        line.append(str(i.end))
+        line.append(i.name.replace(";", ","))
+        result.append(line)
+
+    design = '\n'.join(['\t'.join(l) for l in result])
+    return design
+
+def create_bed(regions):
+    """
+    Method to translate regions to BED file format.
+
+    :return: result string - fields are comma separated and lines are joined with a new line character
+    :rtype: String
+    """
+    result = []
+    for i in regions:
+        line = []
+        line.append(i.chrom)
+        line.append(str(i.start))
+        line.append(str(i.end))
+        line.append(i.name.replace(";", ","))
+        result.append(line)
+
+    bed = '\n'.join(['\t'.join(l) for l in result])
+    return bed
+
 @panels.route('/download')
 @login_required
-def download_as_bed():
+def download():
     """
     Allows the panel or virtual panel to be downloaded as a text file in the correct BED format using the name of
     the panel.
@@ -260,14 +319,20 @@ def download_as_bed():
     :rtype: Flask Response Object
     """
     scope = request.args.get('scope')
+    type = request.args.get('type')
     id = request.args.get('id')
     version = request.args.get('version')
     panel_name = request.args.get('name')
 
+    if type == 'default':
+        extension = 0
+    else:
+        extension = 25
+
     if scope == 'Panel':
-        panel = get_regions_by_panelid(s, id, version)
+        panel = get_regions_by_panelid(s, id, version, extension)
     elif scope == 'Virtual':
-        panel = get_regions_by_vpanelid(s, id, version)
+        panel = get_regions_by_vpanelid(s, id, version, extension)
 
     result = []
 
@@ -288,24 +353,27 @@ def download_as_bed():
     bed_sorted = bed_tool.sort()
     bed_sorted_merged = bed_sorted.merge(c=4, o='collapse')
 
-    result = []
-    for i in bed_sorted_merged:
-        line = []
-        line.append(i.chrom)
-        line.append(str(i.start))
-        line.append(str(i.end))
-        line.append(i.name.replace(";", ","))
-        result.append(line)
-
-    bed = '\n'.join(['\t'.join(l) for l in result])
+    if type == 'design':
+        create_design(bed_sorted_merged)
+        filename = "attachment; filename=" + panel_name + "_25bp_v" + version + "_" + current_user.id + "_" + time.strftime(
+                         "%d-%m-%Y") + ".txt"
+    else:
+        create_bed(bed_sorted_merged)
+        if type == "extension":
+            filename = "attachment; filename=" + panel_name + "_25bp_v" + version + "_" + current_user.id + "_" + time.strftime(
+                "%d-%m-%Y") + ".bed"
+        else:
+            filename = "attachment; filename=" + panel_name + "_v" + version + "_" + current_user.id + "_" + time.strftime(
+                         "%d-%m-%Y") + ".bed"
 
     return Response(
         bed,
         mimetype='test/plain',
-        headers={"Content-disposition":
-                     "attachment; filename=" + panel_name + "_v" + version + "_" + current_user.id + "_" + time.strftime(
-                         "%d-%m-%Y") + ".bed"}
+        headers={"Content-disposition": filename
+                     }
     )
+
+
 
 
 @panels.route('/panels', methods=['GET', 'POST'])
@@ -597,7 +665,7 @@ def upload_multiple():
     added_list = []
     button_list = ''
 
-    for gene in gene_list:
+    for gene in sorted(gene_list):
         if gene == "" or gene in added_list:
             continue
         dct = create_panel_get_tx(gene, project_id)
@@ -656,6 +724,7 @@ def create_panel_get_tx(gene_name=None, project_id=None):
         json = True
     exists = isgene(s, gene_name)
     if exists:
+        gene_name = exists
         gene_id = get_gene_id_from_name(s, gene_name)
         preftx_id = get_preftx_by_gene_id
         upcoming_preftx = get_upcoming_preftx_by_gene_id(s, project_id, gene_id)
@@ -840,7 +909,7 @@ def remove_panel_regions():
 
     The query associated with this method checks whether the region was live in the panel. If it has been in a live
     version the region remains in the versions table and the "last" field is populated with the current version.
-    If the region ahs never been included in a live version of the panel, it is removed from the table.
+    If the region has never been included in a live version of the panel, it is removed from the table.
 
     The method returns the number of regions in the panel. If this is zero, locks will be put in place within the
     wizard as the panel cannot be made live etc.
@@ -1139,9 +1208,9 @@ def view_vpanel():
             message = "This Panel has no regions yet & may also have changes that have not been made live yet"
             bed = 'disabled'
             current_version = version
-
+        print(type(version))
         current_version = round(current_version, 1)
-        version = round(version, 1)
+        version = round(float(version), 1)
 
         if check_user_has_permission(s, current_user.id, project_id):
             edit = ''
@@ -1200,9 +1269,7 @@ def create_virtual_panel_process():
         vp_id = request.args.get('id')
         if make_live == "True":
             panel_id = get_panel_by_vp_id(s, vp_id)
-            current_panel_version = get_current_version(s, panel_id)
-            new_version  = float(current_panel_version) + 0.1
-            make_vp_panel_live(s, vp_id, new_version)
+            make_vp_panel_live(s, vp_id)
         panel_id = get_panel_by_vp_id(s, vp_id)
         unlock_panel_query(s, panel_id)
         return redirect(url_for('panels.view_vpanel') + "?id=" + vp_id)
@@ -1234,9 +1301,7 @@ def edit_virtual_panel_process():
     panel_id = get_panel_by_vp_id(s, vp_id)
     if request.method == "POST":
         if request.form['make_live'] == "True":
-            current_version = get_current_version_vp(s, vp_id)
-            new_version = float(current_version) + 0.1
-            make_vp_panel_live(s, vp_id, new_version)
+            make_vp_panel_live(s, vp_id)
         unlock_panel_query(s, panel_id)
         return redirect(url_for('panels.view_vpanel') + "?id=" + vp_id)
     elif request.method == "GET":
@@ -1254,7 +1319,12 @@ def edit_virtual_panel_process():
         vp_name = vp_info.name
         form.vpanelname.data = vp_name
         vp_genes = get_genes_by_vpanelid_edit(s, vp_id, vp_version)
-        gene_html = ""
+        gene_html = """<li class=\"list-group-item list-group-item-select-all\"><strong>Select all</strong> 
+                    <div class=\"material-switch pull-right\">
+                        <input type=\"checkbox\" id=\"all-genes\">
+                        <label for=\"all-genes\" class=\"label-success\"></label>
+                    </div>
+                </li>"""
         genelist = ""
         vp_list = []
         for i in vp_genes:
@@ -1326,7 +1396,7 @@ def select_vp_genes():
 
     genes = get_genes_by_panelid(s, panel_id, current_version)
 
-    html = """<li class=\"list-group-item\"><strong>Select all</strong> 
+    html = """<li class=\"list-group-item list-group-item-select-all\"><strong>Select all</strong> 
                     <div class=\"material-switch pull-right\">
                         <input type=\"checkbox\" id=\"all-genes\">
                         <label for=\"all-genes\" class=\"label-success\"></label>
@@ -1701,24 +1771,23 @@ def remove_vp_regions():
     length = len(list(panel))
     return jsonify(length)
 
-# todo is this needed
-# @panels.route('/virtualpanels/live', methods=['GET', 'POST'])
-# def make_virtualpanel_live():
-#     """
-#     given a panel id this method makes a panel live
-#
-#     :return: redirection to view panels
-#     """
-#     vpanelid = request.args.get('id')
-#     current_version = get_current_version_vp(s, vpanelid)
-#     panelid = get_panel_by_vp_id(s, vpanelid)
-#     new_version = current_version + 1
-#     locked = check_if_locked_by_user(s, current_user.id, panelid)
-#     if locked:
-#         return redirect(url_for('panels.view_virtual_panels'))
-#     else:
-#         make_vp_panel_live(s, vpanelid, new_version)
-#         return redirect(url_for('panels.view_virtual_panels'))
+@panels.route('/virtualpanels/live', methods=['GET', 'POST'])
+def make_virtualpanel_live():
+    """
+    given a panel id this method makes a panel live
+
+    :return: redirection to view panels
+    """
+    vpanelid = request.args.get('id')
+    panelid = get_panel_by_vp_id(s, vpanelid)
+    locked = check_if_locked(s, panelid)
+    if locked:
+        if current_user.id == get_locked_user(s, panelid):
+            make_vp_panel_live(s, vpanelid)
+        return redirect(url_for('panels.view_virtual_panels'))
+    else:
+        make_vp_panel_live(s, vpanelid)
+        return redirect(url_for('panels.view_virtual_panels'))
 
 
 @panels.route('/virtualpanels/delete', methods=['GET', 'POST'])
