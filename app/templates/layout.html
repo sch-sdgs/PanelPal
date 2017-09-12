@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {{ JSGlue.include() }}
+
+    <title>PanelPal</title>
+
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/jquery-1.12.4.js"></script>
+    <script src="/static/js/jquery-ui.js"></script>
+    <script src="/static/js/jquery.dataTables.min.js"></script>
+    <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+    <script src="/static/js/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="/static/css/jquery-ui.css">
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <script src="/static/js/respond.src.js"></script>
+    <link rel="stylesheet" href="/static/css/panel_pal.css">
+    <script type="text/javascript" language="javascript" src="/static/js/dataTables.bootstrap.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/css/dataTables.bootstrap.min.css">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
+
+
+    <!--<link rel="stylesheet" href="/static/css/font-awesome.min.css">-->
+
+    <script src="/static/js/panelpal.js"></script>
+
+    <!--<script type="text/javascript">-->
+    <!--$(document).ready(function () {-->
+    <!--$('#panel').DataTable({-->
+    <!--"pageLength": 10,-->
+    <!--"data": "{{ table|safe }}",-->
+    <!--"columns": [{"title": "Chr"},-->
+    <!--{"title": "Start"},-->
+    <!--{"title": "End"},-->
+    <!--{"title": "Gene"},-->
+    <!--{"title": "Region Name"}-->
+    <!--]-->
+    <!--});-->
+    <!--});-->
+
+    <!--</script>-->
+
+    {% if table %}
+    <script type="text/javascript">
+        //        var dataSet = "{{ table|safe }}"
+        $(document).ready(function () {
+            $('#panel').DataTable({
+                "pageLength": 10,
+                data: {{ table | safe }},
+                "aoColumns":[
+                            {title: "Chr", sWidth: '90px'},
+                            {title: "Start", sWidth: '90px'},
+                            {title: "End", sWidth: '90px'},
+                            {title: "Gene", sWidth: '90px'},
+                            {title: "Region Name", sWidth: '150px'}
+                            ]
+        });
+        });
+
+
+    </script>
+    {% endif %}
+
+    {% if delete == True %}
+    <script type="text/javascript">
+
+
+        $(document).ready(function () {
+
+            $('#areyousure').modal('show');
+
+        });
+    </script>
+    {% endif %}
+</head>
+
+
+<body>
+<div class="container">
+    <!-- Modal -->
+    <div class="modal fade" id="ajaxModal" role="dialog">
+        <div class="modal-dialog vertical-align-center">
+
+            <!-- Modal content-->
+            <div id="error" class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Well this is embarrassing...</h4>
+                </div>
+                <div class="modal-body">
+                    <p>Something has gone wrong here, if the problem persists please contact a member of the
+                        bioinformatics team.</p>
+                </div>
+                <div class="modal-footer" id="trace">
+                </div>
+            </div>
+
+
+        </div>
+
+    </div>
+    <div class="modal fade" id="regionModal" role="dialog">
+        <div class="modal-dialog vertical-align-center">
+            <div id="region_change" class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Uh-oh!</h4>
+                </div>
+                <div class="modal-body">
+                    <p>That region can't be updated.</p>
+                    <p>Please make sure that the start value is smaller than the end value for the region</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="cdsModal" role="dialog">
+        <div class="modal-dialog vertical-align-center">
+            <div id="region_cds" class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Hmmmm...</h4>
+                </div>
+                <div class="modal-body">
+                    <p>That region no longer covers the coding region.</p>
+                    <p>Are you sure you want to change it?</p>
+                </div>
+                <div class="modal-footer">
+                    <ul class="list-unstyled list-inline pull-right">
+                        <li>
+                            <button type="button" class="btn btn-default" id="region-ok" data-dismiss="modal">Yes</button>
+                        </li>
+                        <li>
+                            <button type="button" class="btn btn-default" id="region-cancel" data-dismiss="modal">No</button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+<nav class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button><!---->
+            <a class="navbar-brand" href="{{ url_for('index') }}"><span
+                    class="glyphicon glyphicon-th-list"></span>
+                PanelPal</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+            <ul class="nav navbar-nav">
+                <li><a href="{{ url_for('search.search_for') }}">Search</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                       aria-haspopup="true"
+                       aria-expanded="false">Projects <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('projects.view_projects') }}">View Projects</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="{{ url_for('projects.add_projects') }}">Create Project</a></li>
+                    </ul>
+                </li>
+
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                       aria-haspopup="true"
+                       aria-expanded="false">Panels <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('panels.view_panels') }}">View Panels</a></li>
+                        <li><a href="{{ url_for('panels.create_panel_process') }}">Create Panel</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="{{ url_for('panels.manage_locked') }}">Manage Locked Panels</a></li>
+                        <!--<li><a href="#">Create Panel From Panel App</a></li>-->
+                        <!--<li role="separator" class="divider"></li>-->
+                        <!--<li><a href="#">Export Panel</a></li>-->
+                    </ul>
+                </li>
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                       aria-haspopup="true"
+                       aria-expanded="false">Virtual Panels <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('panels.view_virtual_panels') }}">View Virtual Panels</a></li>
+                        <li><a href="{{ url_for('panels.create_virtual_panel_process') }}">Create a Virtual
+                            Panel</a>
+                        </li>
+                        <!--<li role="separator" class="divider"></li>-->
+                        <!--<li><a href="#">Export Virtual Panel</a></li>-->
+                    </ul>
+                </li>
+                {% if admin == True %}
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                       aria-haspopup="true"
+                       aria-expanded="false">Admin <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="/admin/user">User Admin</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="/admin/permissions">Permissions</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="/admin/logs">Logs</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="/admin/locked">Locked</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+
+                <li><a href="/api/spec.html"><span class="glyphicon glyphicon-cog"></span> API</a></li>
+                <li><a href="{{ url_for('admin.faq_page') }}"><span class="glyphicon glyphicon-question-sign"></span> FAQ</a></li>
+
+            <li>
+            <form class="navbar-form navbar-right" role="search">
+                {% if logged_in == True %}
+                <a href="{{ url_for('logout')}}" class="btn btn-success">Logout <strong>{{ userid
+                    }}</strong></a>
+                {% else %}
+                <a href="{{ url_for('login')}}" class="btn btn-primary">Login</a>
+                {% endif %}
+            </form>
+            </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+{% block popup %}
+{% endblock %}
+
+<div class="container theme-showcase" role="">
+    <div class="container">
+        {% block content %}
+        {% endblock %}
+    </div>
+</div>
+
+
+</body>
+</html>

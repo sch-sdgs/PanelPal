@@ -7,44 +7,65 @@ def create_tables(c):
     c.executescript('drop table if exists genes;')
     c.executescript('drop table if exists tx;')
     c.executescript('drop table if exists exons;')
+    c.executescript('drop table if exists regions;')
 
     c.execute('''CREATE TABLE genes
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, name CHAR(50), UNIQUE(name))''')
 
     c.execute('''CREATE TABLE tx
-        (id INTEGER PRIMARY KEY AUTOINCREMENT, gene_id INTEGER, strand CHAR(1), accession CHAR(30),FOREIGN KEY(gene_id) REFERENCES genes(id), UNIQUE(accession))''')
+        (id INTEGER PRIMARY KEY AUTOINCREMENT, gene_id INTEGER, strand CHAR(1), accession CHAR(30), tx_start INTEGER, tx_end INTEGER, cds_start INTEGER, cds_end INTEGER,FOREIGN KEY(gene_id) REFERENCES genes(id), UNIQUE(accession))''')
 
     c.execute('''CREATE TABLE exons
-        (id INTEGER PRIMARY KEY AUTOINCREMENT, tx_id INTEGER, number INTEGER, chrom CHAR(4), start INTEGER, end INTEGER, FOREIGN KEY(tx_id) REFERENCES tx(id) )''')
+        (id INTEGER PRIMARY KEY AUTOINCREMENT, tx_id, region_id INTEGER, number INTEGER, FOREIGN KEY(tx_id) REFERENCES tx(id), FOREIGN KEY(region_id) REFERENCES regions(id) )''')
 
+    c.execute('''CREATE TABLE regions
+        (id INTEGER PRIMARY KEY AUTOINCREMENT, chrom CHAR(4), start INTEGER, end INTEGER, name VARCHAR(50), CONSTRAINT unq UNIQUE (chrom,start,end))''')
+
+    c.execute('''CREATE UNIQUE INDEX genes_index
+            on genes (name);''')
+    c.execute('''CREATE UNIQUE INDEX tx_index
+        on tx (accession);''')
+    c.execute('''CREATE INDEX exons_index
+        on exons (region_id);''')
+    c.execute('''CREATE INDEX regions_index
+        on regions (start);''')
 
 def parse_reflat(c,refflat):
     reader = Reader(filename=refflat)
     for record in reader:
-        gene = record.gene
-        c.execute("INSERT OR IGNORE INTO genes(name) VALUES (?)",(gene,))
-        c.execute("SELECT id FROM genes WHERE name=?",(gene,))
-        gene_id = c.fetchone()[0]
-        tx = record.transcript
-        strand = record.strand
-        c.execute("INSERT OR IGNORE INTO tx(gene_id,strand,accession) VALUES (?,?,?)", (gene_id, strand, tx))
-        c.execute("SELECT id FROM tx WHERE name=?", (tx,))
-        tx_id = c.fetchone()[0]
-        for exon in record.exons:
-            start = exon._start
-            end = exon._end
-            chrom = exon._chr
-            number = exon._number
-            c.execute("INSERT OR IGNORE INTO exons(tx_id,number,chrom,start,end) VALUES (?,?,?,?,?)", (tx_id, number, chrom,start,end))
+        if record.transcript.startswith('NM_'):
+            gene = record.gene
+            c.execute("INSERT OR IGNORE INTO genes(name) VALUES (?)",(gene,))
+            c.execute("SELECT id FROM genes WHERE name=?",(gene,))
+            gene_id = c.fetchone()[0]
+            tx = record.transcript
+            strand = record.strand
+            txStart = record.txStart
+            txEnd = record.txEnd
+            cdsStart = record.cdsStart
+            cdsEnd = record.cdsEnd
+            c.execute("INSERT OR IGNORE INTO tx(gene_id, strand, accession, tx_start, tx_end, cds_start, cds_end) VALUES (?,?,?,?,?,?,?)", (gene_id, strand, tx, txStart, txEnd, cdsStart, cdsEnd))
+            c.execute("SELECT id FROM tx WHERE accession=?", (tx,))
+            tx_id = c.fetchone()[0]
+            for exon in record.exons:
+                start = exon._start
+                end = exon._end
+                chrom = exon._chr
+                number = exon._number
+                c.execute("INSERT OR IGNORE INTO regions(chrom,start,end) VALUES (?,?,?)",
+                          (chrom, start, end))
+                c.execute("SELECT id FROM regions WHERE chrom=? AND start=? AND end=?", (chrom,start,end,))
+                region_id = c.fetchone()[0]
+                c.execute("INSERT OR IGNORE INTO exons(tx_id,region_id,number) VALUES (?,?,?)", (tx_id, region_id, number,))
 
     c.close()
 
-def main():
+def main(db):
     parser = argparse.ArgumentParser(description='creates db of genes, tx and exons for PanelPal')
     parser.add_argument('--refflat',default="/results/Pipeline/reference/UCSCRefSeqTable_refflat_format.txt")
     args = parser.parse_args()
 
-    conn = sqlite3.connect('resources/refflat.db')
+    conn = sqlite3.connect(db)
     c = conn.cursor()
 
     create_tables(c)

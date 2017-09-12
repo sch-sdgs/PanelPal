@@ -1,0 +1,393 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<div class="container">
+    <h1>FAQs</h1>
+    <br/>
+    Can't find the answer to your question? Email it to <a
+        href="mailto:matthewparker24+lzj6vkpuibpnivi6nsog@boards.trello.com?Subject=#PanelPal%20PanelPal%20Question"
+        target="_top">bioinformatics</a>
+    <div class="panel-group" id="accordion">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 data-toggle="collapse" data-parent="#accordion" href="#collapse1" class="panel-title expand">
+                    <span class="glyphicon glyphicon-plus pull-right"></span>
+                    <a href="#">How do I change the display properties in MS Internet Explorer?</a>
+                </h4>
+            </div>
+            <div id="collapse1" class="panel-collapse collapse">
+                <div class="panel-body">
+                    To display PanelPal correctly in IE, you may need to change some of your default settings:<br/>
+                    <ul class="list-unstyled" style="padding-left: 10px;">
+                        <li>Press
+                            <button class="btn btn-sm btn-default">Alt</button>
+                            to display the IE menu
+                        </li>
+                        <li>Click "Tools" and then "Compatibility View settings"</li>
+                        <li>
+                            <div class="col-md-12"><br>
+                                <center><img style="margin:20px 0px" src="/static/images/Tools_menu_faq.PNG"></center>
+                            </div>
+                            <br/>
+                        </li>
+                        <li>In the Compatibility View menu, make sure the "Display intranet sites in compatibility view
+                            is unchecked
+                        </li>
+                        <li>
+                            <div class="col-md-12"><br>
+                                <center><img style="margin:20px 0px" src="/static/images/CVS_menu.PNG"></center>
+                            </div>
+                            <br/>
+                        </li>
+                        <li><span class="glyphicon glyphicon-info-sign"></span> If Starlims is not in the list; open
+                            Starlims as normal, go to the Compatibility View menu as described above and click "Add" to
+                            make sure it is still shown in compatibiltiy view
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 data-toggle="collapse" data-parent="#accordion" href="#collapse2" class="panel-title expand">
+                    <span class="glyphicon glyphicon-plus pull-right"></span>
+                    <a href="#">Why can't I login to PanelPal?</a>
+                </h4>
+            </div>
+            <div id="collapse2" class="panel-collapse collapse">
+                <div class="panel-body">
+                    In order to use PanelPal, your windows username must be stored in the database.<br/>
+                    If you are not able to login to PanelPal, send an email to <a
+                        href="mailto:matthewparker24+lzj6vkpuibpnivi6nsog@boards.trello.com?Subject=#PanelPal%20#registration%20New%20login"
+                        target="_top">bioinformatics</a> and someone will add you to the system.
+                </div>
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 data-toggle="collapse" data-parent="#accordion" href="#collapse3" class="panel-title expand">
+                    <span class="glyphicon glyphicon-plus pull-right"></span>
+                    <a href="#">What is a...</a>
+                </h4>
+            </div>
+            <div id="collapse3" class="panel-collapse collapse">
+                <div class="panel-body">
+                    <div class="panel-group" id="accordion2">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h4 data-toggle="collapse" data-parent="#accordion2" href="#collapseThreeOne"
+                                    class="panel-title expand">
+                                    <span class="glyphicon glyphicon-plus pull-right"></span>
+                                    <a href="#">BED file?</a>
+                                </h4>
+                            </div>
+                            <div id="collapseThreeOne" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <div>
+                                        BED files (Browser Extensible Data) are used in the analysis of Next Generation
+                                        Sequencing (NGS) data. These files define the region of interest for the genetic
+                                        investigation. By filtering the output to regions that are specifically
+                                        associated with the genetic condition, the both the analysis time and risk of
+                                        incidental findings are reduced.<br/>
+                                        BED files follow a specific format and the tools that utilise this information
+                                        system will interpret the data according to the specification. The most
+                                        important specification is the co-ordinate numbering. BED files notation is
+                                        zero-based, half open. Zero based means that the first nucleotide in the
+                                        sequence is given the number zero. The term half open refers to the interval
+                                        notation. The figure below shows three different types of interval notation. In
+                                        the half open format, the start position is included in the sequence of interest
+                                        but the end position is outside of the region of interest. This has
+                                        computational benefits; for example, calculating interval size where length is
+                                        equal to end minus start. Therefore, zero-based, half open numbering is common
+                                        place in the computational aspects of NGS analysis. However, one based numbering
+                                        has more benefits in terms of visualisation and is therefore often used when
+                                        visualising data. Other format specifications are shown in table 1.
+                                    </div>
+                                    <div class="col-md-12"><br>
+                                        <center><img style="margin:20px 0px" src="/static/images/numbering.png">
+                                        </center>
+                                    </div>
+
+                                    <br/>
+                                    <div>
+                                        Table 1: specifications for BED file format
+                                        <div class="container col-md-12" align="center">
+                                            <table class="table table-striped" style="width:80%;">
+                                                <thead>
+                                                <tr>
+                                                    <th width="30%">Specification</th>
+                                                    <th width="70%">Description</th>
+                                                </tr>
+                                                </thead>
+                                                <tr>
+                                                    <td>
+                                                        Non-overlapping
+                                                    </td>
+                                                    <td>
+                                                        Each region should be distinct and not overlap with any other
+                                                        regions within the file
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        Ordered by start position
+                                                    </td>
+                                                    <td>
+                                                        All regions within the same chromosome must be ordered by start
+                                                        position. <br/>
+                                                        N.B. chromosomes do not have to appear in a specific
+                                                        order
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        Three required fields
+                                                    </td>
+                                                    <td>
+                                                        The chromosome, start position and end position must be included
+                                                        for all regions.
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        Nine optional fields
+                                                    </td>
+                                                    <td>
+                                                        The optional fields are:
+                                                        <ul>
+                                                            <li>Name</li>
+                                                            <li>Score</li>
+                                                            <li>Strand</li>
+                                                            <li>thickStart (e.g. CDS start)</li>
+                                                            <li>thickEnd (e.g. CDS end</li>
+                                                            <li>itemRgb (colour of the track line)</li>
+                                                            <li>blockCount (number of exons)</li>
+                                                            <li>blockSizes (a comma-separated list of block sizes)</li>
+                                                            <li>blockStarts (a comma-separated list of start
+                                                                positions)
+                                                            </li>
+                                                        </ul>
+                                                        These do not have to be included but the order is static.
+                                                        Therefore, if column number eight was to be included, columns
+                                                        four through seven must also be included. However, these do not
+                                                        have to be populated with meaningful data.
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        Tab-delimited
+                                                    </td>
+                                                    <td>
+                                                        All fields must be separated by the tab character
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        Linux line endings
+                                                    </td>
+                                                    <td>
+                                                        Most software that uses BED files will be a linux based system
+                                                        and therefore expects the end of line to be ‘\n’ rather than
+                                                        ‘\r\n’ (windows line endings).
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        No special characters
+                                                    </td>
+                                                    <td>
+                                                        Only specific characters are permitted in the BED files. Some
+                                                        software will be unable to read the BED file if it contains
+                                                        characters that are not permitted.
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        Chromosome naming must match the reference file/annotations
+                                                    </td>
+                                                    <td>
+                                                        The naming of chromosomes (e.g. chr1) must follow that of the
+                                                        files that are being filtered (for example VCF files). Generally
+                                                        this follows the format of the reference genome file used
+                                                        throughout the analysis process.
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h4 data-toggle="collapse" data-parent="#accordion2" href="#collapseThreeTwo"
+                                    class="panel-title expand">
+                                    <span class="glyphicon glyphicon-plus pull-right"></span>
+                                    <a href="#">Project?</a>
+                                </h4>
+                            </div>
+                            <div id="collapseThreeTwo" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    A project usually represents a service; however, there is greater scope to include
+                                    additional research projects that don't fit into current service delivery
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h4 data-toggle="collapse" data-parent="#accordion2" href="#collapseThreeThree"
+                                    class="panel-title expand">
+                                    <span class="glyphicon glyphicon-plus pull-right"></span>
+                                    <a href="#">Panel?</a>
+                                </h4>
+                            </div>
+                            <div id="collapseThreeThree" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    A panel refers to the actual capture kit. These are the regions that we are aiming
+                                    to amplify and sequence during the lab work.
+                                    The genes included in the panels are usually centred around a group of conditions
+                                    that have a similar phenotype.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h4 data-toggle="collapse" data-parent="#accordion2" href="#collapseThreeFour"
+                                    class="panel-title expand">
+                                    <span class="glyphicon glyphicon-plus pull-right"></span>
+                                    <a href="#">Virtual Panel?</a>
+                                </h4>
+                            </div>
+                            <div id="collapseThreeFour" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    A virtual Panel is a smaller subset of the panel regions; only regions that are
+                                    included in the panel can be added. These panels represent the smaller subset of
+                                    genes to be filtered to during analysis and reflect a more specific phenotype or
+                                    condition.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 data-toggle="collapse" data-parent="#accordion" href="#collapse4"
+                    class="panel-title expand">
+                    <span class="glyphicon glyphicon-plus pull-right"></span>
+                    <a href="#">Why can't I edit any panels?</a>
+                </h4>
+            </div>
+            <div id="collapse4" class="panel-collapse collapse">
+                <div class="panel-body">
+                    In order to edit panels within a project, you must be member of the project.<br/>
+                    If you are not able to edit panels within a project, speak to a current member of the admin user,
+                    they will then be able to grant you access to the relevant projects.
+                </div>
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 data-toggle="collapse" data-parent="#accordion" href="#collapse5"
+                    class="panel-title expand">
+                    <span class="glyphicon glyphicon-plus pull-right"></span>
+                    <a href="#">Why is my panel locked for editing?</a>
+                </h4>
+            </div>
+            <div id="collapse5" class="panel-collapse collapse">
+                <div class="panel-body">
+                    Panels are locked if they are being edited to prevent multiple users making changes at
+                    the same time.
+                    Virtual panels are locked if their parent is locked. This prevents regions being added
+                    to the
+                    virtual panel that are being removed from the broad panel.
+                    Similarly, panels are locked if one of their virtual panels is being edited.
+                    <br/>
+                    <br/>
+                    Hovering the mouse over the <span class="glyphicon glyphicon-lock"></span> will show who
+                    has locked
+                    the panel. If this person has left the panel locked and is not currently editing it, an
+                    admin user
+                    can unlock the panel to allow other users to edit.
+                </div>
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 data-toggle="collapse" data-parent="#accordion" href="#collapse6"
+                    class="panel-title expand">
+                    <span class="glyphicon glyphicon-plus pull-right"></span>
+                    <a href="#">Why do the co-ordinates not go to +/- 25 bp for my panel?</a>
+                </h4>
+            </div>
+            <div id="collapse6" class="panel-collapse collapse">
+                <div class="panel-body">
+                    The co-ordinates displayed in PanelPal do not have any extensions (i.e. +/- 25 bp etc.).
+                    <br/>
+                    This is because these are added when the data is exported from the database. This means that we do
+                    not need to keep duplicate records for the different extensions we apply within the bioinformatics
+                    pipeline.
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<script src="/static/js/attrchange.js"></script>
+<script src="/static/js/attrchange_ext.js"></script>
+<script>
+    //    $(function () {
+    //        $(".expand").on("click", function () {
+    //            $expand = $(this).find(">:first-child");
+    //
+    //            if ($expand.hasClass('glyphicon-plus')) {
+    //                $expand.removeClass('glyphicon-plus');
+    //                $expand.addClass('glyphicon-minus');
+    //            } else {
+    //                $expand.removeClass('glyphicon-minus');
+    //                $expand.addClass('glyphicon-plus');
+    //            }
+    //        });
+    //    });
+
+    //    $('.panel-heading').click(function () {
+    //        console.log('clicked');
+    //        $heading = $(this).children().eq(0);
+    //        $glyph = $(this).children().eq(0).children().eq(0);
+    //        console.log($heading);
+    //        console.log($heading.attr('aria-expanded'));
+    //        if ($heading.hasClass('collapsed')) {
+    //            $glyph.removeClass('glyphicon-plus');
+    //            $glyph.addClass('glyphicon-minus');
+    //        }
+    //        else {
+    //            $glyph.removeClass('glyphicon-minus');
+    //            $glyph.addClass('glyphicon-plus');
+    //        }
+    //
+    //
+    //    })
+
+    $('.panel-title').attrchange({
+        trackValues: true,
+        callback: function (e) {
+            if (e.newValue.indexOf('panel-title') > -1) {
+                $glyph = $(this).children().eq(0);
+                if (e.newValue.indexOf('collapsed') > -1) {
+                    $glyph.removeClass('glyphicon-minus');
+                    $glyph.addClass('glyphicon-plus');
+                }
+                else {
+                    $glyph.removeClass('glyphicon-plus');
+                    $glyph.addClass('glyphicon-minus');
+                }
+            }
+
+        }
+    })
+</script>
+
+
+{% endblock %}
