@@ -1105,6 +1105,11 @@ def get_panel_id_by_name(s, panel_name):
     for panel in panels:
         return panel.id
 
+def get_vpanel_id_by_name(s, vpanel_name):
+    panels = s.query(VirtualPanels).filter(VirtualPanels.name == vpanel_name).values(VirtualPanels.id)
+    for panel in panels:
+        return panel.id
+
 def get_vpanel_details_by_id(s, vpanel_id):
     panel = s.query(Projects, Panels, Versions, VPRelationships, VirtualPanels). \
         join(Panels). \
@@ -1219,6 +1224,8 @@ def make_panel_live(s, panelid, new_version, username):
     """
     project_id = get_project_id_by_panel_id(s, panelid)
     if check_user_has_permission(s, username, project_id):
+        print('new_version')
+        print(new_version)
         s.query(Panels).filter_by(id=panelid).update({Panels.current_version: new_version})
         s.commit()
         return True
@@ -1377,8 +1384,8 @@ def get_regions_by_vpanelid(s, vpanelid, version, extension=0):
 
     sql = text("""SELECT versions.id AS version_id,
                 regions.chrom, virtual_panels.current_version, virtual_panels.name AS panel_name, genes.name AS gene_name,
-                CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5 END AS region_start,
-                CASE WHEN (versions.extension_3 IS NULL) THEN regions."end" ELSE regions."end" + versions.extension_3 END AS region_end,
+                CASE WHEN (versions.extension_5 IS NULL) THEN regions.start ELSE regions.start - versions.extension_5  - :extension END AS region_start,
+                CASE WHEN (versions.extension_3 IS NULL) THEN regions."end" ELSE regions."end" + versions.extension_3 + :extension END AS region_end,
                 CASE WHEN regions.name IS NULL THEN group_concat(DISTINCT tx.accession || "_exon" || CAST(exons.number AS VARCHAR)) ELSE regions.name END AS name
                 FROM virtual_panels
                 JOIN VP_relationships on virtual_panels.id = VP_relationships.vpanel_id
@@ -1391,7 +1398,7 @@ def get_regions_by_vpanelid(s, vpanelid, version, extension=0):
                 GROUP BY regions.id
                 UNION SELECT * FROM _custom
                 ORDER BY chrom,region_start;""")
-
+    values["extension"] = extension
     regions = s.execute(sql, values)
     return list(regions)
 
@@ -1426,4 +1433,22 @@ def get_genes_by_vpanelid_edit(s, vpanel_id, current_version):
 
     return genes
 
+def get_gene_cds(s, region_id):
+    """
+    Method to get the cds co-ordinates for the gene given a region ID
 
+    :param s: SQLAlchemy session token
+    :param region_id: ID of teh region of interest
+    :return:
+    """
+    sql = text("""SELECT min(tx.cds_start) AS cds_start, max(tx.cds_end) AS cds_end 
+                    FROM tx 
+                    JOIN exons on tx.id = exons.tx_id 
+                    JOIN regions ON exons.region_id = regions.id 
+                    WHERE regions.id = :region_id
+                    GROUP BY regions.id;
+                """)
+    values = {"region_id":region_id}
+    result = s.execute(sql, values)
+    for i in result:
+        return i

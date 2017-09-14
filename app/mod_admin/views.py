@@ -31,11 +31,24 @@ class ItemTableLocked(Table):
     toggle_lock = LinkCol('Toggle Lock', 'admin.toggle_locked', url_kwargs=dict(id='id'))
 
 class User(UserMixin):
+    """
+    Defines methods for users for authentication. Each user has an id (username) and a password
+
+    """
     def __init__(self, id, password=None):
         self.id = id
         self.password = password
 
     def is_authenticated(self, s, id, password):
+        """
+        Method to check if user is authenticated. The method checks the database for the username and then active
+        directory for username and password authentication
+
+        :param s: SQLAlechmy session token
+        :param id: ID of the user (username)
+        :param password: password the user has entered into the application
+        :return: True if the user authenticates, false if not
+        """
         validuser = get_user_by_username(s, id)
         if len(list(validuser)) == 0:
             return False
@@ -59,6 +72,12 @@ class User(UserMixin):
 admin = Blueprint('admin', __name__, template_folder='templates')
 
 def admin_required(f):
+    """
+    This method allows others to require the user to have admin permissions to execute
+
+    :param f:
+    :return:
+    """
     @wraps(f)
     def decorated_function(*args,**kwargs):
         if check_if_admin(s,current_user.id) is False:
@@ -114,7 +133,9 @@ def toggle_admin():
 def toggle_locked():
     """
     toggles the locked status of a panel
+
     useful if someone has forgotten they have left a panel locked - an admin can unlock
+
     :return: view_locked method
     """
     panel_id = request.args.get('id')

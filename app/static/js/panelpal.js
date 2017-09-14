@@ -442,7 +442,7 @@ function checkRegions(row, changed, prev) {
     var cdsVal;
     if (changed == 'start') {
         newVal = $(startBox).val();
-        cdsVal = $(startBox).attr('id');
+        cdsVal = $(startBox).attr('cds');
 
         if (newVal > cdsVal) {
             $('#cdsModal').modal('show');
@@ -451,7 +451,7 @@ function checkRegions(row, changed, prev) {
     }
     else {
         newVal = $(endBox).val();
-        cdsVal = $(endBox).attr('id');
+        cdsVal = $(endBox).attr('cds');
 
         if (newVal < cdsVal) {
             $('#cdsModal').modal('show');
@@ -1143,10 +1143,18 @@ $(document).ready(function () {
 });
 
 function add_gene(i, gene_list, complete, progress) {
+    console.log('hello');
     var total = $(gene_list).length;
+    var button = $('[data-id="'+ gene_list[i] +'"');
+    var gene_name = $(button).attr('data-name');
+    console.log(gene_name);
+    var pref_tx_id = $('#' + gene_name).val();
+    console.log(pref_tx_id);
     var dict = {
         "gene_id": gene_list[i],
-        "panel_id": $('#main').attr('name')
+        "panel_id": $('#main').attr('name'),
+        "gene_name": gene_name,
+        "tx_id": pref_tx_id
     };
     var data = JSON.stringify(dict);
 
@@ -1207,7 +1215,7 @@ $(document).on('click', '#add-all', function () {
             gene_list.push($(obj).attr('data-id'))
         }
     });
-
+    console.log('add all');
     add_gene(0, gene_list, 0, 0.0)
 });
 

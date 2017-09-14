@@ -1,5 +1,6 @@
 from app.panel_pal import app, s
-from queries import get_panel_api, get_intronic_api, get_vpanel_api, get_preftx_api
+from queries import get_intronic_api, get_preftx_api, get_gene_api
+from app.mod_panels.queries import get_regions_by_panelid, get_regions_by_vpanelid, get_panel_id_by_name, get_vpanel_id_by_name, get_current_version_vp, get_current_version
 from flask import request, Blueprint
 from flask_restful_swagger import swagger
 from flask_restful import Resource, Api, reqparse, fields
@@ -64,35 +65,46 @@ panel_fields = {
 
 }
 
-
-# todo - need to add extensions from db here
-def region_result_to_json(data, extension=0):
-    args = request.args
-    if 'extension' in args:
-        extension = int(args["extension"])
-    else:
-        extension = 0
+def region_result_to_json(data):
     result = dict()
     result['details'] = dict()
     result['regions'] = list()
     regions = dict()
     for i in data:
         region = dict()
-        if i.Versions.extension_5 is not None:
-            region['start'] = i.Regions.start - extension + i.Versions.extension_5
-        else:
-            region['start'] = i.Regions.start - extension
-        if i.Versions.extension_3 is not None:
-            region['end'] = i.Regions.end + extension + i.Versions.extension_3
-        else:
-            region['end'] = i.Regions.end + extension
-        region["annotation"] = "ex" + str(i.Exons.number) + "_" + i.Genes.name + "_" + str(i.Tx.accession)
-        if i.Regions.chrom.replace('chr', '') not in regions:
-            regions[i.Regions.chrom.replace('chr', '')] = list()
-        regions[i.Regions.chrom.replace('chr', '')].append(region)
+        region['start'] = i.region_start
+        region['end'] = i.region_end
+        region["annotation"] = i.gene_name + ":" + i.name
+        if i.chrom.replace('chr', '') not in regions:
+            regions[i.chrom.replace('chr', '')] = list()
+        regions[i.chrom.replace('chr', '')].append(region)
 
     for i in sorted(regions, cmp=ChrSorter.__lt__):
+        for details in regions[i]:
+            region = dict()
+            region["chrom"] = "chr" + str(i)
+            region["start"] = details["start"]
+            region["end"] = details["end"]
+            region["annotation"] = details["annotation"]
+            result['regions'].append(region)
 
+    return result
+
+def gene_result_to_json(data):
+    result = dict()
+    result['details'] = dict()
+    result['regions'] = list()
+    regions = dict()
+    for i in data:
+        region = dict()
+        region['start'] = i.region_start
+        region['end'] = i.region_end
+        region["annotation"] = i.annotation
+        if i.chrom.replace('chr', '') not in regions:
+            regions[i.chrom.replace('chr', '')] = list()
+        regions[i.chrom.replace('chr', '')].append(region)
+
+    for i in sorted(regions, cmp=ChrSorter.__lt__):
         for details in regions[i]:
             region = dict()
             region["chrom"] = "chr" + str(i)
@@ -136,7 +148,7 @@ def prefttx_result_to_json(data):
     preftxs = []
     result["details"] = {}
     for i in data:
-        preftxs.append(i.accession)
+        preftxs.append((i.gene, i.accession))
     result["preftx"] = preftxs
     return result
 
@@ -182,7 +194,10 @@ class APIPanels(Resource):
         ]
     )
     def get(self, name, version):
-        result = get_panel_api(s, name, version)
+        panel_id = get_panel_id_by_name(s, name)
+        if version == "current":
+            version = get_current_version(s, panel_id)
+        result = get_regions_by_panelid(s, panel_id, version, 25)
         result_json = region_result_to_json(result.result)
         result_json["details"]["panel"] = name
         result_json["details"]["version"] = int(result.current_version)
@@ -217,10 +232,17 @@ class APIVirtualPanels(Resource):
         ]
     )
     def get(self, name, version):
-        result = get_vpanel_api(s, name, version)
-        result_json = region_result_to_json(result.result)
+        extension = request.args.get("extension")
+        vpanel_id = get_vpanel_id_by_name(s, name)
+        if not extension:
+            print(extension)
+            extension = 0
+        if version == "current":
+            version = get_current_version_vp(s, vpanel_id)
+        result = get_regions_by_vpanelid(s, vpanel_id, version, extension)
+        result_json = region_result_to_json(result)
         result_json["details"]["panel"] = name
-        result_json["details"]["version"] = float(result.current_version)
+        result_json["details"]["version"] = float(version)
         resp = output_json(result_json, 200)
         resp.headers['content-type'] = 'application/json'
         return resp
@@ -246,6 +268,43 @@ class APIIntronic(Resource):
     def get(self, name, version):
         result = get_intronic_api(s, name, version)
         result_json = intronic_result_to_json(result.result)
+        result_json['details']['panel'] = name
+        result_json['details']['version'] = result.current_version
+        resp = output_json(result_json, 200)
+        resp.headers['content-type'] = 'application/json'
+        return resp
+
+class APIGene(Resource):
+    @swagger.operation(
+        notes='Gets a JSON of the intronic portion of the bed virtual panel (i.e. +/- 6bp to +/- 25 bp)',
+        responseClass='x',
+        nickname='intronic',
+        parameters=[
+            {
+                "name": "extension",
+                "paramType": "query",
+                "required": False,
+                "allowMultiple": False,
+                "dataType": "integer"
+            }
+        ],
+        responseMessages=[
+                {
+                    "code": 201,
+                    "message": "Created. The URL of the created blueprint should be in the Location header"
+                },
+                {
+                    "code": 405,
+                    "message": "Invalid input"
+                }
+        ]
+    )
+    def get(self, name, version):
+        extension = request.args.get("extension")
+        if not extension:
+            extension = 1000
+        result = get_gene_api(s, name, version, extension)
+        result_json = gene_result_to_json(result.result)
         result_json['details']['panel'] = name
         result_json['details']['version'] = result.current_version
         resp = output_json(result_json, 200)
@@ -285,5 +344,5 @@ class APIPreferredTx(Resource):
 api.add_resource(APIPanels, '/panel/<string:name>/<string:version>', )
 api.add_resource(APIVirtualPanels, '/virtualpanel/<string:name>/<string:version>', )
 api.add_resource(APIIntronic, '/intronic/<string:name>/<string:version>/', )
-# api.add_resource(APIPanelFilled, '/filled/<string:name>/<string:version>/<int:extension>', )
+api.add_resource(APIGene, '/filled/<string:name>/<string:version>', )
 api.add_resource(APIPreferredTx, '/preftx/<string:name>/<string:version>', )
