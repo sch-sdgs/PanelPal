@@ -356,11 +356,11 @@ def download():
     bed_sorted_merged = bed_sorted.merge(c=4, o='collapse')
 
     if type == 'design':
-        create_design(bed_sorted_merged)
+        bed = create_design(bed_sorted_merged)
         filename = "attachment; filename=" + panel_name + "_25bp_v" + version + "_" + current_user.id + "_" + time.strftime(
                          "%d-%m-%Y") + ".txt"
     else:
-        create_bed(bed_sorted_merged)
+        bed = create_bed(bed_sorted_merged)
         if type == "extension":
             filename = "attachment; filename=" + panel_name + "_25bp_v" + version + "_" + current_user.id + "_" + time.strftime(
                 "%d-%m-%Y") + ".bed"
