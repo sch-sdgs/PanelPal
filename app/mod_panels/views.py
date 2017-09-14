@@ -261,12 +261,13 @@ def create_design(regions):
 
     This file is in the format:
 
-    *
-    *
-    *
-    *
+    * chromosome (preceded by 'chr')
+    * colon (':')
+    * start and end values, separated by a hyphen ('-')
+    * space
+    * region name, in the format <gene>:<transcript_number>_exon<exon_number>,<transcript_number>_exon<exon_number> etc.
 
-    and is comma separated instead of tab separated. All design files contain the +/- 25 bp extension
+    All design files contain the +/- 25 bp extension.
 
     :regions: merged sorted list of regions to be included in the BED file
     :type regions:
@@ -283,7 +284,8 @@ def create_design(regions):
         line.append(i.name.replace(";", ","))
         result.append(line)
 
-    design = '\n'.join(['\t'.join(l) for l in result])
+    design = '\n'.join([line[0] + ':' + str(line[1]) + '-' + str(line[2]) + ' ' + line[3] for line in result])
+    print(design)
     return design
 
 def create_bed(regions):
@@ -542,12 +544,14 @@ def edit_panel_process():
         panel_id = request.args.get('id')
         project_id = get_project_id_by_panel_id(s, panel_id)
         preftx_id = get_preftx_id_by_project_id(s, project_id)
-        version = get_current_preftx_version(s, preftx_id)
-        if not version:
-            version = 0
+        tx_version = get_current_preftx_version(s, preftx_id)
+        panel_version = get_current_version(s, panel_id)
+        if not tx_version:
+            tx_version = 0
         if make_live == "True":
-            make_preftx_live(s, preftx_id, version + 1, current_user.id)
-            make_panel_live(s, panel_id, 1, current_user.id)
+            print('make_live')
+            make_preftx_live(s, preftx_id, tx_version + 1, current_user.id)
+            make_panel_live(s, panel_id, panel_version + 1, current_user.id)
         unlock_panel_query(s, panel_id)
         return redirect(url_for('panels.view_panel') + "?id=" + panel_id)
     elif request.method == "GET":
@@ -829,6 +833,11 @@ def add_all_regions():
     """
     gene_id = request.json['gene_id']
     panel_id = request.json['panel_id']
+    tx_id = request.json['tx_id']
+    gene_name = request.json['gene_name']
+    project_id = get_project_id_by_panel_id(s, panel_id)
+
+    add_preftxs_to_panel(s, project_id, [{"gene": gene_name, "tx_id": tx_id}, ])
     add_genes_to_panel_with_ext(s, panel_id, gene_id)
     return jsonify({"genes": [gene_id,]})
 
@@ -1670,10 +1679,25 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
                                 <label for=\"""" + v_id + """\" class=\"label-success label-region\" ></label>
                             </div>"""
 
+        #get the cds start and end for the gene
+        cds = get_gene_cds(s, v_id)
+
+        if i.region_start < cds['cds_start'] < i.region_end:
+            cds_start = cds['cds_start']
+        else:
+            cds_start = i.region_start
+
+        if i.region_start < cds['cds_end'] < i.region_end:
+            cds_end = cds['cds_end']
+        else:
+            cds_end = i.region_end
+
         coord = "<td><input " + start_style + "class=\"form-control\" id=\"" + str(
-            i.region_start) + "\" name=\"region_start\" type=\"text\" value=\"" + start + "\"></td>" + \
+            i.region_start) + "\" cds=\"" + str(
+            cds_start) + "\" name=\"region_start\" type=\"text\" value=\"" + start + "\"></td>" + \
                 "<td><input " + end_style + "class=\"form-control\" id=\"" + str(
-            i.region_end) + "\" name=\"region_end\" type=\"text\" value=\"" + end + "\"></td>"
+            i.region_end) + "\" cds=\"" + str(
+            cds_end) + "\" name=\"region_end\" type=\"text\" value=\"" + end + "\"></td>"
 
         row = """<tr>
                     <td><label for=\"""" + v_id + "\">" + v_id + "</label></td>" + \
