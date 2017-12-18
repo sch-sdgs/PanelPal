@@ -1,0 +1,11 @@
+<div class ="alert alert-success" name="message-fade">
+    <strong>Just so you know... </strong>
+    {% for i,g in added_list %}
+        {% if i == length -1 %}
+            and {{ g }}&nbsp;
+        {% else %}
+            {{ g }},&nbsp;
+        {% endif %}
+    {% endfor %}
+    have been added
+</div>

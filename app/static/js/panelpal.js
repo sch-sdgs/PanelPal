@@ -2,6 +2,14 @@
  * Created by cytng on 23/05/2017.
  */
 
+function ajax_error(xhr, status, error){
+    var trace = $('#trace');
+    $(trace).children().remove();
+    $(trace).append("<p>" + error + "</p>");
+    $('#ajaxModal').modal('show');
+    return false;
+}
+
 /**
  * When a region is added to the panel the final window message is changed
  */
@@ -16,7 +24,7 @@ function region_added() {
 
     var comp_messge = $('#complete_message');
     comp_messge.removeClass('alert-danger').addClass('alert-success');
-    comp_messge.html('<strong>Congratulations!</strong> You have ' + name + ' your panel');
+    comp_messge.load(Flask.url_for('panels.comp_message') + "?name=" + name);
     var cancel = $('#cancel');
     cancel.removeClass('btn-danger').addClass('btn-success');
     cancel.text('Done!');
@@ -63,9 +71,7 @@ function remove_panel(vp_name, panel_name) {
             window.location.replace(redirect);
         },
         error: function (xhr, status, error) {
-            $('#trace').append("<p>" + error + "</p>");
-            $('#ajaxModal').modal('show');
-            return false;
+            return ajax_error(xhr, status, error)
         }
 
     });
@@ -102,9 +108,7 @@ function unlock_panel() {
                 return true;
             },
             error: function (xhr, status, error) {
-                $('#trace').append("<p>" + error + "</p>");
-                $('#ajaxModal').modal('show');
-                return false;
+                return ajax_error(xhr, status, error)
             }
         })
     }
@@ -151,13 +155,15 @@ function add_panel(changeTab, e) {
     var panel = $('#panel');
 
     if ($('#vpanelname').length && panel.val() == "__None" ) {
-        new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't selected a panel name</div>";
-        msg.append(new_html);
+        // new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't selected a panel name</div>";
+        // msg.append(new_html);
+        $(msg).load(Flask.url_for('panels.no_panel_name'));
         return false;
     }
     else if($('#panelname').length && $('#project').val() == "__None"){
-        new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't selected a project name</div>";
-        msg.append(new_html);
+        // new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't selected a project name</div>";
+        // msg.append(new_html);
+        $(msg).load(Flask.url_for('panels.no_project_name'));
         return false;
     }
 
@@ -193,8 +199,9 @@ function add_panel(changeTab, e) {
         contentType: "application/json",
         success: function (response) {
             if (response == -1) {
-                new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
-                msg.append(new_html)
+                // new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
+                // msg.append(new_html)
+                $(msg).load(Flask.url_for('panels.not_unique'))
             }
             else {
                 var newUrl = redirect + response;
@@ -224,9 +231,7 @@ function add_panel(changeTab, e) {
             }
         },
         error: function (xhr, status, error) {
-            $('#trace').append("<p>" + error + "</p>");
-            $('#ajaxModal').modal('show');
-            return false;
+            return ajax_error(xhr, status, error)
         }
     })).done(function () {
         return complete;
@@ -288,7 +293,7 @@ $(document).on('click', '.next-step, .prev-step', function (e) {
 
 $(document).on('change', '#panel', function () {
     $('#geneselector').children().remove();
-    $('#loading').append("<br/><center><div class=\"row\"><div class=\"col-md-5\"></div><div class=\"col-md-2\"><div class=\"loader\"></div></div><div class=\"col-md-5\"></div></div></center>");
+    $('#loading').load(Flask.url_for('panels.loading_wheel'));
 
     var panel_id = $('#panel').val();
 
@@ -311,9 +316,7 @@ $(document).on('change', '#panel', function () {
             $('#geneselector').append(response)
         },
         error: function (xhr, status, error) {
-            $('#trace').append("<p>" + error + "</p>");
-            $('#ajaxModal').modal('show');
-            return false;
+            return ajax_error(xhr, status, error)
         }
 
     });
@@ -337,8 +340,8 @@ $(document).on('focusin', '[name="region_start"]', function () {
         }
         sessionStorage.setItem(region_id, JSON.stringify(dict));
         $($(td).children()).remove();
-        var html = '<ul class="list-unstyled list-inline pull-right"><li><button type="button" class="btn btn-small btn-success" name="update" data-name="region_start"><span class="glyphicon glyphicon-floppy-disk"></span></button></li><li><button type="button" class="btn btn-small btn-danger" name="undo"><span class="glyphicon glyphicon-remove"></span></button></li></ul>';
-        $(td).append(html);
+        console.log(Flask.url_for('panels.edit_region') + "?type=start");
+        $(td).load(Flask.url_for('panels.edit_region') + "?type=start");
     }
 });
 
@@ -389,8 +392,7 @@ $(document).on('focusin', '[name="region_end"]', function () {
         }
         sessionStorage.setItem(region_id, JSON.stringify(dict));
         $($(td).children()).remove();
-        var html = '<ul class="list-unstyled list-inline pull-right"><li><button type="button" class="btn btn-small btn-success" name="update" data-name="region_start"><span class="glyphicon glyphicon-floppy-disk"></span></button></li><li><button type="button" class="btn btn-small btn-danger" name="undo"><span class="glyphicon glyphicon-remove"></span></button></li></ul>';
-        $(td).append(html);
+        $(td).load(Flask.url_for('panels.edit_region') + "?type=end");
     }
 });
 
@@ -531,9 +533,7 @@ function update_region(row, store, region_id) {
 
         },
         error: function (xhr, status, error) {
-            $('#trace').append("<p>" + error + "</p>");
-            $('#ajaxModal').modal('show');
-            return false;
+            return ajax_error(xhr, status, error)
         }
 
     });
@@ -549,14 +549,15 @@ $(document).on('click', '[name="update"]', function () {
     }
 
     var region_id = $(row).children().eq(0).children().eq(0).attr('for');
-
+    console.log(region_id);
     var store = JSON.parse(sessionStorage.getItem(region_id));
 
     var complete;
+    console.log(store);
     if ("start" in store) {
         if (store["start"]["value"] == $(row).children().eq(2).children().eq(0).val()) {
             $(row).children().eq(2).children().eq(0).trigger('focusout');
-            return
+            // return
         }
         complete = checkRegions(row, 'start', store["start"]["value"]);
     }
@@ -566,7 +567,8 @@ $(document).on('click', '[name="update"]', function () {
         }
         complete = checkRegions(row, 'end', store["end"]["value"]);
     }
-
+    console.log('complete');
+    console.log(complete);
     if (complete) {
         update_region(row, store, region_id)
     }
@@ -574,9 +576,14 @@ $(document).on('click', '[name="update"]', function () {
 
 });
 
-$(document).on('click', '[name="undo"]', function () {
-    var target = $('[name="undo"]');
-    var row = $(target).parent().parent().parent().parent();
+$(document).on('click', '[name="undo"]', function (e) {
+    var row;
+    if ($(event.target).attr('name') == 'undo') {
+        row = $(event.target).parent().parent().parent().parent();
+    }
+    else {
+        row = $(event.target).parent().parent().parent().parent().parent();
+    }
     var region_id = $(row).children().eq(0).children().eq(0).attr('for');
     var store = JSON.parse(sessionStorage.getItem(region_id));
     var html;
@@ -626,6 +633,10 @@ $(document).on('click', '.label-gene', function () {
                     return false;
                 }
             });
+            console.log('hello');
+            console.log($('#genelist').html());
+            console.log($('#genelist').html().search(/&nbsp;\s+&nbsp;/));
+            $('#genelist').html($('#genelist').html().replace(/&nbsp;\s+&nbsp;/, "&nbsp;"));
             var select_all = $('#all-genes');
             if (select_all.prop('checked')) {
                 select_all.attr('uncheck-all', 'false');
@@ -635,7 +646,9 @@ $(document).on('click', '.label-gene', function () {
         }
         else {
             var geneId = $("#" + geneName).attr('name');
-            $('#genelist').append("<button name=\"genebutton\" type=\"button\" class=\"btn btn-danger btn-md btngene\" data-name=\"" + geneName + "\" data-id=\"" + geneId + "\"><span class='glyphicon glyphicon-pencil'></span> " + geneName + "</button> ");
+            $.get(Flask.url_for('panels.add_to_genelist') + "?name=" + geneName + "&id=" + geneId, function (data) {
+                $('#genelist').append(data)
+            });
             if (count_genes() == 0) {
                 $('#add-all').attr('disabled', 'disabled')
             }
@@ -668,8 +681,8 @@ $(document).on('change', 'input[type="radio"][name="menucolor"]', function () {
 function doChange() {
     var btnOnGlyph = $('#btnOn .glyphicon-ok');
     var btnOffGlyph = $('#btnOff .glyphicon-remove');
-
-    if (btnOnGlyph.attr('style') == 'opacity: 0;') {
+    console.log(btnOnGlyph.attr('style'));
+    if (btnOnGlyph.attr('style') == 'opacity:0;') {
         $('#btnOff').removeClass('active');
         btnOffGlyph.attr('style', 'opacity: 0;');
         btnOnGlyph.attr('style', 'opacity: 1;');
@@ -683,7 +696,7 @@ function doChange() {
     }
 
     $('#region-table').remove();
-    $('#regions').append("<br/><center><div class=\"row\"><div class=\"col-md-5\"></div><div class=\"col-md-2\"><div class=\"loader\"></div></div><div class=\"col-md-5\"></div></div></center>");
+    $('#regions').load(Flask.url_for('panels.loading_wheel'));
     get_regions($('.btn-warning'));
 }
 
@@ -694,11 +707,10 @@ $(document).on('click', '#create-regions', function () {
 $(document).on('click', '#add-custom', function () {
     var custom_message = $('#custom-message');
     custom_message.attr('style', "display: none;");
-    custom_message.children().remove();
-    custom_message.append("<strong>You can't add that!</strong> ");
+    custom_message.html("");
     var chrom = $('#chrom').val();
-    var start = $('#start-pos').val();
-    var end = $('#end-pos').val();
+    var start = parseInt($('#start-pos').val());
+    var end = parseInt($('#end-pos').val());
     var name = $('#region-name').val();
     var message = '';
     if (chrom == 0) {
@@ -716,12 +728,12 @@ $(document).on('click', '#add-custom', function () {
     else if (start > end) {
         message = "The start position is greater the end position"
     }
-    else if (!/^[a-z0-9_\->]+$/i.test(name)) {
-        message = "The name field can only contain numbers, letters and the following special characters '_->'"
+    else if (!/^[a-z0-9:._\->+]+$/i.test(name)) {
+        message = "The name field can only contain numbers, letters and the following special characters ': . _ - + >'"
     }
-
+    console.log(encodeURIComponent(message));
     if (message != '') {
-        custom_message.append(message);
+        custom_message.load(Flask.url_for('panels.custom_message') + "?message=" + encodeURIComponent(message));
         custom_message.removeAttr('style')
     }
     else {
@@ -746,14 +758,15 @@ $(document).on('click', '#add-custom', function () {
                 $('#start-pos').val('');
                 $('#end-pos').val('');
                 $('#region-name').val('');
-                get_regions($('.btn-custom'));
 
+                $('#region-table').remove();
+                $('#regions').load(Flask.url_for('panels.loading_wheel'));
+
+                get_regions($('.btn-custom'));
                 region_added()
             },
             error: function (xhr, status, error) {
-                $('#trace').append("<p>" + error + "</p>");
-                $('#ajaxModal').modal('show');
-                return false;
+                return ajax_error(xhr, status, error)
             }
 
         });
@@ -783,16 +796,18 @@ function get_regions(element) {
         vpanel_id = $('#main').attr('name');
     }
     else {
+        console.log('$(\'#regions\').children().length');
+        console.log($('#regions').children());
         panel_id = $('#main').attr('name');
         if ($('#btnOn').hasClass('active')) {
             include_utr = true;
         }
-        else if ($('#regions').children().length == 2 && $(element).children(0).hasClass("glyphicon-ok")) {
+        else if ($(element).children(0).hasClass("glyphicon-ok")) {
             include_utr = "added"
         }
         vpanel_id = null;
     }
-
+    console.log(include_utr);
     var dict = {
         "panel_id": panel_id,
         "gene_id": gene_id,
@@ -820,6 +835,7 @@ function get_regions(element) {
             regions.children().remove();
             regions.append(response['html']);
             var ids = response['ids'];
+            console.log(ids);
             try {
                 for (var key in response['store']) {
                     if (response['store'].hasOwnProperty(key)) {
@@ -828,25 +844,26 @@ function get_regions(element) {
                 }
             }
             catch (err) {
+                console.log('error')
             }
 
             sessionStorage.setItem("current_ids", JSON.stringify(response['ids']));
-
+            console.log('success');
             $('.label-region').each(function (i, obj) {
+                console.log('hello');
                 //this gets the third parent of the label (tr)
                 var row = $(obj).parent().parent().parent();
                 //this get the third child (index 2) of the row and the child of that row is the text box
                 //check that ID is in list and
                 var style = $($($($(row[0])).children().eq(2)[0])[0]).children().eq(0).attr('style');
                 if (($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) > -1 && style != "color:red;") || ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) == -1 && style == "color:red;")) {
+                    console.log('click');
                     $(obj).trigger('click')
                 }
             });
         },
         error: function (xhr, status, error) {
-            $('#trace').append("<p>" + error + "</p>");
-            $('#ajaxModal').modal('show');
-            return false;
+            return ajax_error(xhr, status, error)
         }
 
     });
@@ -859,7 +876,7 @@ $(document).on('click', '[name="genebutton"]', function (request) {
         add_custom.attr("style", "display: none;")
     }
     regions.children().remove();
-    regions.append("<br/><center><div class=\"row\"><div class=\"col-md-5\"></div><div class=\"col-md-2\"><div class=\"loader\"></div></div><div class=\"col-md-5\"></div></div></center>");
+    regions.load(Flask.url_for('panels.loading_wheel'));
     var element = $(request.currentTarget);
     $('.btn-warning').each(function (i, obj) {
         if ($(obj.firstElementChild).hasClass('glyphicon-ok')) {
@@ -892,7 +909,6 @@ $(document).on('click', ".label-region", function (request) {
     var select_all = $('.label-selectall');
 
     var count = count_ids().length;
-    console.log(count);
     if (count == 1 && $(check).prop('checked')){
         $('#add-regions').attr('disabled', 'disabled');
     }
@@ -903,19 +919,14 @@ $(document).on('click', ".label-region", function (request) {
         $('#add-regions').attr('disabled', 'disabled');
     }
 
-    console.log(count == $('.label-region').length -1 && !$(check).prop('checked'));
-    console.log(count == 1 && $(check).prop('checked'));
-    console.log(select_all.attr('clicked') != "clicked");
     if (((count == $('.label-region').length -1 && !$(check).prop('checked')) || //if the count is one less than the total and the current target is about to be "checked"
         (count == 1 && $(check).prop('checked'))) && //if the count is one and the current target is about to be "unchecked"
         select_all.attr('clicked') != "clicked") { //if the selectall slider has not been clicked
-        console.log('trigger');
         select_all.attr('uncheck-all', 'false');
         select_all.trigger('click')
     }
     else if ($(check).prop('checked') && $(select_all.parent().children().eq(0)).prop('checked')//if the current target is being "unchecked" and the selectall button is checked
         && select_all.attr('clicked') != "clicked"){ //if the selectall slider has not been clicked
-        console.log('uncheck');
         select_all.attr('uncheck-all', 'false');
         select_all.trigger('click')
     }
@@ -934,8 +945,6 @@ $(document).on('change', '#all-genes', function (e) {
 
     }
     else {
-        console.log('unchecked');
-        console.log($(all_genes).attr('uncheck-all'));
         if ($(all_genes).attr('uncheck-all') == 'false') {
             $(all_genes).removeAttr('uncheck-all')
         }
@@ -953,11 +962,9 @@ $(document).on('change', '#all-genes', function (e) {
 $(document).on('click', ".label-selectall", function () {
     var select_all = $('.label-selectall');
     var select_check = $(select_all).parent().children().eq(0);
-    console.log(select_check.prop('checked'));
     select_all.attr('clicked', 'clicked');
     if (select_all.attr('uncheck-all') == 'false')//if one region has been (un)selected (not all regions need to be deselected)
     {
-        console.log('here');
         select_all.removeAttr('uncheck-all')
     }
     else if (select_check.prop('checked')) //if select all has been clicked off
@@ -1028,6 +1035,9 @@ $(document).on('click', "#remove-gene", function () {
                 $(obj).remove()
             }
         });
+        console.log('hello');
+        console.log($('#genelist').html());
+        $('#genelist').html($('#genelist').html().replace(/&nbsp;\s+&nbsp;/, "&nbsp;"));
         var row = $('#' + geneName).parent().parent().parent();
         $(row[0]).remove();
         if (JSON.parse(sessionStorage.getItem("current_ids")).length > 0) {
@@ -1059,7 +1069,7 @@ function remove_vp_regions(vpanel_id, ids, geneName) {
             if (response == 0) {
                 var complete = $('#complete_message');
                 complete.addClass('alert-danger').removeClass('alert-success');
-                complete.html("<strong>Oopsie Daisy!</strong> You haven't added any regions to this panel yet...");
+                complete.load(Flask.url_for('panels.no_regions'));
                 var cancel = $('#cancel');
                 cancel.addClass('btn-danger').removeClass('btn-success');
                 cancel.text('Cancel');
@@ -1079,9 +1089,7 @@ function remove_vp_regions(vpanel_id, ids, geneName) {
             region_added()
         },
         error: function (xhr, status, error) {
-            $('#trace').append("<p>" + error + "</p>");
-            $('#ajaxModal').modal('show');
-            return false;
+            return ajax_error(xhr, status, error)
         }
 
     });
@@ -1103,7 +1111,7 @@ function remove_panel_regions(panel_id, ids, gene_name) {
             if (response == 0) {
                 var complete = $('#complete_message');
                 complete.addClass('alert-danger').removeClass('alert-success');
-                complete.html("<strong>Oopsie Daisy!</strong> You haven't added any regions to this panel yet...");
+                complete.load(Flask.url_for('panels.no_regions'));
                 var cancel = $('#cancel');
                 cancel.addClass('btn-danger').removeClass('btn-success');
                 cancel.text('Cancel');
@@ -1130,9 +1138,7 @@ function remove_panel_regions(panel_id, ids, gene_name) {
             $('#regions').children().remove();
         },
         error: function (xhr, status, error) {
-            $('#trace').append("<p>" + error + "</p>");
-            $('#ajaxModal').modal('show');
-            return false;
+            return ajax_error(xhr, status, error)
         }
 
     });
@@ -1200,9 +1206,7 @@ function add_gene(i, gene_list, complete, progress) {
 
         },
         error: function (xhr, status, error) {
-            $('#trace').append("<p>" + error + "</p>");
-            $('#ajaxModal').modal('show');
-            return false;
+            return ajax_error(xhr, status, error)
         }
     })
 }
@@ -1270,9 +1274,7 @@ function add_gene_vp(i, gene_list, complete, progress) {
 
         },
         error: function (xhr, status, error) {
-            $('#trace').append("<p>" + error + "</p>");
-            $('#ajaxModal').modal('show');
-            return false;
+            return ajax_error(xhr, status, error)
         }
     })
 }
@@ -1322,9 +1324,7 @@ function add_regions(vpanel_id, ids, geneName) {
             }
         },
         error: function (xhr, status, error) {
-            $('#trace').append("<p>" + error + "</p>");
-            $('#ajaxModal').modal('show');
-            return false;
+            return ajax_error(xhr, status, error)
         }
 
     });
@@ -1387,9 +1387,7 @@ function add_panel_regions(panel_id, ids, gene_name) {
             }
         },
         error: function (xhr, status, error) {
-            $('#trace').append("<p>" + error + "</p>");
-            $('#ajaxModal').modal('show');
-            return false;
+            return ajax_error(xhr, status, error)
         }
 
     });
@@ -1400,7 +1398,7 @@ $(document).on('click', '#upload', function () {
     if (file) {
         var upload = $('#upload');
         upload.empty();
-        upload.append("<span class=\"glyphicon glyphicon-refresh glyphicon-refresh-animate\"></span>");
+        upload.load(Flask.url_for('panels.loading_wheel_spin'));
         var reader = new FileReader();
         var project_id = $('#project').val();
         var exists = "";
@@ -1446,8 +1444,7 @@ $(document).on('click', '#upload', function () {
                         $(obj).remove()
                     });
                     if (exists != "") {
-                        var message = "<div class =\"alert alert-warning\" id=\"message-fail\"><strong>Silly Sausage!</strong> " + exists + " have already been added</div>";
-                        gene_message.append(message);
+                        gene_message.load(Flask.url_for('panels.added_message') + "?method=multiple&gene=" + encodeURIComponent(exists));
                     }
                     gene_message.append(response['message']);
 
@@ -1464,9 +1461,7 @@ $(document).on('click', '#upload', function () {
                     upload.append('Upload');
                 },
                 error: function (xhr, status, error) {
-                    $('#trace').append("<p>" + error + "</p>");
-                    $('#ajaxModal').modal('show');
-                    return false;
+                    return ajax_error(xhr, status, error)
                 }
             })
 
@@ -1486,10 +1481,12 @@ $(document).on('click', "#add-regions", function () {
     var geneName = add_Regions.attr('name');
     var ids = count_ids();
     var vpanel_id = $('#main').attr('name');
-
+    console.log('hello');
+    console.log(ids);
     if (ids.length == 0) {
     }
     else if (add_Regions.text() == "Add Regions") {
+        console.log('adding');
         if ($('#vpanelname').length) {
             add_regions(vpanel_id, ids, geneName)
         }
@@ -1498,19 +1495,28 @@ $(document).on('click', "#add-regions", function () {
         }
     }
     else {
+        console.log('updating');
         var to_add = [];
         var to_remove = [];
 
         $('.label-region').each(function (i, obj) {
+            console.log('new label');
+            console.log($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) == -1);
+            var check = $(obj).parent().children().eq(0);
+            console.log($(check).prop('checked'));
+            console.log($(check));
 
-            if ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) > -1 && !$(obj).prop('checked')) {
+            if ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) > -1 && !$(check).prop('checked')) {
                 to_remove.push($(obj).attr("for"))
             }
-            else if ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) == -1 && $(obj).prop('checked')) {
+            else if ($.inArray(parseInt($(obj).attr("for")), JSON.parse(sessionStorage.getItem("current_ids"))) == -1 && $(check).prop('checked')) {
                 to_add.push($(obj).attr("for"))
             }
 
         });
+
+        console.log(to_add);
+        console.log(to_remove);
 
         if ($('#vpanelname').length) {
             if (to_add.length > 0) {
@@ -1549,8 +1555,7 @@ $(document).ready(function () {
         var gene_name = $('#genes').val();
 
         if ($('#' + gene_name).length) {
-            var fail_message = "<strong>Oh Crumbs!</strong> " + gene_name + " has already been added";
-            alert(fail_message);
+            $('#genemessage').load(Flask.url_for('panels.added_message') + "?type=single&gene=" + gene_name);
             return
         }
 
@@ -1591,9 +1596,7 @@ $(document).ready(function () {
                     $('#genes').val('');
                 },
                 error: function (xhr, status, error) {
-                    $('#trace').append("<p>" + error + "</p>");
-                    $('#ajaxModal').modal('show');
-                    return false;
+                    return ajax_error(xhr, status, error)
                 }
             })
         }
@@ -1603,7 +1606,7 @@ $(document).ready(function () {
         if ($('#genes').val().length > 0) {
             var add = $('#add');
             add.empty();
-            add.append("<span class=\"glyphicon glyphicon-refresh glyphicon-refresh-animate\"></span>");
+            add.load(Flask.url_for('panels.loading_wheel_spin'));
             add_panel_gene()
         }
     });

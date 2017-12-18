@@ -1,0 +1,26 @@
+<tr>
+    <td>
+        <label for="{{ gene_name }}">{{ gene_name }}</label>
+    </td>
+    <td>
+        <div class="form-group">
+            {% if disabled %}
+            <select class="form-control" name="{{ gene_name }}" id="{{ gene_name }}" disabled="disabled">
+            {% else %}
+            <select class="form-control" name="{{ gene_name }}" id="{{ gene_name }}">
+            {% endif %}
+                {% for tx in all_tx %}
+                    {% if upcoming == tx.id %}
+                    <option value="tx.id" class="red" selected>{{ tx.accession }} - This Is a Change Not Made Live Yet</option>
+                    {% else %}
+                        {% if preftx== tx.id %}
+                            <option value="{{ tx.id }}" class="bolden" selected>{{ tx.accession }}</option>
+                        {% else %}
+                            <option value="{{ tx.id }}" class="">{{ tx.accession }}</option>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+    </td>
+</tr>

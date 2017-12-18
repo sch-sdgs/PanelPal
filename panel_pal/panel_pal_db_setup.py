@@ -52,6 +52,7 @@ def main():
     parser.add_argument('--projects', default="CTD,IEM,Haems,HeredCancer,DevDel,NGD,Research")
     parser.add_argument('--studies')
     parser.add_argument('--users', default='dnamdp,cytng,gencph,genes,dnanhc')
+    parser.add_argument('--refflat', default='/results/Analysis/projects/PanelPal/alamut_refflat.txt')
     args = parser.parse_args()
 
 
@@ -60,7 +61,7 @@ def main():
 
     conn_main = sqlite3.connect(db)
 
-    parse_refflat_into_db.main(db)
+    parse_refflat_into_db.main(db, args.refflat)
     complete = create_db(conn_main)
 
     pp = conn_main.cursor()

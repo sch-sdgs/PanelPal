@@ -1,0 +1,47 @@
+<h3 name="{{ gene_id }}">{{ gene_name }}</h3>
+<ul class="list-unstyled list-inline pull-right">
+    <li>
+        <button type="button" class="btn btn-success" id="add-regions" name="{{ gene_name }}" disabled="disabled">Add
+            Regions
+        </button>
+    </li>
+    <li>
+        <button type="button" class="btn btn-danger" id="remove-gene" name="{{ gene_name }}">Remove Gene</button>
+    </li>
+</ul>
+
+<table class="table table-striped" id="region-table">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Chrom</th>
+        <th>Region Start</th>
+        <th>Region End</th>
+        <th>Names</th>
+        <th>Select All
+            <div class="material-switch pull-right">
+                <input type="checkbox" id="checkAll">
+                <label for="checkAll" class="label-success label-selectall"></label>
+            </div>
+        </th>
+    </tr>
+    </thead>
+    {% for i in regions %}
+
+    <tr>
+        <td><label for="{{ i.version_id }}">{{ i.version_id }}</label></td>
+        <td>{{ i.chrom }}</td>
+        <td>{{ i.region_start }}</td>
+        <td>{{ i.region_end }}</td>
+        <td>{{ i.name | replace(',', '\n') }}</td>
+        <td>
+            <div class="material-switch pull-right">
+                <input type="checkbox" id="{{ i.version_id }}" name="region-check">
+                <label for="{{ i.version_id }}" class="label-success label-region"></label>
+            </div>
+        </td>
+    </tr>
+
+    {% endfor %}
+
+</table>

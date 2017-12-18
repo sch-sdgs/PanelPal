@@ -113,6 +113,7 @@ def get_preftx_by_gene_id(s, project_id, gene_id):
         filter(and_(PrefTx.project_id == project_id,Genes.id == gene_id,or_(PrefTxVersions.last >= PrefTx.current_version, PrefTxVersions.last == None), \
                     PrefTxVersions.intro <= PrefTx.current_version)).values(PrefTxVersions.tx_id)
     for i in preftx:
+        print(i.tx_id)
         return i.tx_id
 
 

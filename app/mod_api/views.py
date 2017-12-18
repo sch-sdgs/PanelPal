@@ -148,7 +148,7 @@ def prefttx_result_to_json(data):
     preftxs = []
     result["details"] = {}
     for i in data:
-        preftxs.append((i.gene, i.accession))
+        preftxs.append((i.name, i.accession))
     result["preftx"] = preftxs
     return result
 
@@ -198,9 +198,9 @@ class APIPanels(Resource):
         if version == "current":
             version = get_current_version(s, panel_id)
         result = get_regions_by_panelid(s, panel_id, version, 25)
-        result_json = region_result_to_json(result.result)
+        result_json = region_result_to_json(result)
         result_json["details"]["panel"] = name
-        result_json["details"]["version"] = int(result.current_version)
+        result_json["details"]["version"] = int(version)
         resp = output_json(result_json, 200)
         resp.headers['content-type'] = 'application/json'
         return resp
@@ -341,8 +341,29 @@ class APIPreferredTx(Resource):
         return resp
 
 
+class APITest(Resource):
+    @swagger.operation(
+        notes='Returns "pass" so the API can be confirmed to be active',
+        responseClass='x',
+        nickname='test',
+        parameters=[],
+        responseMessage=[
+            {
+                "code": 201,
+                "message": "Created. The URL of the created blueprint should be in the Location header"
+            },
+            {
+                "code": 405,
+                "message": "Invalid input"
+            }
+        ]
+    )
+    def get(self):
+        return "pass"
+
 api.add_resource(APIPanels, '/panel/<string:name>/<string:version>', )
 api.add_resource(APIVirtualPanels, '/virtualpanel/<string:name>/<string:version>', )
 api.add_resource(APIIntronic, '/intronic/<string:name>/<string:version>/', )
 api.add_resource(APIGene, '/filled/<string:name>/<string:version>', )
 api.add_resource(APIPreferredTx, '/preftx/<string:name>/<string:version>', )
+api.add_resource(APITest, '/test')

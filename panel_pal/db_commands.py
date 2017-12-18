@@ -4,7 +4,7 @@ from enum import Enum
 import os
 from pybedtools import BedTool
 import os
-from app.mod_panels import queries as q
+# from app.mod_panels import queries as q
 
 
 class Database():
@@ -292,14 +292,19 @@ class Panels(Database):
         pp = self.panelpal_conn.cursor()
         project_id = self.query_db(pp, 'SELECT id fROM projects WHERE name = ?', (project,))[0].get('id')
 
-        pp.execute('INSERT INTO pref_tx (project_id, current_version) VALUES (?,0)', (project_id,))
+        pp.execute('INSERT INTO pref_tx (project_id, current_version) VALUES (?,1)', (project_id,))
         pref_tx_id = pp.lastrowid
 
         for tx in tx_list:
             if tx != tx_list[0]:
-                acc = tx.split('\t')[1].split('.')[0]  # splits gene name from transcript and removes version from accession
+                print tx
                 try:
-                    tx_id = self.query_db(pp, 'SELECT id FROM tx WHERE accession = ?', (acc,))[0].get('id')
+                    acc = tx.split('\t')[1].split('.')[0]  # splits gene name from transcript and removes version from accession
+                except IndexError:
+                    acc = tx.split(' ')[1].split('.')[
+                        0]  # splits gene name from transcript and removes version from accession
+                try:
+                    tx_id = self.query_db(pp, 'SELECT id FROM tx WHERE accession like ?', (acc + "%",))[0].get('id')
                     pp.execute('INSERT INTO pref_tx_versions (pref_tx_id, tx_id, intro) VALUES (?,?,1)', (pref_tx_id, tx_id))
 
                 except IndexError:

@@ -1,0 +1,78 @@
+<h3 name="{{ gene_id }}">{{ gene_name }}</h3>
+<ul class="list-unstyled list-inline pull-right">
+    <li>
+        <div class="btn-group" role="group" aria-label="basic label">
+            <p style="text-align: center; vertical-align: middle; display: table-cell;">Include UTR </p>
+        </div>
+
+        <div class="btn-group btn-group-xs" role="group" aria-label="...">
+            <a id="btnOn" href="javascript:;" class="btn {{ ok_active }}"><span class="glyphicon glyphicon-ok"
+                                                                                style="opacity:{{ ok_opac }};"></span></a>
+            <a id="btnOff" href="javascript:;" class="btn {{ remove_active }}"><span class="glyphicon glyphicon-remove"
+                                                                                     style="opacity:{{ remove_opac }};"></span></a>
+        </div>
+        <input type="radio" name="menucolor" value="navbar-default" checked>
+        <input type="radio" name="menucolor" value="navbar-inverse">
+    </li>
+    <li>
+        <button type="button" class="btn btn-success" id="add-regions" name="{{ gene_name }}" disabled="disabled">
+            Add Regions
+        </button>
+    </li>
+    <li>
+        <button type="button" class="btn btn-danger" id="remove-gene" name="{{ gene_name }}">Remove Gene</button>
+    </li>
+</ul>
+
+<table class="table table-striped" id="region-table">
+    <thead>
+    <tr>
+        <th width='14%'>ID</th>
+        <th width='13%'>Chrom</th>
+        <th width='17%'>Region Start</th>
+        <th width='17%'>Region End</th>
+        <th width='22%'>Names</th>
+        <th width='17%'>Select All
+            <div class="material-switch pull-right">
+                <input type="checkbox" id="checkAll">
+                <label for="checkAll" class="label-success label-selectall"></label>
+            </div>
+        </th>
+    </tr>
+    </thead>
+    {% for i in regions %}
+    <tr>
+        <td><label for="{{ i.region_id }}">{{ i.region_id }}</label></td>
+        <td>{{ i.chrom }}</td>
+
+        <td><input style="{{ i['start_style'] }}" class="form-control" id="{{ i['region_start'] }}"
+                   cds="{{ i['cds_start'] }}" name="region_start" type="text" value="{{ i['start'] }}"></td>
+        <td><input style="{{ i['end_style'] }}" class="form-control" id="{{ i['region_end'] }}" cds="{{ i['cds_end'] }}"
+                   name="region_end" type="text" value="{{ i['end'] }}"></td>
+
+        <td class="expand">{{ i['name'] }}</td>
+        <td>
+            {% if i['end_col'] == "check" %}
+            <div class="material-switch pull-right">
+                <input type="checkbox" id="{{ i.region_id }}" name="region-check">
+                <label for="{{ i.region_id }}" class="label-success label-region"></label>
+            </div>
+            {% else %}
+            <ul class="list-unstyled list-inline pull-right" name="edit_region">
+                <li>
+                    <button type="button" class="btn btn-small btn-success" name="update" data-name="{{ i['data_name'] }}">
+                        <span class="glyphicon glyphicon-floppy-disk"></span>
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="btn btn-small btn-danger" name="undo">
+                        <span class="glyphicon glyphicon-remove"></span>
+                    </button>
+                </li>
+            </ul>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+
+</table>

@@ -1,0 +1,21 @@
+<li class="list-group-item list-group-item-select-all"><strong>Select all</strong>
+    <div class="material-switch pull-right">
+        <input type="checkbox" id="all-genes">
+        <label for="all-genes" class="label-success"></label>
+    </div>
+</li>
+
+{% for i in panel_genes %}
+<li class="list-group-item">{{ i["name"] }}
+    <div class="material-switch pull-right">
+        {% if i["vp_list"] %}
+        <input type="checkbox" name="{{ i['id'] }}" id="{{ i['name'] }}" disabled="disabled" checked="checked">
+        <label for="{{ i['name'] }}" class="label-added label-gene" disabled="disabled"></label>
+        {% else %}
+        <input type="checkbox" name="{{ i['id'] }}" id="{{ i['name'] }}">
+        <label for="{{ i['name'] }}" class="label-added label-gene"></label>
+        {% endif %}
+
+    </div>
+</li>
+{% endfor %}

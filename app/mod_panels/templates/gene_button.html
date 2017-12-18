@@ -1,0 +1,9 @@
+{% if added %}
+<button name="genebutton" type="button" class="btn btn-success btn-md btngene" data-name="{{ gene_name }}"
+        data-id="{{ gene_id }}"><span class='glyphicon glyphicon-ok'></span>{{ gene_name }}
+</button>&nbsp;
+{% else %}
+<button name="genebutton" type="button" class="btn btn-danger btn-md btngene" data-name="{{ gene_name }}"
+        data-id="{{ gene_id }}"><span class='glyphicon glyphicon-pencil'></span>{{ gene_name }}
+</button>&nbsp;
+{% endif %}

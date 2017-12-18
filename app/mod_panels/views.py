@@ -16,6 +16,7 @@ import time
 
 panels = Blueprint('panels', __name__, template_folder='templates')
 
+
 class NumberCol(Col):
     def __init__(self, name, valmin=False, attr=None, attr_list=None, **kwargs):
         self.valmin = valmin
@@ -56,32 +57,38 @@ class LockCol(Col):
     def td_contents(self, item, attr_list):
         if item["locked"] is not None:
             username = get_username_by_user_id(s, item["locked"])
-            return '<center><span class="glyphicon glyphicon-lock"  data-toggle="tooltip" data-placement="bottom" title="Locked by: ' + username + '" aria-hidden="true"></span></center>'
+            return render_template('locked_by.html', username=username)
         else:
             return ''
 
+
 class LinkColEdit(LinkCol):
     def td_contents(self, item, attr_list):
-        if (item["locked"] is None or current_user.id == get_username_by_user_id(s, item["locked"])) and item["permission"] is True:
+        if (item["locked"] is None or current_user.id == get_username_by_user_id(s, item["locked"])) and item[
+            "permission"] is True:
             return '<a href="{url}">{text}</a>'.format(
                 url=self.url(item),
                 text=self.td_format(self.text(item, attr_list)))
         else:
             return '-'
 
+
 class LinkColLive(LinkCol):
     def td_contents(self, item, attr_list):
-        if (item["locked"] is None or current_user.id == get_username_by_user_id(s,item["locked"])) and item["permission"] is True and item["status"] is False:
+        if (item["locked"] is None or current_user.id == get_username_by_user_id(s, item["locked"])) and item[
+            "permission"] is True and item["status"] is False:
             return '<a href="{url}">{text}</a>'.format(
                 url=self.url(item),
                 text=self.td_format(self.text(item, attr_list)))
         else:
             return '-'
+
 
 class RegionCol(Col):
     def td(self, item, attr):
         return '<td style="word-wrap: break-word;max-width:800px;">{}</td>'.format(
             self.td_contents(item, self.get_attr_list(attr)))
+
 
 class LabelCol(Col):
     def __init__(self, name, valmin=False, attr=None, attr_list=None, **kwargs):
@@ -110,13 +117,15 @@ class LabelCol(Col):
 
         return '<p><span class="label label-{type}">{status}</span></p>'.format(type=type, status=status)
 
+
 class ItemTablePanels(Table):
-    args = {"style":"width:80px"}
+    args = {"style": "width:80px"}
     panelname = Col('Name')
     current_version = Col('Stable Version', column_html_attrs=args)
     view_panel = LinkCol('View Panel', 'panels.view_panel', url_kwargs=dict(id='panelid'), column_html_attrs=args)
     edit = LinkColEdit('Edit Panel', 'panels.edit_panel_process', url_kwargs=dict(id='panelid'), column_html_attrs=args)
-    view = LinkCol('View Virtual Panels', 'panels.view_virtual_panels', url_kwargs=dict(id='panelid'), column_html_attrs=args)
+    view = LinkCol('View Virtual Panels', 'panels.view_virtual_panels', url_kwargs=dict(id='panelid'),
+                   column_html_attrs=args)
     locked = LockCol('Locked', column_html_attrs=args)
     status = LabelCol('Status', column_html_attrs=args)
     make_live = LinkColLive('Make Live', 'panels.make_live', url_kwargs=dict(id='panelid'), column_html_attrs=args)
@@ -243,6 +252,60 @@ def check_virtualpanel_status(s, id):
 
     return status
 
+@panels.route('/html/no_panel', methods=['GET'])
+def no_panel_name():
+    return render_template('no_name_selected.html', type='panel')
+
+@panels.route('/html/no_project', methods=['GET'])
+def no_project_name():
+    return render_template('no_name_selected.html', type='project')
+
+@panels.route('/html/not_unique', methods=['GET'])
+def not_unique():
+    return render_template('not_unique.html')
+
+@panels.route('/html/loading', methods=['GET'])
+def loading_wheel():
+    return render_template('loading_wheel.html')
+
+@panels.route('/html/edit_region', methods=['GET'])
+def edit_region():
+    region = request.args.get('type')
+    return render_template('edit_region.html', name=region)
+
+@panels.route('/html/add_gene', methods=['GET'])
+def add_to_genelist():
+    name = request.args.get('name')
+    id = request.args.get('id')
+    return render_template('gene_button.html', gene_name=name, gene_id=id, added=False)
+
+@panels.route('/html/custom_message', methods=['GET'])
+def custom_message():
+    m = request.args.get('message')
+    return render_template('custom_message.html', message=m)
+
+@panels.route('/html/no_regions', methods=['GET'])
+def no_regions():
+    return render_template('no_regions.html')
+
+@panels.route('/html/loading_spin', methods=['GET'])
+def loading_wheel_spin():
+    return render_template('loading_wheel_spin.html')
+
+@panels.route('/html/complete_message', methods=['GET'])
+def comp_message():
+    name = request.args.get('name')
+    return render_template('complete_message.html', type=name)
+
+@panels.route('/html/added_message', methods=['GET'])
+def added_message():
+    gene_list = request.args.get('gene')
+    method = request.args.get('method')
+    multiple=False
+    if method == "multiple":
+        multiple= True
+    return render_template('added_message.html', gene_list=gene_list, multiple=multiple)
+
 @panels.route('/autocomplete', methods=['GET'])
 def autocomplete():
     """
@@ -288,6 +351,7 @@ def create_design(regions):
     print(design)
     return design
 
+
 def create_bed(regions):
     """
     Method to translate regions to BED file format.
@@ -306,6 +370,7 @@ def create_bed(regions):
 
     bed = '\n'.join(['\t'.join(l) for l in result])
     return bed
+
 
 @panels.route('/download')
 @login_required
@@ -358,7 +423,7 @@ def download():
     if type == 'design':
         bed = create_design(bed_sorted_merged)
         filename = "attachment; filename=" + panel_name + "_25bp_v" + version + "_" + current_user.id + "_" + time.strftime(
-                         "%d-%m-%Y") + ".txt"
+            "%d-%m-%Y") + ".txt"
     else:
         bed = create_bed(bed_sorted_merged)
         if type == "extension":
@@ -366,16 +431,14 @@ def download():
                 "%d-%m-%Y") + ".bed"
         else:
             filename = "attachment; filename=" + panel_name + "_v" + version + "_" + current_user.id + "_" + time.strftime(
-                         "%d-%m-%Y") + ".bed"
+                "%d-%m-%Y") + ".bed"
 
     return Response(
         bed,
         mimetype='test/plain',
         headers={"Content-disposition": filename
-                     }
+                 }
     )
-
-
 
 
 @panels.route('/panels', methods=['GET', 'POST'])
@@ -567,6 +630,7 @@ def edit_panel_process():
         genes = get_genes_by_panelid_edit(s, panel_id, panel_info.current_version)
         html = ""
         buttonlist = ""
+        print('hello')
         for gene in genes:
             gene_id = gene.id
             gene_name = gene.name
@@ -574,42 +638,9 @@ def edit_panel_process():
             upcoming_preftx = get_upcoming_preftx_by_gene_id(s, project_id, gene_id)
             all_tx = get_tx_by_gene_id(s, gene_id)
 
-            gene_button = "<button name=\"genebutton\" type=\"button\" class=\"btn btn-success btn-md btngene\" data-name=\"" + \
-                          gene_name + "\" data-id=\"" + str(
-                gene_id) + "\"><span class='glyphicon glyphicon-ok'></span> " + \
-                          gene_name + "</button> "
-            buttonlist += gene_button
-            tx_html = """<tr>
-                            <td>
-                                <label for=\"""" + gene_name + "\">" + gene_name + """</label>
-                            </td>
-                            <td>
-                                <div class=\"form-group\">
-                                <select class=\"form-control\" name=\"""" + gene_name + "\" id=\"" + gene_name + "\" disabled=\"disabled\">"
-
-            for tx in all_tx:
-                if upcoming_preftx == tx.id:
-
-                    tx_html += "<option value=\"" + str(
-                        tx.id) + "\" class=\"red\">" + tx.accession + " - This Is a Change Not Made Live Yet</option>" + \
-                               """</select>
-                                    </div>
-                                       </td>
-                               </tr>"""
-                    break
-                else:
-                    tx_html += "<option value=\"" + str(tx.id) + "\""
-
-                    if preftx_id == tx.id:
-                        tx_html += " class=\"bolden\" selected"
-                    else:
-                        tx_html += " class=\"\""
-
-                    tx_html += ">" + tx.accession + "</option>"
-            tx_html += """</select>
-                                </div>
-                            </td>
-                        </tr>"""
+            buttonlist += render_template("gene_button.html", gene_name=gene_name, gene_id=gene_id, added=True)
+            tx_html = render_template("tx_list.html", gene_name=gene_name, all_tx=all_tx, preftx=preftx_id,
+                                      upcoming=upcoming_preftx, disabled=True)
             html += tx_html
 
         return render_template('panel_createprocess.html', form=form, genes=html, genelist=buttonlist,
@@ -659,7 +690,7 @@ def upload_multiple():
     The create_panel_get_tx() method is applied to each gene in the list and teh html is combined before being returned
     to the client side for display.
 
-    :return: JSON containing HTML for the transcripts table and the gene button list as ewll as for the messages to be
+    :return: JSON containing HTML for the transcripts table and the gene button list as well as for the messages to be
     displayed on the initial screen.
     """
     gene_list = request.json['gene_list']
@@ -686,19 +717,10 @@ def upload_multiple():
         except KeyError:
             pass
 
-    added_message = "<div class =\"alert alert-success\" name=\"message-fade\"><strong>Just so you know... </strong> "
-
-    for g in added_list:
-        if added_list.index(g) == len(added_list) - 1:
-            string = "and " + g
-            added_message += string
-        else:
-            string = g + ", "
-            added_message += string
-
-    if added_message != "<div class =\"alert alert-success\" name=\"message-fade\"><strong>Just so you know... </strong> ":
-        added_message += " have been added</div>"
+    if len(added_list) > 0:
+        added_message = render_template("added_list.html", added_list=enumerate(added_list), length=len(added_list))
         all_message += added_message
+
     return jsonify({'message': all_message, 'html': html, 'button_list': button_list})
 
 
@@ -730,66 +752,22 @@ def create_panel_get_tx(gene_name=None, project_id=None):
     if exists:
         gene_name = exists
         gene_id = get_gene_id_from_name(s, gene_name)
-        preftx_id = get_preftx_by_gene_id
+        preftx_id = get_preftx_by_gene_id(s, project_id, gene_id)
         upcoming_preftx = get_upcoming_preftx_by_gene_id(s, project_id, gene_id)
         all_tx = get_tx_by_gene_id(s, gene_id)
-        html = """<tr>
-                    <td>
-                        <label for=\"""" + gene_name + "\">" + gene_name + """</label>
-                    </td>
-                    <td>
-                        <div class=\"form-group\">
-                        <select class=\"form-control\" name=\"""" + gene_name + "\" id=\"" + gene_name + "\">"
 
-        gene_button = "<button name=\"genebutton\" type=\"button\" class=\"btn btn-danger btn-md btngene\" data-name=\"" + \
-                      gene_name + "\" data-id=\"" + str(
-            gene_id) + "\"><span class='glyphicon glyphicon-pencil'></span> " + \
-                      gene_name + "</button> "
+        gene_button = render_template("gene_button.html", gene_name=gene_name, gene_id=gene_id, added=False)
+        html = render_template("tx_list.html", gene_name=gene_name, all_tx=all_tx, preftx=preftx_id,
+                               upcoming=upcoming_preftx, disabled=False)
 
-        for tx in all_tx:
-            if upcoming_preftx == tx.id:
-
-                html = """<tr>
-                    <td>
-                        <label for=\"""" + gene_name + "\">" + gene_name + """</label>
-                    </td>
-                    <td>
-                        <div class=\"form-group\">
-                        <select class=\"form-control\" name=\"""" + gene_name + "\" id=\"" + gene_name + "\">" + \
-                       "<option value=\"" + str(
-                    tx.id) + "\" class=\"red\">" + tx.accession + " - This Is a Change Not Made Live Yet</option>" + \
-                       """</select>
-                            </div>
-                               </td>
-                       </tr>"""
-
-                success_message = "<div class =\"alert alert-success\" name=\"message-fade\"><strong>Just so you know... </strong> " + gene_name + " was added</div>"
-                if json:
-                    return jsonify({'html': html, 'button_list': gene_button, 'message': success_message})
-                else:
-                    return {'html': html, 'button_list': gene_button, 'message': "added"}
-            else:
-                html += "<option value=\"" + str(tx.id) + "\""
-
-                if preftx_id == tx.id:
-                    html += " class=\"bolden\" selected"
-                else:
-                    html += " class=\"\""
-
-            html += ">" + tx.accession + "</option>"
-        html += """</select>
-                    </div>
-                </td>
-            </tr>"""
-
-        success_message = "<div class =\"alert alert-success\" name=\"message-fade\"><strong>Just so you know... </strong> " + gene_name + " was added</div>"
+        success_message = render_template("success_message.html", gene_name=gene_name)
 
         if json:
             return jsonify({'html': html, 'button_list': gene_button, 'message': success_message})
         else:
             return {'html': html, 'button_list': gene_button, 'message': "added"}
     else:
-        fail_message = "<div class =\"alert alert-danger\" name=\"" + gene_name + "\" id=\"message-fail\"><strong>Oh Crumbs!</strong> " + gene_name + " didn't match anything in the database</div>"
+        fail_message = render_template("fail_message.html", gene_name=gene_name)
         if json:
             return jsonify({'message': fail_message})
         else:
@@ -839,7 +817,8 @@ def add_all_regions():
 
     add_preftxs_to_panel(s, project_id, [{"gene": gene_name, "tx_id": tx_id}, ])
     add_genes_to_panel_with_ext(s, panel_id, gene_id)
-    return jsonify({"genes": [gene_id,]})
+    return jsonify({"genes": [gene_id, ]})
+
 
 @panels.route('/panels/add_regions', methods=['POST'])
 @login_required
@@ -854,11 +833,14 @@ def add_panel_regions():
     """
     version_ids = request.json['id_ext']
     panel_id = request.json['panel_id']
-    tx_id = request.json['pref_tx_id']
     project_id = request.json['project_id']
     gene_name = request.json['gene_name']
 
-    add_preftxs_to_panel(s, project_id, [{"gene": gene_name, "tx_id": tx_id}, ])
+    try:
+        tx_id = request.json['pref_tx_id']
+        add_preftxs_to_panel(s, project_id, [{"gene": gene_name, "tx_id": tx_id}, ])
+    except KeyError:
+        pass
 
     for i in version_ids:
         if i["ext_5"] == 0:
@@ -1328,36 +1310,23 @@ def edit_virtual_panel_process():
         vp_name = vp_info.name
         form.vpanelname.data = vp_name
         vp_genes = get_genes_by_vpanelid_edit(s, vp_id, vp_version)
-        gene_html = """<li class=\"list-group-item list-group-item-select-all\"><strong>Select all</strong> 
-                    <div class=\"material-switch pull-right\">
-                        <input type=\"checkbox\" id=\"all-genes\">
-                        <label for=\"all-genes\" class=\"label-success\"></label>
-                    </div>
-                </li>"""
         genelist = ""
         vp_list = []
         for i in vp_genes:
             vp_list.append(i.id)
 
+        genes = []
+        print('new method')
         for i in panel_genes:
             if i.id in vp_list:
-                line = "<li class=\"list-group-item\">" + \
-                       i.name + \
-                       "<div class=\"material-switch pull-right\"><input type=\"checkbox\" name=\"" + str(i.id) + \
-                       "\" id=\"" + i.name + "\" disabled=\"disabled\" checked=\"checked\"><label for=\"" + i.name + \
-                       "\" class=\"label-added label-gene\" disabled=\"disabled\"></label></div></li>"
-                button = "<button name=\"genebutton\" type=\"button\" class=\"btn btn-success btn-md btngene\" data-name=\"" + \
-                         i.name + "\" data-id=\"" + str(i.id) + "\"><span class='glyphicon glyphicon-ok'></span> " + \
-                         i.name + "</button> "
+                genes.append({"name": i.name, "id": i.id, "vp_list": True})
+                button = render_template("gene_button.html", gene_name=i.name, gene_id=i.id, added=True)
                 genelist += button
 
             else:
-                line = "<li class=\"list-group-item\">" + \
-                       i.name + \
-                       "<div class=\"material-switch pull-right\"><input type=\"checkbox\" name=\"" + str(i.id) + \
-                       "\" id=\"" + i.name + "\"><label for=\"" + i.name + \
-                       "\" class=\"label-success label-gene\"></label></div></li>"
-            gene_html += line
+                genes.append({"name": i.name, "id": i.id, "vp_list": False})
+
+        gene_html = render_template("panel_genes.html", panel_genes=genes)
 
         url = url_for('panels.edit_virtual_panel_process') + '?id=' + str(vp_id)
         return render_template('virtualpanels_createprocess.html', form=form, genes=gene_html, genelist=genelist,
@@ -1402,22 +1371,12 @@ def select_vp_genes():
     """
     panel_id = request.json["panel"]
     current_version = get_current_version(s, panel_id)
+    panel_genes = get_genes_by_panelid(s, panel_id, current_version)
 
-    genes = get_genes_by_panelid(s, panel_id, current_version)
-
-    html = """<li class=\"list-group-item list-group-item-select-all\"><strong>Select all</strong> 
-                    <div class=\"material-switch pull-right\">
-                        <input type=\"checkbox\" id=\"all-genes\">
-                        <label for=\"all-genes\" class=\"label-success\"></label>
-                    </div>
-                </li>"""
-    for gene in genes:
-        line = "<li class=\"list-group-item\">" + \
-               gene.name + \
-               "<div class=\"material-switch pull-right\"><input type=\"checkbox\" name=\"" + str(
-            gene.id) + "\" id=\"" + \
-               gene.name + "\"><label for=\"" + gene.name + "\" class=\"label-success label-gene\"></label></div></li>"
-        html += line
+    genes = []
+    for gene in panel_genes:
+        genes.append({"name": gene.name, "id": gene.id, "vp_list": False})
+    html = render_template("panel_genes.html", panel_genes=genes)
     return jsonify(html)
 
 
@@ -1430,61 +1389,27 @@ def get_custom_regions():
     """
     panel_id = request.json["panel_id"]
     vpanel_id = request.json["vpanel_id"]
-    current_regions = []
 
     regions = get_custom_regions_query(s, panel_id)
-    html = """<h3 name=\"Custom\">Custom Regions</h3><ul class=\"list-unstyled list-inline pull-right\">
-                        <li>
-                            <button type=\"button\" class=\"btn btn-success\" id=\"add-regions\" name=\"Custom\" disabled=\"disabled\">Add Regions</button>
-                            </li>"""
 
     if not vpanel_id:
-        html += "<li><button type=\"button\" class=\"btn btn-primary\" id=\"create-regions\" name=\"Create\">Create Custom Region</button></li>"
-
-    html += """</ul>
-
-                <table class=\"table table-striped\">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Chrom</th>
-                            <th>Region Start</th>
-                            <th>Region End</th>
-                            <th>Names</th>
-                            <th>Select All <div class="material-switch pull-right">
-                                                <input type="checkbox" id="checkAll">
-                                                <label for="checkAll" class="label-success label-selectall"></label>
-                                            </div>
-                            </th>
-                        </tr>
-                    </thead>"""
-    for i in regions:
-        if not vpanel_id:
-            current_regions.append(i.region_id)
-            v_id = str(i.region_id)
-        else:
-            v_id = str(i.version_id)
-
-        row = """<tr>
-                        <td><label for=\"""" + v_id + "\">" + v_id + "</label></td>" + \
-              "<td>" + i.chrom + "</td>" + \
-              "<td>" + str(i.region_start) + "</td>" + \
-              "<td>" + str(i.region_end) + "</td>" + \
-              "<td>" + i.name.replace(',', '\n') + "</td>" + \
-              """<td><div class=\"material-switch pull-right\">
-                      <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
-                                <label for=\"""" + v_id + """\" class=\"label-success label-region\" ></label>
-                            </div></td>
-                    </tr>"""
-        html += row
+        html = render_template("custom_regions.html", regions=regions)
+    else:
+        html = render_template("custom_regions_vpanel", regions=regions)
 
     if vpanel_id:
         version_ids = get_current_custom_regions(s, vpanel_id)
-        for i in version_ids:
-            current_regions.append(i[0])
+    else:
+        version_ids = get_custom_regions_query(s, panel_id)
+    current_regions = []
+    for i in version_ids:
+        print('#################')
+        print(i)
+        print(i.region_id)
+        current_regions.append(i.region_id)
 
-    html += "</table>"
     return jsonify({'html': html, 'ids': current_regions})
+
 
 @panels.route('/virtualpanels/getregions', methods=['POST'])
 def select_vp_regions(gene_id, gene_name, panel_id):
@@ -1496,46 +1421,7 @@ def select_vp_regions(gene_id, gene_name, panel_id):
     :return:
     """
     regions = get_panel_regions_by_geneid(s, gene_id, panel_id)
-    html = "<h3 name=\"" + gene_id + "\">" + gene_name + "</h3><ul class=\"list-unstyled list-inline pull-right\">" + \
-           """<li>
-               <button type=\"button\" class=\"btn btn-success\" id=\"add-regions\" name=\"""" + gene_name + """\" disabled=\"disabled\">Add Regions</button>
-                        </li>
-                        <li>
-                            <button type=\"button\" class=\"btn btn-danger\" id=\"remove-gene\" name=\"""" + gene_name + """\">Remove Gene</button>
-                        </li>
-                    </ul>
-
-                <table class=\"table table-striped\" id=\"region-table\">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Chrom</th>
-                            <th>Region Start</th>
-                            <th>Region End</th>
-                            <th>Names</th>
-                            <th>Select All <div class="material-switch pull-right">
-                                                <input type="checkbox" id="checkAll">
-                                                <label for="checkAll" class="label-success label-selectall"></label>
-                                            </div>
-                            </th>
-                        </tr>
-                    </thead>"""
-    for i in regions:
-        v_id = str(i.version_id)
-        coord = "<td>" + str(i.region_start) + "</td>" + \
-                "<td>" + str(i.region_end) + "</td>"
-        row = """<tr>
-                            <td><label for=\"""" + v_id + "\">" + v_id + "</label></td>" + \
-              "<td>" + i.chrom + "</td>" + coord + \
-              "<td>" + i.name.replace(',', '\n') + "</td>" + \
-              """<td><div class=\"material-switch pull-right\">
-                      <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
-                                    <label for=\"""" + v_id + """\" class=\"label-success label-region\" ></label>
-                                </div></td>
-                        </tr>"""
-        html += row
-
-    html += "</table>"
+    html = render_template("vpanel_regions.html", gene_name=gene_name, regions=regions)
 
     return html
 
@@ -1548,14 +1434,20 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
     """
     changed_regions = {}
     include_utr = False
-    if added: #added is true when the gene has been added to the panel during the edit (no regions have been saved to versions yet)
+    print('added')
+    print(added)
+    if added:  # added is true when the gene has been added to the panel during the edit (no regions have been saved to versions yet)
         if not utr:  # if utr is false (default) then only coding regions are added
             regions = get_regions_by_gene_no_utr(s, gene_id)
         else:
             regions = get_regions_by_geneid(s, gene_id)
     else:
+        print('*****************')
+        print('include UTR')
+        print(utr)
         if utr is None:
             include_utr = check_if_utr(s, gene_id, panel_id)
+            print(include_utr)
             if include_utr:
                 regions = get_regions_by_geneid_with_versions(s, gene_id, panel_id)
             else:
@@ -1577,136 +1469,61 @@ def select_regions(gene_id=None, gene_name=None, panel_id=None, added=False, utr
         remove_opac = "1"
         remove_active = "btn-danger active"
 
-    utr_html = """<li>
-                        <div class="btn-group" role="group" aria-label="basic label">
-                            <p style="text-align: center; vertical-align: middle; display: table-cell;">Include UTR </p>
-                        </div>
-
-                        <div class="btn-group btn-group-xs" role="group" aria-label="...">
-                            <a id="btnOn" href="javascript:;" class="btn """ +  ok_active + """""><span class="glyphicon glyphicon-ok" style="opacity: """ + ok_opac + """;"></span></a>
-                            <a id="btnOff" href="javascript:;" class="btn """ + remove_active + """""><span class="glyphicon glyphicon-remove" style="opacity: """ + remove_opac + """;"></span></a>
-                        </div>
-                        <input type="radio" name="menucolor" value="navbar-default" checked>
-                        <input type="radio" name="menucolor" value="navbar-inverse">
-                </li>"""
-
-    html = "<h3 name=\"" + gene_id + "\">" + gene_name + "</h3><ul class=\"list-unstyled list-inline pull-right\">" + \
-           utr_html + \
-           """<li>
-               <button type=\"button\" class=\"btn btn-success\" id=\"add-regions\" name=\"""" + gene_name + """\" disabled=\"disabled\">Add Regions</button>
-                    </li>
-                    <li>
-                        <button type=\"button\" class=\"btn btn-danger\" id=\"remove-gene\" name=\"""" + gene_name + """\">Remove Gene</button>
-                    </li>
-                </ul>
-
-            <table class=\"table table-striped\" id=\"region-table\">
-                <thead>
-                    <tr>
-                        <th width='14%'>ID</th>
-                        <th width='13%'>Chrom</th>
-                        <th width='17%'>Region Start</th>
-                        <th width='17%'>Region End</th>
-                        <th width='22%'>Names</th>
-                        <th width='17%'>Select All <div class="material-switch pull-right">
-                                            <input type="checkbox" id="checkAll">
-                                            <label for="checkAll" class="label-success label-selectall"></label>
-                                        </div>
-                        </th>
-                    </tr>
-                </thead>"""
-
     store = {}
+    html_regions = []
     for i in regions:
         v_id = str(i.region_id)
-        if i.region_id in changed_regions.keys():
-            h = """<div class=\"material-switch pull-right\">
-                                <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
-                                <label for=\"""" + v_id + """\" class=\"label-success label-region\" checked=\"checked\"></label>
-                            </div>"""
-            if changed_regions[i.region_id]['position'] == 'both':
-                start = str(changed_regions[i.region_id]['coord'][0])
-                start_style = "style=\"color:red;\" "
-                end = str(changed_regions[i.region_id]['coord'][1])
-                end_style = "style=\"color:red;\" "
-                end_column = """<div class=\"material-switch pull-right\">
-                                                <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
-                                                <label for=\"""" + v_id + """\" class=\"label-success label-region\" ></label>
-                                            </div>"""
-            elif changed_regions[i.region_id]['position'] == 'start':
-                store[i.region_id] = {"start":{'html':h, 'value':i.region_start}}
-                start = str(changed_regions[i.region_id]['coord'])
-                start_style = "style=\"color:red;\" "
-                end = str(i.region_end + i.ext_3)
-                end_style = ""
-                end_column = """<ul class="list-unstyled list-inline pull-right" name="edit_region">
-                                                <li>
-                                                    <button type="button" class="btn btn-small btn-success" name="update" data-name="region_start">
-                                                        <span class="glyphicon glyphicon-floppy-disk"></span>
-                                                    </button>
-                                                </li>
-                                                <li>
-                                                    <button type="button" class="btn btn-small btn-danger" name="undo">
-                                                        <span class="glyphicon glyphicon-remove" name="undo"></span>
-                                                    </button>
-                                                </li>
-                                            </ul>"""
-            else:
-                store[i.region_id] = {"end": {'html': h, 'value': i.region_end}}
-                start = str(i.region_start - i.ext_5)
-                start_style = ""
-                end = str(changed_regions[i.region_id]['coord'])
-                end_style = "style=\"color:red;\" "
-                end_column = """<ul class="list-unstyled list-inline pull-right" name="edit_region">
-                                <li>
-                                    <button type="button" class="btn btn-small btn-success" name="update" data-name="region_end">
-                                        <span class="glyphicon glyphicon-floppy-disk"></span>
-                                    </button>
-                                </li>
-                                <li>
-                                    <button type="button" class="btn btn-small btn-danger" name="undo">
-                                        <span class="glyphicon glyphicon-remove" name="undo"></span>
-                                    </button>
-                                </li>
-                            </ul>"""
-        else:
-            start = str(i.region_start - i.ext_5)
-            start_style = ""
-            end = str(i.region_end + i.ext_3)
-            end_style = ""
-            end_column = """<div class=\"material-switch pull-right\">
-                                <input type=\"checkbox\" id=\"""" + v_id + """\" name=\"region-check\">
-                                <label for=\"""" + v_id + """\" class=\"label-success label-region\" ></label>
-                            </div>"""
 
-        #get the cds start and end for the gene
         cds = get_gene_cds(s, v_id)
-
         if i.region_start < cds['cds_start'] < i.region_end:
             cds_start = cds['cds_start']
         else:
             cds_start = i.region_start
-
         if i.region_start < cds['cds_end'] < i.region_end:
             cds_end = cds['cds_end']
         else:
             cds_end = i.region_end
 
-        coord = "<td><input " + start_style + "class=\"form-control\" id=\"" + str(
-            i.region_start) + "\" cds=\"" + str(
-            cds_start) + "\" name=\"region_start\" type=\"text\" value=\"" + start + "\"></td>" + \
-                "<td><input " + end_style + "class=\"form-control\" id=\"" + str(
-            i.region_end) + "\" cds=\"" + str(
-            cds_end) + "\" name=\"region_end\" type=\"text\" value=\"" + end + "\"></td>"
+        if i.region_id in changed_regions.keys():
+            h = render_template("store.html", region_id=i.region_id)
+            if changed_regions[i.region_id]['position'] == 'both':
+                start_style = "color:red;"
+                end_style = "color:red;"
+                start = changed_regions[i.region_id]['coord'][0]
+                end = changed_regions[i.region_id]['coord'][1]
+                end_col = "check"
+                data_name = None
+            elif changed_regions[i.region_id]['position'] == 'start':
+                store[i.region_id] = {"start": {'html': h, 'value': i.region_start}}
+                start_style = "color:red;"
+                end_style = ""
+                start = changed_regions[i.region_id]['coord']
+                end = i.region_end + i.ext_3
+                end_col = "button"
+                data_name = 'region_start'
+            else:
+                store[i.region_id] = {"end": {'html': h, 'value': i.region_end}}
+                start_style = ""
+                end_style = "color:red;"
+                start = i.region_start - i.ext_5
+                end = changed_regions[i.region_id]['coord']
+                end_col = "button"
+                data_name = 'region_end'
+        else:
+            start_style = ""
+            end_style = ""
+            start = i.region_start - i.ext_5
+            end = i.region_end + i.ext_3
+            end_col = "check"
+            data_name = None
 
-        row = """<tr>
-                    <td><label for=\"""" + v_id + "\">" + v_id + "</label></td>" + \
-              "<td>" + i.chrom + "</td>" + coord + \
-              "<td class=\"expand\">" + i.name.replace(',', '\n') + "</td>" + \
-              "<td>" + end_column + "</td></tr>"
-        html += row
+        html_regions.append({"region_id": i.region_id, "chrom": i.chrom, "region_start": i.region_start,
+                                 "region_end":i.region_end, "name":i.name.replace(',', '\n'),
+                                 "start_style": start_style, "end_style": end_style, "start": start, "end": end,
+                                 "end_col": end_col, "cds_start":cds_start, "cds_end":cds_end, 'data_name':data_name})
 
-    html += "</table>"
+    html = render_template("panel_regions.html", regions=html_regions, gene_name=gene_name, gene_id=gene_id,
+                           ok_active=ok_active, ok_opac=ok_opac, remove_active=remove_active, remove_opac=remove_opac)
     return html, store
 
 
@@ -1722,6 +1539,7 @@ def edit_vp_regions():
     vpanel_id = request.json['vpanel_id']
     utr = request.json['include_utr']
 
+    print('here!')
     html = ""
     if vpanel_id:
         html = select_vp_regions(gene_id, gene_name, panel_id)
@@ -1731,11 +1549,13 @@ def edit_vp_regions():
 
     version_ids = []
     for i in regions:
+        print(i)
         version_ids.append(i[0])
     store = {}
-    if len(version_ids) > 0:
-        html = html.replace("Add Regions", "Update Regions")
 
+    print('#################')
+    print(version_ids)
+    print(utr)
     if not vpanel_id and len(version_ids) > 0:
         if not utr:
             html, store = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id)
@@ -1749,7 +1569,15 @@ def edit_vp_regions():
             html, store = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, added=True)
         else:
             html, store = select_regions(gene_id=gene_id, gene_name=gene_name, panel_id=panel_id, added=True, utr=True)
-    d = {'html': html, 'ids': version_ids, 'store':store}
+
+    if len(version_ids) > 0:
+        print('replace')
+        print(html)
+        if "Add Regions" in html:
+            print('found')
+        html = html.replace("Add Regions", "Update Regions")
+
+    d = {'html': html, 'ids': version_ids, 'store': store}
     return jsonify(d)
 
 
@@ -1763,6 +1591,7 @@ def add_vp_regions():
     s.commit()
     return jsonify("complete")
 
+
 @panels.route('/virtualpanels/add-all-regions', methods=['POST'])
 @login_required
 def add_all_regions_vp():
@@ -1774,8 +1603,9 @@ def add_all_regions_vp():
     gene_id = request.json['gene_id']
     vpanel_id = request.json['vpanel_id']
     panel_id = request.json['panel_id']
-    add_all_regions_to_vp(s,panel_id,gene_id,vpanel_id)
-    return jsonify({"genes": [gene_id,]})
+    add_all_regions_to_vp(s, panel_id, gene_id, vpanel_id)
+    return jsonify({"genes": [gene_id, ]})
+
 
 @panels.route('/virtualpanels/remove_regions', methods=['POST'])
 @login_required
@@ -1794,6 +1624,7 @@ def remove_vp_regions():
     panel = get_vpanel_by_id(s, vpanel_id)
     length = len(list(panel))
     return jsonify(length)
+
 
 @panels.route('/virtualpanels/live', methods=['GET', 'POST'])
 def make_virtualpanel_live():
@@ -1855,7 +1686,7 @@ def toggle_locked():
     :return: view_locked method
     """
     panel_id = request.args.get('id')
-    json  = False
+    json = False
     if not panel_id:
         json = True
         panel_id = request.json['id']
@@ -1868,5 +1699,3 @@ def toggle_locked():
         return manage_locked(message="Panel Unlocked")
     else:
         return manage_locked(message="Hmmmm you don't have permission to do that")
-
-

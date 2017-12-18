@@ -33,7 +33,7 @@ def create_tables(c):
 def parse_reflat(c,refflat):
     reader = Reader(filename=refflat)
     for record in reader:
-        if record.transcript.startswith('NM_'):
+        # if record.transcript.startswith('NM_'):
             gene = record.gene
             c.execute("INSERT OR IGNORE INTO genes(name) VALUES (?)",(gene,))
             c.execute("SELECT id FROM genes WHERE name=?",(gene,))
@@ -60,17 +60,23 @@ def parse_reflat(c,refflat):
 
     c.close()
 
-def main(db):
+def main(db=None, refflat=None):
     parser = argparse.ArgumentParser(description='creates db of genes, tx and exons for PanelPal')
     parser.add_argument('--refflat',default="/results/Pipeline/reference/UCSCRefSeqTable_refflat_format.txt")
+    parser.add_argument('-db')
     args = parser.parse_args()
 
+    if not db:
+        db = args.db
+
+    if not refflat:
+        refflat = args.refflat
     conn = sqlite3.connect(db)
     c = conn.cursor()
 
     create_tables(c)
 
-    parse_reflat(c,args.refflat)
+    parse_reflat(c,refflat)
 
     conn.commit()
     conn.close()
