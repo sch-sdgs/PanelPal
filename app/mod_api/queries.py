@@ -56,7 +56,7 @@ def get_intronic_api(s, vpanel_name, version='current'):
 
 def get_gene_api(s, panel, version, extension=1000):
     """
-    Method to get the preferred transcripts for a version.
+    Method to get the filled BED for a version.
 
     The method first creates a temporary table with all the genes included in the specified version of the panel.
     This table is then used to retrieve the minimum and maximum co-ordinates for each gene and adds a 100 bp buffer
@@ -73,31 +73,42 @@ def get_gene_api(s, panel, version, extension=1000):
     if version == "current":
         version = get_current_version(s, panel_id)
 
-    sql = text("DROP TABLE IF EXISTS _genes")
-    s.execute(sql)
+    # sql = text("DROP TABLE IF EXISTS _genes")
+    # s.execute(sql)
+    #
+    # sql = text("""CREATE TEMP TABLE _genes AS SELECT genes.id as id
+    #                 FROM genes
+    #                 JOIN tx on tx.gene_id = genes.id
+    #                 JOIN exons on exons.tx_id = tx.id
+    #                 JOIN regions on regions.id = exons.region_id
+    #                 JOIN versions on versions.region_id = regions.id
+    #                 JOIN panels on panels.id = versions.panel_id
+    #                 WHERE panels.id = :panel_id AND versions.intro <= :version AND (versions.last >= :version OR versions.last IS NULL);
+    #             """)
+    # values = {"panel_id":panel_id, "version":version}
+    # s.execute(sql, values)
+    #
+    # sql = text("""SELECT regions.chrom as chrom, MIN(regions.start) - :extension as region_start, MAX(regions.end) + :extension as region_end, genes.name as annotation
+    #                 FROM genes
+    #                 JOIN tx on tx.gene_id = genes.id
+    #                 JOIN exons on exons.tx_id = tx.id
+    #                 JOIN regions on regions.id = exons.region_id
+    #                 WHERE EXISTS (SELECT id FROM _genes WHERE id = genes.id)
+    #                 GROUP BY genes.id
+    #                 ORDER BY chrom, region_start
+    #                     """)
+    # values = {"extension":extension}
+    # regions = s.execute(sql, values)
 
-    sql = text("""CREATE TEMP TABLE _genes AS SELECT genes.id as id
+    sql = """SELECT genes.id as gene_id, regions.chrom as chrom, MIN(regions.start) - :extension as region_start, MAX(regions.end) + :extension as region_end, genes.name as annotation
                     FROM genes
                     JOIN tx on tx.gene_id = genes.id
                     JOIN exons on exons.tx_id = tx.id
                     JOIN regions on regions.id = exons.region_id
                     JOIN versions on versions.region_id = regions.id
                     JOIN panels on panels.id = versions.panel_id
-                    WHERE panels.id = :panel_id AND versions.intro <= :version AND (versions.last >= :version OR versions.last IS NULL);
-                """)
-    values = {"panel_id":panel_id, "version":version}
-    s.execute(sql, values)
-
-    sql = text("""SELECT regions.chrom as chrom, MIN(regions.start) - :extension as region_start, MAX(regions.end) + :extension as region_end, genes.name as annotation
-                    FROM genes
-                    JOIN tx on tx.gene_id = genes.id
-                    JOIN exons on exons.tx_id = tx.id
-                    JOIN regions on regions.id = exons.region_id
-                    WHERE EXISTS (SELECT id FROM _genes WHERE id = genes.id)
-                    GROUP BY genes.id
-                    ORDER BY chrom, region_start
-                        """)
-    values = {"extension":extension}
+                    WHERE panels.id = :panel_id AND versions.intro <= :version AND (versions.last >= :version OR versions.last IS NULL) GROUP BY genes.id;"""
+    values = {"panel_id": panel_id, "version": version, "extension":extension}
     regions = s.execute(sql, values)
 
     return PanelApiReturn(version, regions)
