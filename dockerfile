@@ -11,6 +11,18 @@ RUN pip install -r /tmp/requirements.txt
 
 COPY ./app /app
 
+RUN git clone https://github.com/sch-sdgs/SDGSCommonLibs.git
+
+WORKDIR /tmp/SDGSCommonLibs
+
+RUN git checkout sci_check
+
+RUN pip install -r requirements.txt
+
+RUN python setup.py install
+
+WORKDIR /tmp
+
 WORKDIR /tmp/PanelPal
 
 RUN python setup.py install
