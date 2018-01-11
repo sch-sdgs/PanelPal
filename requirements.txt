@@ -16,3 +16,4 @@ suds
 pybedtools
 raven[flask]
 flask_jsglue
+httplib2
