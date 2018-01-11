@@ -28,12 +28,14 @@ class UserRelationships(db.Model):
 class Projects(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True)
+    short_name = db.Column(db.String(10), unique=False)
     panels = db.relationship('Panels', backref='author', lazy='dynamic')
     pref_tx = db.relationship('PrefTx', backref='author', lazy='dynamic')
     user = relationship("UserRelationships")
 
-    def __init__(self,name):
+    def __init__(self,name, short_name):
         self.name = name
+        self.short_name = short_name
 
     def __repr__(self):
         return '<name %r>' % (self.name)
@@ -110,6 +112,7 @@ class VirtualPanels(db.Model):
     name = db.Column(db.String(50))
     current_version = db.Column(db.DECIMAL)
     vprelationship = db.relationship('VPRelationships', backref='i', lazy='dynamic')
+    testcoderelationship = db.relationship('TestCodes', backref='i', lazy='dynamic')
 
     def __init__(self, name, current_version):
         self.name = name
@@ -118,6 +121,19 @@ class VirtualPanels(db.Model):
     def __repr__(self):
         return '<name %r>' % (self.name)
 
+class TestCodes(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    vpanel_id = db.Column(db.Integer, db.ForeignKey('virtual_panels.id'))
+    version = db.Column(db.DECIMAL)
+    test_code = db.Column(db.Integer)
+
+    def __init__(self,vpanel_id, version, testcode):
+        self.vpanel_id = vpanel_id
+        self.version = version
+        self.test_code = testcode
+
+    def __repr__(self):
+        return '<name %r>' % (self.name)
 
 class Versions(db.Model):
     id = db.Column(db.Integer, primary_key=True)

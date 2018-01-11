@@ -13,6 +13,10 @@ from app.mod_projects.queries import get_preftx_by_gene_id, get_upcoming_preftx_
 from app.mod_admin.queries import get_username_by_user_id, check_user_has_permission
 import json
 import time
+import requests
+import httplib2 as http
+import math
+from producers import StarLims
 
 panels = Blueprint('panels', __name__, template_folder='templates')
 
@@ -185,6 +189,54 @@ class ItemTableLocked(Table):
     toggle_lock = LinkCol('Toggle Lock', 'panels.toggle_locked', url_kwargs=dict(id='id'))
 
 
+def check_gene_name(gene_name, prev=False):
+    try:
+        from urlparse import urlparse
+    except ImportError:
+        from urllib.parse import urlparse
+
+    headers = {
+        'Accept': 'application/json',
+    }
+
+    uri = 'http://rest.genenames.org'
+    if prev:
+        path = '/fetch/prev_symbol/' + gene_name
+    else:
+        path = '/fetch/symbol/' + gene_name
+
+    target = urlparse(uri + path)
+    method = 'GET'
+    body = ''
+
+    h = http.Http()
+
+    response, content = h.request(
+        target.geturl(),
+        method,
+        body,
+        headers)
+
+    if response['status'] == '200':
+        data = json.loads(content)
+        if len(data['response']['docs']) == 0 and not prev:
+            return check_gene_name(gene_name, True)
+        elif len(data['response']['docs']) == 0 and prev:
+            print('no match')
+            return []
+        try:
+            if prev:
+                return [data['response']['docs'][0]['symbol'],]
+            try:
+                return data['response']['docs'][0]['prev_symbol']
+            except IndexError:
+                print(len(data['response']['docs']))
+                exit()
+        except KeyError:
+            return []
+    else:
+        print 'Error detected: ' + response['status']
+
 def isgene(s, gene):
     """
     Checks if a gene is in refflat
@@ -198,7 +250,16 @@ def isgene(s, gene):
     """
     test = s.query(Genes).filter(Genes.name.ilike(gene)).first()
     if test is None:
-        return None
+        gene_list = check_gene_name(gene)
+        if len(gene_list) == 0:
+            return None
+        else:
+            for g in gene_list:
+                print(g)
+                test = s.query(Genes).filter(Genes.name.ilike(str(g))).first()
+                if test is not None:
+                    return test.name
+            return None
     else:
         return test.name
 
@@ -330,7 +391,8 @@ def create_design(regions):
     * space
     * region name, in the format <gene>:<transcript_number>_exon<exon_number>,<transcript_number>_exon<exon_number> etc.
 
-    All design files contain the +/- 25 bp extension.
+    All design files contain the +/- 25 bp extension. N.B. All regions are required to be at least XXX bp in length for
+    design. This method will check the size of each region and expand if necessary.
 
     :regions: merged sorted list of regions to be included in the BED file
     :type regions:
@@ -342,8 +404,17 @@ def create_design(regions):
     for i in regions:
         line = []
         line.append(i.chrom)
-        line.append(str(i.start))
-        line.append(str(i.end))
+
+        #ensure minimum region size
+        if (i.end - i.start) > 150:
+            line.append(str(i.start))
+            line.append(str(i.end))
+        else:
+            region_size = i.end - i.start
+            extra = math.ceil(150.0 -region_size / 2) #round up to whole number
+            line.append(str(i.start - extra))
+            line.append(str(i.end + extra))
+
         line.append(i.name.replace(";", ","))
         result.append(line)
 
@@ -505,10 +576,9 @@ def view_panel():
         else:
             message = None
         panel_details = get_panel_details_by_id(s, id)
-        for i in panel_details:
-            if not version:
-                version = i.current_version
-            panel_name = i.name
+        if not version:
+            version = panel_details.current_version
+        panel_name = panel_details.name
         panel = get_regions_by_panelid(s, id, version)
         project_id = get_project_id_by_panel_id(s, id)
         result = []
@@ -579,7 +649,7 @@ def create_panel_process():
         version = get_current_preftx_version(s, preftx_id)
         if not version:
             version = 0
-        if make_live == "True":
+        if make_live == "on":
             make_preftx_live(s, preftx_id, version + 1, current_user.id)
             make_panel_live(s, panel_id, 1, current_user.id)
         unlock_panel_query(s, panel_id)
@@ -611,7 +681,7 @@ def edit_panel_process():
         panel_version = get_current_version(s, panel_id)
         if not tx_version:
             tx_version = 0
-        if make_live == "True":
+        if make_live == "on":
             print('make_live')
             make_preftx_live(s, preftx_id, tx_version + 1, current_user.id)
             make_panel_live(s, panel_id, panel_version + 1, current_user.id)
@@ -750,6 +820,14 @@ def create_panel_get_tx(gene_name=None, project_id=None):
         json = True
     exists = isgene(s, gene_name)
     if exists:
+        if exists != gene_name:
+            message = render_template("wrong_gene_name_message.html", gene_name=gene_name, match_name=exists)
+            if json:
+                return jsonify({'html': '', 'button_list': '', 'message': message})
+            else:
+                return {'html': '', 'button_list': '', 'message': message} #alternate gene name is not automatically added
+        else:
+            message = render_template("success_message.html", gene_name=gene_name)
         gene_name = exists
         gene_id = get_gene_id_from_name(s, gene_name)
         preftx_id = get_preftx_by_gene_id(s, project_id, gene_id)
@@ -760,10 +838,8 @@ def create_panel_get_tx(gene_name=None, project_id=None):
         html = render_template("tx_list.html", gene_name=gene_name, all_tx=all_tx, preftx=preftx_id,
                                upcoming=upcoming_preftx, disabled=False)
 
-        success_message = render_template("success_message.html", gene_name=gene_name)
-
         if json:
-            return jsonify({'html': html, 'button_list': gene_button, 'message': success_message})
+            return jsonify({'html': html, 'button_list': gene_button, 'message': message})
         else:
             return {'html': html, 'button_list': gene_button, 'message': "added"}
     else:
@@ -1258,9 +1334,9 @@ def create_virtual_panel_process():
     if request.method == "POST":
         make_live = request.form['make_live']
         vp_id = request.args.get('id')
-        if make_live == "True":
-            panel_id = get_panel_by_vp_id(s, vp_id)
+        if make_live == "on":
             make_vp_panel_live(s, vp_id)
+            add_to_starlims(vp_id)
         panel_id = get_panel_by_vp_id(s, vp_id)
         unlock_panel_query(s, panel_id)
         return redirect(url_for('panels.view_vpanel') + "?id=" + vp_id)
@@ -1291,16 +1367,15 @@ def edit_virtual_panel_process():
     vp_id = request.args.get('id')
     panel_id = get_panel_by_vp_id(s, vp_id)
     if request.method == "POST":
-        if request.form['make_live'] == "True":
+        if request.form['make_live'] == "on":
             make_vp_panel_live(s, vp_id)
+            add_to_starlims(vp_id)
         unlock_panel_query(s, panel_id)
         return redirect(url_for('panels.view_vpanel') + "?id=" + vp_id)
     elif request.method == "GET":
         lock_panel(s, current_user.id, panel_id)
         panel_info = get_panel_details_by_id(s, panel_id)
-        panel_name = ""
-        for i in panel_info:
-            panel_name = i.name
+        panel_name = panel_info.name
         form.panel.choices = [(panel_id, panel_name), ]
 
         panel_version = get_current_version(s, panel_id)
@@ -1625,6 +1700,33 @@ def remove_vp_regions():
     length = len(list(panel))
     return jsonify(length)
 
+def add_to_starlims(vpanelid):
+    """
+    Method to add new test to StarLIMS. Method calls bioinfoweb API method through commonlibs producers.
+
+    The TESTCODE value returned is added to the virtual panels table.
+
+    :param vpanelid: ID for the virtual panel to be added
+    :return:
+    """
+    details = get_vpanel_details_by_id(s, vpanelid)
+    print(details)
+    version = round(details.current_version,1)
+    panel_name = 'Analysis: ' + details.name + ' v' + str(version) + ' (' + details.panel_name + ')'
+    print(len(panel_name))
+    if len(panel_name) > 50:
+        #todo do something with the name here!
+        pass
+    gene_result = get_genes_by_vpanelid(s, vpanelid, version)
+    gene_list = list()
+    for g in gene_result:
+        gene_list.append(g.name)
+    starlims = StarLims.StarLimsApi(test=True)
+    testcode = starlims.add_new_test(panel_name, 'NGS Analysis', details.project_name, gene_list)
+    if testcode > 0:
+        add_testcode(s, vpanelid, details.current_version, testcode)
+
+    return testcode
 
 @panels.route('/virtualpanels/live', methods=['GET', 'POST'])
 def make_virtualpanel_live():
@@ -1639,9 +1741,11 @@ def make_virtualpanel_live():
     if locked:
         if current_user.id == get_locked_user(s, panelid):
             make_vp_panel_live(s, vpanelid)
+            add_to_starlims(vpanelid)
         return redirect(url_for('panels.view_virtual_panels'))
     else:
         make_vp_panel_live(s, vpanelid)
+        add_to_starlims(vpanelid)
         return redirect(url_for('panels.view_virtual_panels'))
 
 

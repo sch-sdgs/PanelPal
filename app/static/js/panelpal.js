@@ -1,6 +1,13 @@
 /**
  * Created by cytng on 23/05/2017.
  */
+var loading_Wheel_spin;
+$(document).ready(function(){
+    var data = $.get(Flask.url_for('panels.loading_wheel_spin'), function(response){
+            loading_Wheel_spin = response;
+        });
+});
+
 
 function ajax_error(xhr, status, error){
     var trace = $('#trace');
@@ -1398,7 +1405,8 @@ $(document).on('click', '#upload', function () {
     if (file) {
         var upload = $('#upload');
         upload.empty();
-        upload.load(Flask.url_for('panels.loading_wheel_spin'));
+        upload.append(loading_Wheel_spin);
+        // upload.load(Flask.url_for('panels.loading_wheel_spin'));
         var reader = new FileReader();
         var project_id = $('#project').val();
         var exists = "";
@@ -1606,7 +1614,8 @@ $(document).ready(function () {
         if ($('#genes').val().length > 0) {
             var add = $('#add');
             add.empty();
-            add.load(Flask.url_for('panels.loading_wheel_spin'));
+            add.append(loading_Wheel_spin);
+            // add.load(Flask.url_for('panels.loading_wheel_spin'));
             add_panel_gene()
         }
     });

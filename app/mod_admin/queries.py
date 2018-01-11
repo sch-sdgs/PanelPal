@@ -2,6 +2,17 @@ from app.panel_pal import message
 from app.models import *
 from sqlalchemy import and_
 
+def check_tx(s, acc):
+    """
+    Method to check whether the transcript has already been added to the database.
+    This method checks the database for alternate versions as these are currently not handled in the program (issue #79)
+
+    :param s: SQLAlchemy session token
+    :param acc: NCBI accession
+    :return:
+    """
+    tx_count = s.query(Tx).filter(Tx.accession == acc.split('.')[0]).count()
+    return tx_count
 
 def get_user_by_username(s, username):
     """

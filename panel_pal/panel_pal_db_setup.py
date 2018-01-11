@@ -28,6 +28,8 @@ def create_db(conn):
             (id INTEGER PRIMARY KEY, intro DECIMAL(2,1), last DECIMAL(2,1), version_id INTEGER, vpanel_id INTEGER, FOREIGN KEY(version_id) REFERENCES versions(id), FOREIGN KEY(vpanel_id) REFERENCES virtual_panels(id));
         CREATE TABLE virtual_panels
             (id INTEGER PRIMARY KEY, name VARCHAR(50), current_version DECIMAL(2,1), UNIQUE(name));
+        CREATE TABLE test_codes
+            (id INTEGER PRIMARY KEY, vpanel_id INTEGER, version DECIMAL(2,1), test_code INTEGER, FOREIGN KEY(vpanel_id) REFERENCES virtual_panels(id), UNIQUE(test_code))
         CREATE TABLE pref_tx
             (id INTEGER PRIMARY KEY, project_id INTEGER, current_version INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id));
         CREATE TABLE pref_tx_versions

@@ -551,6 +551,11 @@ def get_panel_by_vp_id(s, vp_id):
     for i in panel:
         return i.panel_id
 
+def get_panel_by_vp_name(s, vp_name):
+    panel = s.query(VirtualPanels, VPRelationships, Versions).join(VPRelationships).join(Versions).distinct(
+        Versions.panel_id).group_by(Versions.panel_id).filter(VirtualPanels.name == vp_name).values(Versions.panel_id)
+    for i in panel:
+        return i.panel_id
 
 def check_if_utr(s, geneid, panelid):
     """
@@ -1104,8 +1109,8 @@ def get_panel_details_by_id(s, panel_id):
         join(Panels). \
         filter(Panels.id == panel_id). \
         values(Panels.name, Panels.current_version)
-
-    return panel
+    for p in panel:
+        return p
 
 def get_panel_id_by_name(s, panel_name):
     panels = s.query(Panels).filter(Panels.name == panel_name).values(Panels.id)
@@ -1117,6 +1122,11 @@ def get_vpanel_id_by_name(s, vpanel_name):
     for panel in panels:
         return panel.id
 
+def get_vpanel_name_by_id(s, vpanel_id):
+    panels = s.query(VirtualPanels).filter(VirtualPanels.id == vpanel_id).values(VirtualPanels.name)
+    for panel in panels:
+        return panel.name
+
 def get_vpanel_details_by_id(s, vpanel_id):
     panel = s.query(Projects, Panels, Versions, VPRelationships, VirtualPanels). \
         join(Panels). \
@@ -1124,8 +1134,11 @@ def get_vpanel_details_by_id(s, vpanel_id):
         join(VPRelationships). \
         join(VirtualPanels). \
         filter(VirtualPanels.id == vpanel_id). \
-        values(VirtualPanels.name, VirtualPanels.current_version, Projects.id.label('project_id'))
+        values(VirtualPanels.name, VirtualPanels.current_version,
+               Projects.name.label('project_name'), Projects.short_name.label('project_abv'), Projects.id.label('project_id'),
+               Panels.name.label('panel_name'))
     for i in panel:
+        print(i)
         return i
 
 
@@ -1275,7 +1288,7 @@ def lock_panel(s, username, panel_id):
 
 def get_regions_by_panelid(s, panelid, version, extension=0):
     """
-    Gets current regions for a given gene within a given panel.
+    Gets current regions for a given panel.
     Creates temp table containing custom regions and joins with all other regions.
     Table is sorted by chromosome and then region start.
 
@@ -1459,3 +1472,18 @@ def get_gene_cds(s, region_id):
     result = s.execute(sql, values)
     for i in result:
         return i
+
+def add_testcode(s, vpanel_id, version, testcode):
+    """
+    Method to add a new row to the testcodes table (required for API methods to link to StarLIMS)
+
+    :param s:
+    :param vpanel_id:
+    :param version:
+    :param testcode:
+    :return:
+    """
+    tc = TestCodes(vpanel_id, version, testcode)
+    s.add(tc)
+    s.commit()
+    return tc.id

@@ -1,7 +1,8 @@
-<div class="alert alert-warning" id="message-fail">
+<div class="alert alert-warning alert-dismissible" id="message-fail">
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
     {% if multiple %}
     <strong>Silly Sausage!</strong> {{ gene_list }} have already been added
     {% else %}
-    <strong>Oh Crumbs!</strong> {{ gene_list }} has already been added
+    <strong>Silly Sausage!</strong> {{ gene_list }} has already been added
     {% endif %}
 </div>

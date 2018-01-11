@@ -1,8 +1,7 @@
 from app.mod_panels.queries import get_current_version, get_current_version_vp
 from sqlalchemy import and_, or_, text
 
-from app.mod_projects.queries import get_preftx_id_by_project_id, get_current_preftx_version, get_project_id_by_name
-from app.mod_panels.queries import get_panel_id_by_name
+from app.mod_projects.queries import get_preftx_id_by_project_id, get_current_preftx_version
 from app.models import *
 
 class PanelApiReturn(object):
@@ -10,7 +9,7 @@ class PanelApiReturn(object):
         self.current_version = current_version
         self.result = result
 
-def get_intronic_api(s, vpanel_name, version='current'):
+def get_intronic_api(s, vpanel_id, version='current'):
     """
     Method to retrieve intronic regions for vpanel from database.
     The query gets the region start -25 and region start -5, region end + 5 and region end +25 for each exon.
@@ -19,14 +18,10 @@ def get_intronic_api(s, vpanel_name, version='current'):
     If the version = "current" the current version version is retrieved from the database
 
     :param s: SQLALchemy session token
-    :param vpanel_name: name of virtual panel
+    :param vpanel_id: name of virtual panel
     :param version: the version to get from the database
     :return: regions and current_version
     """
-    vpanel = s.query(VirtualPanels).filter_by(name=vpanel_name).values(VirtualPanels.id)
-    for i in vpanel:
-        vpanel_id = i.id
-    print(vpanel_id)
     if version == 'current':
         current_version = get_current_version_vp(s, vpanel_id)
     else:
@@ -54,7 +49,7 @@ def get_intronic_api(s, vpanel_name, version='current'):
 
     return PanelApiReturn(current_version, regions)
 
-def get_gene_api(s, panel, version, extension=1000):
+def get_gene_api(s, panel_id, version, extension=1000):
     """
     Method to get the filled BED for a version.
 
@@ -63,42 +58,13 @@ def get_gene_api(s, panel, version, extension=1000):
     each side.
 
     :param s:
-    :param panel:
+    :param panel_id:
     :param version:
     :param extension:
     :return:
     """
-    panel_id = get_panel_id_by_name(s, panel)
-
     if version == "current":
         version = get_current_version(s, panel_id)
-
-    # sql = text("DROP TABLE IF EXISTS _genes")
-    # s.execute(sql)
-    #
-    # sql = text("""CREATE TEMP TABLE _genes AS SELECT genes.id as id
-    #                 FROM genes
-    #                 JOIN tx on tx.gene_id = genes.id
-    #                 JOIN exons on exons.tx_id = tx.id
-    #                 JOIN regions on regions.id = exons.region_id
-    #                 JOIN versions on versions.region_id = regions.id
-    #                 JOIN panels on panels.id = versions.panel_id
-    #                 WHERE panels.id = :panel_id AND versions.intro <= :version AND (versions.last >= :version OR versions.last IS NULL);
-    #             """)
-    # values = {"panel_id":panel_id, "version":version}
-    # s.execute(sql, values)
-    #
-    # sql = text("""SELECT regions.chrom as chrom, MIN(regions.start) - :extension as region_start, MAX(regions.end) + :extension as region_end, genes.name as annotation
-    #                 FROM genes
-    #                 JOIN tx on tx.gene_id = genes.id
-    #                 JOIN exons on exons.tx_id = tx.id
-    #                 JOIN regions on regions.id = exons.region_id
-    #                 WHERE EXISTS (SELECT id FROM _genes WHERE id = genes.id)
-    #                 GROUP BY genes.id
-    #                 ORDER BY chrom, region_start
-    #                     """)
-    # values = {"extension":extension}
-    # regions = s.execute(sql, values)
 
     sql = """SELECT genes.id as gene_id, regions.chrom as chrom, MIN(regions.start) - :extension as region_start, MAX(regions.end) + :extension as region_end, genes.name as annotation
                     FROM genes
@@ -113,18 +79,17 @@ def get_gene_api(s, panel, version, extension=1000):
 
     return PanelApiReturn(version, regions)
 
-def get_preftx_api(s,project_name,version='current'):
+def get_preftx_api(s,project_id,version='current'):
     """
     Method to retrieve the preferred transcripts for a project
 
     If the version is "current" the query gets the current version from the database
 
     :param s: SQLALchemy session token
-    :param project_name: name of the project to be queried
+    :param project_id: name of the project to be queried
     :param version: the version to retrieve
     :return: list of key values pairs of gene and transcript and current version
     """
-    project_id = get_project_id_by_name(s,project_name)
     preftx_id = get_preftx_id_by_project_id(s, project_id)
     print project_id
     if version == "current":
@@ -145,3 +110,28 @@ def get_preftx_api(s,project_name,version='current'):
                Tx.accession, Genes.name)
 
     return PanelApiReturn(current_version, preftx)
+
+def get_project_from_vp(s, vp_id):
+    """
+    Gets the project ID for a given virtual panel ID
+
+    :param s:
+    :param vp_id:
+    :return:
+    """
+    project = s.query(Projects, Panels, Versions, VPRelationships).\
+        filter(VPRelationships.vpanel_id == vp_id).\
+        join(Panels).join(Versions).join(VPRelationships).group_by(Panels.project_id).values(Projects.id, Projects.name)
+    for p in project:
+        return p
+
+def get_vpanel_id_from_testcode(s, test_code):
+    """
+    Method to get the virtual panel ID from the TestCode assigned in StarLIMS
+
+    :param s:
+    :param test_code:
+    :return:
+    """
+    vpanel = s.query(TestCodes).filter(TestCodes.test_code == test_code).first()
+    return vpanel.vpanel_id, vpanel.version

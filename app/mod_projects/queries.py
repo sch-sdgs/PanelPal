@@ -67,8 +67,8 @@ def check_preftx_status_query(s, id):
     """
 
     panels = s.query(PrefTx, PrefTxVersions).filter(PrefTx.id == id).join(PrefTxVersions). \
-        values(PrefTx.current_version, \
-               PrefTxVersions.last, \
+        values(PrefTx.current_version,
+               PrefTxVersions.last,
                PrefTxVersions.intro)
 
     return panels
@@ -88,9 +88,9 @@ def create_preftx_entry(s, project_id):
 
 
 @message
-def create_project(s, name, user):
+def create_project(s, name, short_name, user):
     try:
-        project = Projects(name=name)
+        project = Projects(name=name, short_name=short_name)
         s.add(project)
         s.flush()
     except exc.IntegrityError:
@@ -161,16 +161,6 @@ def add_preftxs_to_panel(s, project_id, tx_ids):
     return True
 
 def get_upcoming_preftx_by_gene_id(s, pref_tx_id, gene_id):
-    # preftx = s.query(PrefTx,PrefTxVersions,Tx,Genes).\
-    #     join(PrefTxVersions).\
-    #     join(Tx).\
-    #     join(Genes).\
-    #     filter(and_(PrefTx.project_id == project_id,Genes.id == gene_id,
-    #                 or_(PrefTxVersions.last == PrefTx.current_version,
-    #                     PrefTx.current_version > PrefTxVersions.last), \
-    #                     PrefTxVersions.intro > PrefTx.current_version)).\
-    #     values(PrefTxVersions.tx_id)
-
     preftx = s.query(PrefTx, PrefTxVersions, Tx, Genes). \
             join(PrefTxVersions).\
             join(Tx).\
@@ -210,22 +200,6 @@ def get_preftx_id_by_project_id(s, project_id):
     query = s.query(PrefTx).filter(PrefTx.project_id == project_id).values(PrefTx.id)
     for i in query:
         return i.id
-
-def check_preftx_status_query(s, id):
-    """
-    query to check the status of a virtual panel - returns fields required to decide status of a panel
-
-    :param s: db session
-    :param id: panel id
-    :return: result of query
-    """
-
-    panels = s.query(PrefTx, PrefTxVersions).filter(PrefTx.id == id).join(PrefTxVersions). \
-        values(PrefTx.current_version, \
-               PrefTxVersions.last, \
-               PrefTxVersions.intro)
-
-    return panels
 
 
 def get_preftx_current_version(s, project_id):

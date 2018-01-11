@@ -101,13 +101,17 @@ def project_tree():
 @projects.route('/projects/add', methods=['GET', 'POST'])
 @login_required
 def add_projects():
-    form = ProjectForm()
+    form = ProjectForm(request.form)
     if request.method == 'POST':
         if form.validate() == False:
             flash('All fields are required.')
             return render_template('project_add.html', form=form)
         else:
-            id = create_project(s, name=form.data["name"], user=current_user.id)
+            choice = filter(lambda c: c[0] == form.name.data, form.name.choices)[0]
+            print(choice)
+            project_abv = choice[0]
+            project_name = choice[1]
+            id = create_project(s, name=project_name, short_name=project_abv, user=current_user.id)
             if id == -1:
                 form.name.errors = ["That name isn't unique.",]
                 return render_template('project_add.html', form=form)

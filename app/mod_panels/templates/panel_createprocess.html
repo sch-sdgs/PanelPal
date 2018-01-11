@@ -341,13 +341,20 @@
                             <div class="col-md-2"></div>
                             <div class="col-md-8">
                                 <center>
-                                    <tr>{{ form.make_live.label }}</tr>
-                                    {% for subfield in form.make_live %}
-                                    <tr>
-                                        <td>{{ subfield }}</td>
-                                        <td>{{ subfield.label }}</td>
-                                    </tr>
-                                    {% endfor %}
+                                    <ul class="list-unstyled list-inline">
+                                            <li>
+                                                <h3 style="vertical-align: super;">
+                                                    Would you like to make this panel live?&nbsp;&nbsp;</h3>
+                                            </li>
+                                            <li>
+                                                <label class="switch" for="make_live_check" style="margin-bottom: 0px">
+                                                    <input id="make_live_check" name="make_live" type="checkbox">
+                                                    <div class="slider round pull-right btn-sm"><span
+                                                            class="on pull-left">YES</span><span
+                                                            class="off pull-right">NO</span></div>
+                                                </label>
+                                            </li>
+                                        </ul>
                                 </center>
                             </div>
                             <div class="col-md-2"></div>
