@@ -17,6 +17,8 @@ RUN git clone https://github.com/sch-sdgs/SDGSCommonLibs.git
 
 WORKDIR /tmp/SDGSCommonLibs
 
+RUN git fetch
+
 RUN git checkout sci_check
 
 RUN pip install -r requirements.txt
