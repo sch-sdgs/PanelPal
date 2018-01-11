@@ -27,6 +27,18 @@ RUN python setup.py install
 
 WORKDIR /tmp
 
+RUN git clone https://github.com/sch-sdgs/SDGSDataModels.git
+
+WORKDIR /tmp/SDGSDataModels
+
+RUN git checkout master
+
+RUN pip install -r requirements.txt
+
+RUN python build.py
+
+RUN python setup.py install
+
 WORKDIR /tmp/PanelPal
 
 RUN python setup.py install
