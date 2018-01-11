@@ -11,6 +11,8 @@ RUN pip install -r /tmp/requirements.txt
 
 COPY ./app /app
 
+WORKDIR /tmp
+
 RUN git clone https://github.com/sch-sdgs/SDGSCommonLibs.git
 
 WORKDIR /tmp/SDGSCommonLibs
