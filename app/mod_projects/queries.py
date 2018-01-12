@@ -190,7 +190,6 @@ def get_projects_by_user(s, username):
 
 
 def get_current_preftx_version(s,preftx_id):
-    print "YO"
     print preftx_id
     query = s.query(PrefTx).filter(PrefTx.id == preftx_id).values(PrefTx.current_version)
     for i in query:

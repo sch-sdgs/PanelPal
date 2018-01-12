@@ -63,8 +63,6 @@ def get_gene_api(s, panel_id, version, extension=1000):
     :param extension:
     :return:
     """
-    if version == "current":
-        version = get_current_version(s, panel_id)
 
     sql = """SELECT genes.id as gene_id, regions.chrom as chrom, MIN(regions.start) - :extension as region_start, MAX(regions.end) + :extension as region_end, genes.name as annotation
                     FROM genes
@@ -91,7 +89,6 @@ def get_preftx_api(s,project_id,version='current'):
     :return: list of key values pairs of gene and transcript and current version
     """
     preftx_id = get_preftx_id_by_project_id(s, project_id)
-    print project_id
     if version == "current":
         current_version = get_current_preftx_version(s, preftx_id)
     else:
@@ -100,7 +97,7 @@ def get_preftx_api(s,project_id,version='current'):
     print current_version
     preftx = s.query(Genes, Tx, PrefTxVersions, PrefTx, Projects). \
         filter(and_(PrefTx.project_id == project_id,
-                    or_(PrefTxVersions.last >= current_version, PrefTxVersions.last == None),
+                    or_(PrefTxVersions.last.is_(None), PrefTxVersions.last >= current_version),
                     PrefTxVersions.intro <= current_version)). \
         join(Tx). \
         join(PrefTxVersions). \

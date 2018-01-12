@@ -221,6 +221,8 @@ class APIPanels(Resource):
         elif int(version) > current_version:
             message = "Version {} for {} either does not exist or has not been made live yet.".format(version, name)
             return IncorrectParametersError(message)
+        if version == 0:
+            return PanelNotLiveError(name)
         result = get_regions_by_panelid(s, panel_id, version, 25)
         result_json = region_result_to_json(result)
         result_json["details"]["panel"] = name
@@ -447,6 +449,10 @@ class APIGene(Resource):
         panel_id = get_panel_id_by_name(s, name)
         if not panel_id:
             return ObjectNotFoundError(name, 'panels')
+        if version == "current":
+            version = get_current_version(s, panel_id)
+        if version == 0:
+            return PanelNotLiveError(name)
         result = get_gene_api(s, panel_id, version, extension)
         result_json = gene_result_to_json(result.result)
         result_json['details']['panel'] = name
@@ -463,7 +469,7 @@ class APIPreferredTx(Resource):
         nickname='preftx',
         parameters=[
             {
-                "name": "name",
+                "name": "project_name",
                 "paramType": "path",
                 "required": True,
                 "allowMultiple": False,
@@ -484,7 +490,7 @@ class APIPreferredTx(Resource):
     def get(self, project_name, version):
         project_id = get_project_id_by_name(s, project_name)
         if not project_id:
-            ObjectNotFoundError(project_name, 'projects')
+            return ObjectNotFoundError(project_name, 'projects')
         preftx_id = get_preftx_id_by_project_id(s, project_id)
         current_version = get_current_preftx_version(s, preftx_id)
         if version == "current":
@@ -493,6 +499,8 @@ class APIPreferredTx(Resource):
             message = "Version {} for {} either does not exist or has not been made live yet.".format(version,
                                                                                                       "preferred tx for " + project_name)
             return IncorrectParametersError(message)
+        if version == 0:
+            return PanelNotLiveError("Preferred transcripts for " + project_name)
         result = get_preftx_api(s, project_id, version)
         result_json = prefttx_result_to_json(result.result)
         result_json["details"]["project"] = project_name
@@ -740,7 +748,7 @@ class APIPrefTxFromVPanel(Resource):
     def get(self, vpanel_name):
         vp_id = get_vpanel_id_by_name(s, vpanel_name)
         if not vp_id:
-            ObjectNotFoundError(vpanel_name, 'virtual panels')
+            return ObjectNotFoundError(vpanel_name, 'virtual panels')
         resp = get_preftx(vp_id)
         return resp
 
@@ -765,7 +773,7 @@ class APIPrefTxFromTestCode(Resource):
     def get(self, test_code):
         vp_id, version = get_vpanel_id_from_testcode(s, test_code)
         if not vp_id:
-            ObjectNotFoundError(test_code, 'test codes')
+            return ObjectNotFoundError(test_code, 'test codes')
         resp = get_preftx(vp_id)
         return resp
 
