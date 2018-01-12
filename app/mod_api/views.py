@@ -277,6 +277,8 @@ class APIVirtualPanels(Resource):
         elif float(version) > current_version:
             message = "Version {} for {} either does not exist or has not been made live yet.".format(version, name)
             return IncorrectParametersError(message)
+        if int(current_version) == current_version:#if the version number ends in .0 the panel has never been made live
+            return PanelNotLiveError(name)
         result = get_regions_by_vpanelid(s, vpanel_id, version, extension)
         result_json = region_result_to_json(result)
         result_json["details"]["panel"] = name
@@ -355,15 +357,18 @@ class APIIntronic(Resource):
     )
     def get(self, name, version):
         vp_id = get_vpanel_id_by_name(s, name)
+        print(vp_id)
         if not vp_id:
             return ObjectNotFoundError(name, 'virtual panels')
         current_version = get_current_version_vp(s, vp_id)
         if version == "current":
             version = current_version
-        elif int(version) > current_version:
+        elif float(version) > current_version:
             message = "Version {} for {} either does not exist or has not been made live yet.".format(version, name)
             return IncorrectParametersError(message)
-        result = get_intronic_api(s, vp_id, version)
+        if int(current_version) == current_version:
+            return PanelNotLiveError(name)
+        result = get_intronic_api(s, vp_id, str(version))
         result_json = intronic_result_to_json(result.result)
         result_json['details']['panel'] = name
         result_json['details']['version'] = result.current_version
@@ -392,7 +397,7 @@ class APIIntronicFromTestCode(Resource):
         vp_id, version = get_vpanel_id_from_testcode(s, test_code)
         if not vp_id:
             return ObjectNotFoundError(test_code, 'test codes')
-        result = get_intronic_api(s, vp_id, version)
+        result = get_intronic_api(s, vp_id, str(version))
         result_json = intronic_result_to_json(result.result)
         result_json['details']['panel'] = get_vpanel_name_by_id(s, vp_id)
         result_json['details']['version'] = result.current_version
@@ -808,6 +813,20 @@ def IncorrectParametersError(message):
     :param message: message to be returned in response
     :return:
     """
+    response = {'message': message}
+    result = output_json(response, 400)
+    result.status_code = 400
+    result.headers['content-type'] = 'application/json'
+    return result
+
+def PanelNotLiveError(name):
+    """
+    Method to return an error response if incorrect arguments have been given
+
+    :param name: The name of the panel
+    :return:
+    """
+    message = "{} does not have a live version so cannot be retrieved through the API".format(name)
     response = {'message': message}
     result = output_json(response, 400)
     result.status_code = 400
