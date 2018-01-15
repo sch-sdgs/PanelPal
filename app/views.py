@@ -2,7 +2,7 @@ from flask import render_template, request, url_for, redirect
 from flask_login import login_required, login_user, logout_user
 from flask_table import LinkCol
 
-from app.panel_pal import s, app, auto
+from app.panel_pal import s, app
 from app.forms import Login
 from mod_admin.queries import check_if_admin
 from flask_login import LoginManager, current_user
@@ -140,11 +140,6 @@ def index():
 @app.route('/about')
 def about():
     return render_template('about.html')
-
-@app.route('/documentation')
-def documentation():
-    return auto.html()
-
 
 class LinkColConditional(LinkCol):
     def td_contents(self, item, attr_list):

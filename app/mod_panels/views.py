@@ -369,7 +369,6 @@ def added_message():
     return render_template('added_message.html', gene_list=gene_list, multiple=multiple)
 
 @panels.route('/autocomplete', methods=['GET'])
-@auto.doc()
 def autocomplete():
     """
     this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it
