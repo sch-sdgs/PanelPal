@@ -1,8 +1,9 @@
 from app.mod_projects.queries import get_project_name, get_project_id_by_name, get_user_rel_by_project_id, \
     get_projects_by_user, get_tx_by_gene_id
-from app.mod_panels.queries import get_gene_id_from_name, get_virtual_panels_by_panel_id, get_current_version, \
+from app.mod_panels.queries import get_virtual_panels_by_panel_id, get_current_version, \
     get_genes_by_panelid, get_project_id_by_panel_id, get_current_version_vp, get_genes_by_vpanelid, \
     get_panels_by_project_id
+from app.queries import get_gene_id_from_name
 from flask import Blueprint
 from flask import render_template, request, jsonify
 from flask_login import login_required

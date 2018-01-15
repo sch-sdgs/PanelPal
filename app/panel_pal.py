@@ -36,6 +36,7 @@ error_handler = TimedRotatingFileHandler('PanelPal.error',when='d', interval=1, 
 error_handler.setLevel(logging.ERROR)
 logger.addHandler(error_handler)
 
+
 def message(f):
     """
     decorator that allows query methods to log their actions to a log file so that we can track users

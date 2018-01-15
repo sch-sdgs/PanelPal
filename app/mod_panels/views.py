@@ -1,22 +1,23 @@
+import json
+import math
+import time
+
+import httplib2 as http
 from flask import Blueprint
 from flask import render_template, request, url_for, jsonify, redirect, Response
 from flask_login import login_required, current_user
-from pybedtools import BedTool
-from app.panel_pal import s, Session
-from app.mod_projects.views import LinkColConditional
 from flask_table import Table, Col, LinkCol
-from forms import ViewPanel, CreatePanelProcess, EditPanelProcess, CreateVirtualPanelProcess, \
-    EditVirtualPanelProcess
-from queries import *
+from pybedtools import BedTool
+
+from app.panel_pal import s
+from app.queries import get_gene_id_from_name
 from app.mod_projects.queries import get_preftx_by_gene_id, get_upcoming_preftx_by_gene_id, get_tx_by_gene_id, \
     add_preftxs_to_panel, make_preftx_live, get_current_preftx_version, get_preftx_id_by_project_id
-from app.mod_admin.queries import get_username_by_user_id, check_user_has_permission
-import json
-import time
-import requests
-import httplib2 as http
-import math
+from app.mod_admin.queries import get_username_by_user_id
+from forms import ViewPanel, CreatePanelProcess, EditPanelProcess, CreateVirtualPanelProcess, \
+    EditVirtualPanelProcess
 from producers import StarLims
+from queries import *
 
 panels = Blueprint('panels', __name__, template_folder='templates')
 
@@ -368,6 +369,7 @@ def added_message():
     return render_template('added_message.html', gene_list=gene_list, multiple=multiple)
 
 @panels.route('/autocomplete', methods=['GET'])
+@auto.doc()
 def autocomplete():
     """
     this is the method for gene auto-completion - gets gene list from db and makes it into a json so that javascript can read it

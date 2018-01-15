@@ -3,7 +3,7 @@ from sqlalchemy import and_, or_, exc
 
 from app.panel_pal import message
 from app.mod_admin.queries import get_user_id_by_username, check_user_has_permission
-from app.mod_panels.queries import get_gene_id_from_name
+from app.queries import get_gene_id_from_name
 from app.models import *
 
 def get_genes_by_projectid_new(s, projectid):

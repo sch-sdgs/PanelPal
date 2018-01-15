@@ -16,10 +16,13 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
-
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../app'))
+print('############################')
+print(sys.path)
+print(os.path.abspath('../app'))
+print('############################')
 
 # -- General configuration ------------------------------------------------
 
@@ -34,7 +37,12 @@ extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.imgmath',
-    'sphinx.ext.githubpages']
+    'sphinx.ext.githubpages',
+              'sphinxcontrib.httpdomain',
+              'sphinxcontrib.autohttp.flask',
+              'sphinx.ext.autodoc',
+              'sphinx.ext.viewcode'
+              ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -256,4 +264,5 @@ epub_copyright = copyright
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ['search.html']
 
-
+# A list of the modules that file to import, these are mocked so the docs can be written
+autodoc_mock_imports = ["config"]

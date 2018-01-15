@@ -1,4 +1,3 @@
-from sqlalchemy import and_, or_, desc, text, exc
 from models import *
 
 # TODO ?not used anywhere
@@ -30,3 +29,9 @@ from models import *
 #                Tx.tx_end, \
 #                Tx.strand)
 #     return genes
+
+
+def get_gene_id_from_name(s, gene_name):
+    gene = s.query(Genes).filter(Genes.name == gene_name).values(Genes.id)
+    for i in gene:
+        return i.id

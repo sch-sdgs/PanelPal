@@ -1,22 +1,17 @@
+from collections import OrderedDict
+
 from flask import Blueprint
 from flask import render_template, request, url_for, jsonify, redirect, flash
 from flask_login import login_required, current_user
-from collections import OrderedDict
-from app.panel_pal import s
 from flask_table import Table, Col, LinkCol
+
+from app.panel_pal import s
+from app.views import LinkColConditional
 from forms import ProjectForm, EditPermissions
 from queries import *
 
 projects = Blueprint('projects', __name__, template_folder='templates')
 
-class LinkColConditional(LinkCol):
-    def td_contents(self, item, attr_list):
-        if item["permission"] is True:
-            return '<a href="{url}">{text}</a>'.format(
-                url=self.url(item),
-                text=self.td_format(self.text(item, attr_list)))
-        else:
-            return '-'
 
 class LinkColPrefTx(LinkCol):
     def td_contents(self, item, attr_list):

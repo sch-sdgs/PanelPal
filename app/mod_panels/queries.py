@@ -1,10 +1,11 @@
-from app.queries import *
-from sqlalchemy import and_, or_, case
 from decimal import *
-import itertools
-from app.panel_pal import message
+
+from sqlalchemy import and_, or_, case, text, exc, desc
+
 from app.mod_admin.queries import get_user_id_by_username, check_user_has_permission
+from app.panel_pal import message
 from app.models import *
+
 
 def get_virtual_panels_by_panel_id(s, id):
     vpanels = s.query(VirtualPanels, VPRelationships, Versions, Panels, Projects). \
@@ -104,10 +105,6 @@ def get_genes_by_vpanelid(s, vpanel_id, current_version):
 
     return genes
 
-def get_gene_id_from_name(s, gene_name):
-    gene = s.query(Genes).filter(Genes.name == gene_name).values(Genes.id)
-    for i in gene:
-        return i.id
 
 @message
 def unlock_panel_query(s, panel_id):
