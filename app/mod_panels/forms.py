@@ -7,6 +7,7 @@ from wtforms.validators import Required, regexp
 
 from app import models
 from app.panel_pal import s
+from sqlalchemy import and_
 
 
 def projects():
