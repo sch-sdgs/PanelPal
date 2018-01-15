@@ -28,14 +28,12 @@ class UserRelationships(db.Model):
 class Projects(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True)
-    short_name = db.Column(db.String(10), unique=False)
     panels = db.relationship('Panels', backref='author', lazy='dynamic')
     pref_tx = db.relationship('PrefTx', backref='author', lazy='dynamic')
     user = relationship("UserRelationships")
 
-    def __init__(self,name, short_name):
+    def __init__(self,name):
         self.name = name
-        self.short_name = short_name
 
     def __repr__(self):
         return '<name %r>' % (self.name)
