@@ -1100,6 +1100,26 @@ def get_vpanel_by_id(s, vpanel_id, version=None):
 
     return panel
 
+def get_project_choices(s, user_id):
+    proj_list = s.query(Projects).filter(
+        Projects.user.any(UserRelationships.user.has(Users.username == user_id))).values(Projects.name, Projects.id)
+
+    choices = [("__None", '-- please choose a project -- '),]
+    for proj in proj_list:
+        choices.append((proj.id, proj.name))
+
+    return choices
+
+def get_panel_choices(s, user_id):
+    panel_list = s.query(Panels).filter(and_(Panels.project.has(
+        Projects.user.any(UserRelationships.user.has(Users.username == user_id))),
+        Panels.locked == None)).values(Panels.name, Panels.id)
+
+    panel_choices = [("__None", "-- please choose a panel --"),]
+    for panel in panel_list:
+        panel_choices.append((panel.id, panel.name))
+
+    return panel_choices
 
 def get_panel_details_by_id(s, panel_id):
     panel = s.query(Projects, Panels). \
@@ -1132,7 +1152,7 @@ def get_vpanel_details_by_id(s, vpanel_id):
         join(VirtualPanels). \
         filter(VirtualPanels.id == vpanel_id). \
         values(VirtualPanels.name, VirtualPanels.current_version,
-               Projects.name.label('project_name'), Projects.short_name.label('project_abv'), Projects.id.label('project_id'),
+               Projects.name.label('project_name'), Projects.id.label('project_id'),
                Panels.name.label('panel_name'))
     for i in panel:
         print(i)

@@ -322,6 +322,10 @@ def no_panel_name():
 def no_project_name():
     return render_template('no_name_selected.html', type='project')
 
+@panels.route('/html/no_name', methods=['GET'])
+def no_name():
+    return render_template('no_name_entered.html')
+
 @panels.route('/html/not_unique', methods=['GET'])
 def not_unique():
     return render_template('not_unique.html')
@@ -656,9 +660,9 @@ def create_panel_process():
         unlock_panel_query(s, panel_id)
         return redirect(url_for('panels.view_panel') + "?id=" + panel_id)
     elif request.method == "GET":
+        form.project.choices = get_project_choices(s, current_user.id)
         return render_template('panel_createprocess.html', form=form, panel_id="main",
                                url=url_for('panels.create_panel_process'))
-
 
 @panels.route('/panels/edit', methods=['GET', 'POST'])
 @login_required
@@ -1342,6 +1346,7 @@ def create_virtual_panel_process():
         unlock_panel_query(s, panel_id)
         return redirect(url_for('panels.view_vpanel') + "?id=" + vp_id)
     elif request.method == "GET":
+        form.panel.choices = get_panel_choices(s, current_user.id)
         url = url_for('panels.create_virtual_panel_process')
         return render_template('virtualpanels_createprocess.html', form=form, url=url, vp_id="main")
 

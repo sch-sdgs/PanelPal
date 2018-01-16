@@ -2,14 +2,84 @@
  * Created by cytng on 23/05/2017.
  */
 var loading_Wheel_spin;
-$(document).ready(function(){
-    var data = $.get(Flask.url_for('panels.loading_wheel_spin'), function(response){
-            loading_Wheel_spin = response;
-        });
+$(document).ready(function () {
+    var data = $.get(Flask.url_for('panels.loading_wheel_spin'), function (response) {
+        loading_Wheel_spin = response;
+    });
 });
 
+var loading_wheel;
+$(document).ready(function () {
+    var data = $.get(Flask.url_for('panels.loading_wheel'), function (response) {
+        loading_wheel = response;
+    });
+});
 
-function ajax_error(xhr, status, error){
+var no_name;
+$(document).ready(function () {
+    var data = $.get(Flask.url_for('panels.no_name'), function (response) {
+        no_name = response;
+    });
+});
+
+var no_panel_name;
+$(document).ready(function () {
+    var data = $.get(Flask.url_for('panels.no_panel_name'), function (response) {
+        no_panel_name = response;
+    });
+});
+
+var no_project_name;
+$(document).ready(function () {
+    var data = $.get(Flask.url_for('panels.no_project_name'), function (response) {
+        no_project_name = response;
+    })
+});
+
+var no_regions;
+$(document).ready(function () {
+    var data = $.get(Flask.url_for('panels.no_regions'), function (response) {
+        no_regions = response;
+    })
+});
+
+var not_unique;
+$(document).ready(function () {
+    var data = $.get(Flask.url_for('panels.not_unique'), function (response) {
+        not_unique = response
+    })
+});
+
+var comp_message;
+$(document).ready(function () {
+    var name;
+    if (window.location.href.indexOf('edit') > -1) {
+        name = "edited"
+    }
+    else {
+        name = "completed"
+    }
+
+    var data = $.get(Flask.url_for('panels.comp_message') + "?name=" + name, function (response) {
+        comp_message = response
+    })
+});
+
+var edit_region_start;
+$(document).ready(function () {
+    var data = $.get(Flask.url_for('panels.edit_region') + "?type=start", function (response) {
+        edit_region_start = response
+    })
+});
+
+var edit_region_end;
+$(document).ready(function () {
+    var data = $.get(Flask.url_for('panels.edit_region') + "?type=end", function (response) {
+        edit_region_end = response
+    })
+});
+
+function ajax_error(xhr, status, error) {
     var trace = $('#trace');
     $(trace).children().remove();
     $(trace).append("<p>" + error + "</p>");
@@ -21,23 +91,15 @@ function ajax_error(xhr, status, error){
  * When a region is added to the panel the final window message is changed
  */
 function region_added() {
-    var name;
-    if (window.location.href.indexOf('edit') > -1) {
-        name = "edited"
-    }
-    else {
-        name = "completed"
-    }
-
     var comp_messge = $('#complete_message');
     comp_messge.removeClass('alert-danger').addClass('alert-success');
-    comp_messge.load(Flask.url_for('panels.comp_message') + "?name=" + name);
+    comp_messge.append(comp_message);
     var cancel = $('#cancel');
     cancel.removeClass('btn-danger').addClass('btn-success');
     cancel.text('Done!');
     cancel.attr('type', 'submit');
     $('#cancel_logo').removeClass('fa-remove').addClass('fa-check');
-    $('#make_live').removeAttr('hidden')
+    $('#make_live').removeAttr('hidden');
 }
 
 /**
@@ -160,18 +222,31 @@ function add_panel(changeTab, e) {
     var vpanel = $('#vpanelname');
     var msg = $('#message');
     var panel = $('#panel');
-
-    if ($('#vpanelname').length && panel.val() == "__None" ) {
-        // new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't selected a panel name</div>";
-        // msg.append(new_html);
-        $(msg).load(Flask.url_for('panels.no_panel_name'));
-        return false;
+    console.log('val length');
+    console.log();
+    if ($(vpanel).length) {
+        if (panel.val() == "__None") {
+            // new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't selected a panel name</div>";
+            // msg.append(new_html);
+            $(msg).append(no_panel_name);
+            return false;
+        }
+        else if ($(vpanel).val().length == 0) {
+            $(msg).append(no_name);
+            return false;
+        }
     }
-    else if($('#panelname').length && $('#project').val() == "__None"){
-        // new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't selected a project name</div>";
-        // msg.append(new_html);
-        $(msg).load(Flask.url_for('panels.no_project_name'));
-        return false;
+    else if ($('#panelname').length) {
+        if( $('#project').val() == "__None") {
+            // new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> You haven't selected a project name</div>";
+            // msg.append(new_html);
+            $(msg).append(no_project_name);
+            return false;
+        }
+        else if($('#panelname').val().length == 0){
+            $(msg).append(no_name);
+            return false;
+        }
     }
 
     if (vpanel.length) {
@@ -208,7 +283,7 @@ function add_panel(changeTab, e) {
             if (response == -1) {
                 // new_html = "<div class=\"alert alert-danger\"><strong>Silly Sausage!</strong> That name isn't unique</div>";
                 // msg.append(new_html)
-                $(msg).load(Flask.url_for('panels.not_unique'))
+                $(msg).append(not_unique)
             }
             else {
                 var newUrl = redirect + response;
@@ -300,11 +375,11 @@ $(document).on('click', '.next-step, .prev-step', function (e) {
 
 $(document).on('change', '#panel', function () {
     $('#geneselector').children().remove();
-    $('#loading').load(Flask.url_for('panels.loading_wheel'));
+    $('#loading').append(loading_wheel);
 
     var panel_id = $('#panel').val();
 
-    if(panel_id == "__None"){
+    if (panel_id == "__None") {
         return false;
     }
     var dict = {
@@ -347,8 +422,7 @@ $(document).on('focusin', '[name="region_start"]', function () {
         }
         sessionStorage.setItem(region_id, JSON.stringify(dict));
         $($(td).children()).remove();
-        console.log(Flask.url_for('panels.edit_region') + "?type=start");
-        $(td).load(Flask.url_for('panels.edit_region') + "?type=start");
+        $(td).append(edit_region_start);
     }
 });
 
@@ -399,7 +473,7 @@ $(document).on('focusin', '[name="region_end"]', function () {
         }
         sessionStorage.setItem(region_id, JSON.stringify(dict));
         $($(td).children()).remove();
-        $(td).load(Flask.url_for('panels.edit_region') + "?type=end");
+        $(td).append(edit_region_end);
     }
 });
 
@@ -703,7 +777,7 @@ function doChange() {
     }
 
     $('#region-table').remove();
-    $('#regions').load(Flask.url_for('panels.loading_wheel'));
+    $('#regions').append(loading_wheel);
     get_regions($('.btn-warning'));
 }
 
@@ -767,7 +841,7 @@ $(document).on('click', '#add-custom', function () {
                 $('#region-name').val('');
 
                 $('#region-table').remove();
-                $('#regions').load(Flask.url_for('panels.loading_wheel'));
+                $('#regions').append(loading_wheel);
 
                 get_regions($('.btn-custom'));
                 region_added()
@@ -883,7 +957,7 @@ $(document).on('click', '[name="genebutton"]', function (request) {
         add_custom.attr("style", "display: none;")
     }
     regions.children().remove();
-    regions.load(Flask.url_for('panels.loading_wheel'));
+    regions.append(loading_wheel);
     var element = $(request.currentTarget);
     $('.btn-warning').each(function (i, obj) {
         if ($(obj.firstElementChild).hasClass('glyphicon-ok')) {
@@ -916,7 +990,7 @@ $(document).on('click', ".label-region", function (request) {
     var select_all = $('.label-selectall');
 
     var count = count_ids().length;
-    if (count == 1 && $(check).prop('checked')){
+    if (count == 1 && $(check).prop('checked')) {
         $('#add-regions').attr('disabled', 'disabled');
     }
     else if (count > 0 || (count == 0 && !$(check).prop('checked'))) {
@@ -926,14 +1000,14 @@ $(document).on('click', ".label-region", function (request) {
         $('#add-regions').attr('disabled', 'disabled');
     }
 
-    if (((count == $('.label-region').length -1 && !$(check).prop('checked')) || //if the count is one less than the total and the current target is about to be "checked"
-        (count == 1 && $(check).prop('checked'))) && //if the count is one and the current target is about to be "unchecked"
+    if (((count == $('.label-region').length - 1 && !$(check).prop('checked')) || //if the count is one less than the total and the current target is about to be "checked"
+            (count == 1 && $(check).prop('checked'))) && //if the count is one and the current target is about to be "unchecked"
         select_all.attr('clicked') != "clicked") { //if the selectall slider has not been clicked
         select_all.attr('uncheck-all', 'false');
         select_all.trigger('click')
     }
     else if ($(check).prop('checked') && $(select_all.parent().children().eq(0)).prop('checked')//if the current target is being "unchecked" and the selectall button is checked
-        && select_all.attr('clicked') != "clicked"){ //if the selectall slider has not been clicked
+        && select_all.attr('clicked') != "clicked") { //if the selectall slider has not been clicked
         select_all.attr('uncheck-all', 'false');
         select_all.trigger('click')
     }
@@ -1076,7 +1150,7 @@ function remove_vp_regions(vpanel_id, ids, geneName) {
             if (response == 0) {
                 var complete = $('#complete_message');
                 complete.addClass('alert-danger').removeClass('alert-success');
-                complete.load(Flask.url_for('panels.no_regions'));
+                complete.append(no_regions);
                 var cancel = $('#cancel');
                 cancel.addClass('btn-danger').removeClass('btn-success');
                 cancel.text('Cancel');
@@ -1118,7 +1192,7 @@ function remove_panel_regions(panel_id, ids, gene_name) {
             if (response == 0) {
                 var complete = $('#complete_message');
                 complete.addClass('alert-danger').removeClass('alert-success');
-                complete.load(Flask.url_for('panels.no_regions'));
+                complete.append(no_regions);
                 var cancel = $('#cancel');
                 cancel.addClass('btn-danger').removeClass('btn-success');
                 cancel.text('Cancel');
@@ -1158,7 +1232,7 @@ $(document).ready(function () {
 function add_gene(i, gene_list, complete, progress) {
     console.log('hello');
     var total = $(gene_list).length;
-    var button = $('[data-id="'+ gene_list[i] +'"');
+    var button = $('[data-id="' + gene_list[i] + '"');
     var gene_name = $(button).attr('data-name');
     console.log(gene_name);
     var pref_tx_id = $('#' + gene_name).val();

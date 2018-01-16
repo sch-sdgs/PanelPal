@@ -9,19 +9,8 @@ from app import models
 from app.panel_pal import s
 from sqlalchemy import and_
 
-
-def projects():
-    return s.query(models.Projects).filter(
-        models.Projects.user.any(models.UserRelationships.user.has(models.Users.username == current_user.id))).all()
-
-
 def panels():
     return s.query(models.Panels)
-
-def panels_unlocked():
-    return s.query(models.Panels).filter(and_(models.Panels.project.has(
-        models.Projects.user.any(models.UserRelationships.user.has(models.Users.username == current_user.id))), models.Panels.locked == None)).all()
-
 
 class RemoveGene(Form):
     geneName = TextField("Gene Name")
@@ -38,15 +27,8 @@ class ViewPanel(Form):
     versions = SelectField("Select a version:")
     submit = SubmitField("Go")
 
-class CreatePanel(Form):
-    project = QuerySelectField(query_factory=projects,get_label='name')
-    panelname = TextField("Panel Name")
-    listgenes = HiddenField("Selected Genes")
-    genes = TextField("Genes")
-    submit = SubmitField("Create Panel")
-
 class CreatePanelProcess(Form):
-    project = QuerySelectField(query_factory=projects, get_label='name', allow_blank=True, blank_text=u'-- please choose a project -- ')
+    project = SelectField("Project")
     panelname = TextField("Panel Name", [Required("Enter a Panel Name")])
     make_live = RadioField(label='Do you want to make this panel live?', choices=[(True,"Yes"), (False,"No")], default=False)
     genes = TextField("Genes")
@@ -62,7 +44,7 @@ class EditPanelProcess(Form):
     submitname = SubmitField("Complete Edit")
 
 class CreateVirtualPanelProcess(Form):
-    panel = QuerySelectField(query_factory=panels_unlocked, get_label='name', allow_blank=True, blank_text=u'-- please choose a panel -- ')
+    panel = SelectField("Panel")
     vpanelname = TextField("Virtual Panel Name", [Required("Enter a Virtual Panel Name")])
     submitname = SubmitField("Complete Panel")
 
